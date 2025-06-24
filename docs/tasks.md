@@ -15,16 +15,16 @@
     - [x] Setup `Zustand` for global client state management.
     - [x] Setup `TanStack Query` for server state management (data fetching, caching).
     - [x] Install `React Hook Form` and `Zod` for form handling and validation.
-- [ ] **Backend & Database Setup:**
+- [x] **Backend & Database Setup:**
     - [x] Setup Supabase project (Database, Auth, Storage).
     - [ ] Design initial database schema for Users, Drivers, and Vehicles in Supabase.
 
 ## Phase 2: Core User Features (Sprints 2-4)
 
-- [ ] **Authentication:**
-    - [ ] Implement user registration and login forms.
-    - [ ] Implement authentication flow using Supabase Auth.
-    - [ ] Create protected routes for authenticated users.
+- [x] **Authentication:**
+    - [x] Implement user registration and login forms.
+    - [x] Implement authentication flow using Supabase Auth.
+    - [x] Create protected routes for authenticated users.
 - [ ] **Trip Search & Discovery:**
     - [ ] Create Supabase database function (or RPC) for searching trips.
     - [ ] Create the home page with the trip search form (cities, date).
