@@ -16,7 +16,7 @@
     - [x] Setup `TanStack Query` for server state management (data fetching, caching).
     - [x] Install `React Hook Form` and `Zod` for form handling and validation.
 - [ ] **Backend & Database Setup:**
-    - [ ] Setup Supabase project (Database, Auth, Storage).
+    - [x] Setup Supabase project (Database, Auth, Storage).
     - [ ] Design initial database schema for Users, Drivers, and Vehicles in Supabase.
 
 ## Phase 2: Core User Features (Sprints 2-4)
