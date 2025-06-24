@@ -17,6 +17,8 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/components/auth-provider";
+import { useEffect } from "react";
 
 const formSchema = z.object({
     email: z.string().email(),
@@ -27,6 +29,13 @@ type FormData = z.infer<typeof formSchema>;
 
 export default function AuthPage() {
     const navigate = useNavigate();
+    const { session, isLoading } = useAuth();
+
+    useEffect(() => {
+        if (session && !isLoading) {
+            navigate("/dashboard");
+        }
+    }, [session, isLoading, navigate]);
 
     const loginForm = useForm<FormData>({
         resolver: zodResolver(formSchema),
