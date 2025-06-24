@@ -5,11 +5,11 @@ import {
   Outlet,
   useNavigate,
 } from "react-router-dom";
-import AuthPage from "./pages/auth";
+import Auth from "./pages/auth";
 import { Toaster, toast } from "sonner";
-import DashboardPage from "./pages/dashboard";
+import Dashboard from "./pages/dashboard";
 import { ProtectedRoute } from "./components/protected-route";
-import { useAuth } from "./components/auth-provider";
+import { useAuth } from "@/hooks/use-auth";
 import { useMutation } from "@tanstack/react-query";
 import { signOut } from "./services/auth";
 import { Button } from "./components/ui/button";
@@ -91,14 +91,14 @@ const router = createBrowserRouter([
       },
       {
         path: "/auth",
-        element: <AuthPage />,
+        element: <Auth />,
       },
       {
         element: <ProtectedRoute />,
         children: [
           {
             path: "/dashboard",
-            element: <DashboardPage />,
+            element: <Dashboard />,
           },
         ],
       },

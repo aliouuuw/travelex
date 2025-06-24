@@ -94,4 +94,18 @@
 ## Post-Launch
 - [ ] Gather user feedback for future iterations.
 - [ ] Prioritize and fix bugs.
-- [ ] Plan for V2 features. 
+- [ ] Plan for V2 features.
+
+---
+
+## Session Recap 1 (For Next Chat)
+
+**Objective:** Begin designing and implementing the core database schema.
+
+**Current Status:**
+- The entire project foundation and authentication system are complete and robust.
+- We have a functioning front-end with a professional light theme, using Vite, React, TS, Tailwind, and `shadcn/ui`.
+- A full auth flow (login, signup, logout, protected routes) is working with Supabase.
+
+**Next Step:**
+- The immediate next task is to design the database schema. The first table to create should be `profiles` to store public user data, linked to the `auth.users` table. 

@@ -17,15 +17,22 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/components/auth-provider";
+import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
 
-const formSchema = z.object({
+const signupFormSchema = z.object({
+    full_name: z.string().min(2, "Full name must be at least 2 characters"),
     email: z.string().email(),
     password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
-type FormData = z.infer<typeof formSchema>;
+const loginFormSchema = z.object({
+    email: z.string().email(),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+type SignupFormData = z.infer<typeof signupFormSchema>;
+type LoginFormData = z.infer<typeof loginFormSchema>;
 
 export default function AuthPage() {
     const navigate = useNavigate();
@@ -37,17 +44,18 @@ export default function AuthPage() {
         }
     }, [session, isLoading, navigate]);
 
-    const loginForm = useForm<FormData>({
-        resolver: zodResolver(formSchema),
+    const loginForm = useForm<LoginFormData>({
+        resolver: zodResolver(loginFormSchema),
         defaultValues: {
             email: "",
             password: "",
         },
     });
 
-    const signupForm = useForm<FormData>({
-        resolver: zodResolver(formSchema),
+    const signupForm = useForm<SignupFormData>({
+        resolver: zodResolver(signupFormSchema),
         defaultValues: {
+            full_name: "",
             email: "",
             password: "",
         },
@@ -70,15 +78,21 @@ export default function AuthPage() {
             toast.success("Account created successfully! Please check your email to verify.");
         },
         onError: (error) => {
-            toast.error(error.message);
+            if (error instanceof Error) {
+                if (error.message.includes("User already registered")) {
+                    toast.error("An account with this email already exists. Please log in.");
+                } else {
+                    toast.error(error.message);
+                }
+            }
         },
     });
 
-    const onLoginSubmit = (data: FormData) => {
+    const onLoginSubmit = (data: LoginFormData) => {
         loginMutation(data);
     };
 
-    const onSignupSubmit = (data: FormData) => {
+    const onSignupSubmit = (data: SignupFormData) => {
         signupMutation(data);
     };
 
@@ -155,11 +169,16 @@ export default function AuthPage() {
                                 <CardHeader className="text-center">
                                     <CardTitle>Create an Account</CardTitle>
                                     <CardDescription>
-                                        Enter your email and password to get started.
+                                        Enter your details below to create your account.
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-2">
+                                        <div className="space-y-1">
+                                            <Label htmlFor="full_name">Full Name</Label>
+                                            <Input {...signupForm.register("full_name")} id="full_name" type="text" placeholder="John Doe" />
+                                            {signupForm.formState.errors.full_name && <p className="text-red-500 text-xs">{signupForm.formState.errors.full_name.message}</p>}
+                                        </div>
                                         <div className="space-y-1">
                                             <Label htmlFor="email">Email</Label>
                                             <Input {...signupForm.register("email")} id="email" type="email" placeholder="m@example.com" />

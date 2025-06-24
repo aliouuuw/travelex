@@ -1,14 +1,33 @@
 import { supabase } from './supabase';
-import type { SignInWithPasswordCredentials, SignUpWithPasswordCredentials } from '@supabase/supabase-js';
+import type { SignInWithPasswordCredentials } from '@supabase/supabase-js';
 
-export const signUp = async (credentials: SignUpWithPasswordCredentials) => {
-    const response = await supabase.auth.signUp(credentials);
-    return response;
+// Define a new type for sign-up credentials, including full_name
+interface SignUpCredentials {
+    email: string;
+    password: string;
+    full_name: string;
+}
+
+export const signUp = async (credentials: SignUpCredentials) => {
+    const { data, error } = await supabase.auth.signUp({
+        email: credentials.email,
+        password: credentials.password,
+        options: {
+            data: {
+                full_name: credentials.full_name,
+            },
+        },
+    });
+
+    if (error) throw error;
+    return data;
 };
 
 export const signIn = async (credentials: SignInWithPasswordCredentials) => {
-    const response = await supabase.auth.signInWithPassword(credentials);
-    return response;
+    const { data, error } = await supabase.auth.signInWithPassword(credentials);
+
+    if (error) throw error;
+    return data;
 };
 
 export const signOut = async () => {
