@@ -10,24 +10,29 @@ import { Toaster, toast } from "sonner";
 import Dashboard from "./pages/dashboard";
 import { ProtectedRoute } from "./components/protected-route";
 import { useAuth } from "@/hooks/use-auth";
-import { useMutation } from "@tanstack/react-query";
-import { signOut } from "./services/auth";
 import { Button } from "./components/ui/button";
+import { AdminRoute } from "./components/admin-route";
+import AdminLayout from "./pages/admin/layout";
+import AdminDashboard from "./pages/admin/dashboard";
+import DriversPage from "./pages/admin/drivers";
+import { DriverRoute } from "./components/driver-route";
+import DriverDashboard from "./pages/driver/dashboard";
 
 const Header = () => {
-  const { session } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
-  const { mutate: handleSignOut } = useMutation({
-    mutationFn: signOut,
-    onSuccess: () => {
+  const handleSignOut = async () => {
+    try {
+      await signOut();
       toast.success("Signed out successfully!");
       navigate("/");
-    },
-    onError: (error) => {
-      toast.error(error.message);
-    },
-  });
+    } catch (error) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      }
+    }
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 bg-background/95 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60 z-10">
@@ -35,10 +40,10 @@ const Header = () => {
         <Link to="/" className="font-bold text-lg text-primary">TravelEx</Link>
         <div className="flex items-center gap-4 text-sm">
           <Link to="/about" className="text-muted-foreground hover:text-foreground">About</Link>
-          {session ? (
+          {user ? (
             <>
               <Link to="/dashboard" className="text-muted-foreground hover:text-foreground">Dashboard</Link>
-              <Button variant="default" size="sm" onClick={() => handleSignOut()}>Logout</Button>
+              <Button variant="default" size="sm" onClick={handleSignOut}>Logout</Button>
             </>
           ) : (
             <Link to="/auth" className="text-muted-foreground hover:text-foreground">Login</Link>
@@ -102,6 +107,34 @@ const router = createBrowserRouter([
           },
         ],
       },
+      {
+        element: <AdminRoute />,
+        children: [
+          {
+            element: <AdminLayout />,
+            path: "/admin",
+            children: [
+              {
+                path: "dashboard",
+                element: <AdminDashboard />,
+              },
+              {
+                path: "drivers",
+                element: <DriversPage />,
+              },
+            ]
+          }
+        ]
+      },
+      {
+        element: <DriverRoute />,
+        children: [
+          {
+            path: "/driver/dashboard",
+            element: <DriverDashboard />,
+          },
+        ],
+      }
     ]
   },
 ]);

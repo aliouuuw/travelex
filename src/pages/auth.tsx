@@ -36,13 +36,24 @@ type LoginFormData = z.infer<typeof loginFormSchema>;
 
 export default function AuthPage() {
     const navigate = useNavigate();
-    const { session, isLoading } = useAuth();
+    const { user, isLoading } = useAuth();
 
     useEffect(() => {
-        if (session && !isLoading) {
-            navigate("/dashboard");
+        if (user && !isLoading) {
+            const role = user.profile?.role;
+            switch (role) {
+                case "admin":
+                    navigate("/admin/dashboard");
+                    break;
+                case "driver":
+                    navigate("/driver/dashboard");
+                    break;
+                default:
+                    navigate("/dashboard");
+                    break;
+            }
         }
-    }, [session, isLoading, navigate]);
+    }, [user, isLoading, navigate]);
 
     const loginForm = useForm<LoginFormData>({
         resolver: zodResolver(loginFormSchema),
@@ -65,7 +76,6 @@ export default function AuthPage() {
         mutationFn: signIn,
         onSuccess: () => {
             toast.success("Login successful!");
-            navigate("/dashboard");
         },
         onError: (error) => {
             toast.error(error.message);
