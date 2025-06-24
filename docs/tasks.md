@@ -2,42 +2,43 @@
 
 ## Phase 1: Foundation & Project Setup (Sprint 1)
 
-- [ ] **Project Initialization:**
-    - [ ] Setup React project using Vite with TypeScript template.
+- [x] **Project Initialization:**
+    - [x] Setup React project using Vite with TypeScript template.
     - [ ] Install and configure ESLint, Prettier for code quality.
-    - [ ] Initialize Git repository and setup `main` and `develop` branches.
+    - [x] Initialize Git repository and setup `main` and `develop` branches.
 - [ ] **UI Framework & Styling:**
-    - [ ] Choose and integrate a UI component library (e.g., MUI, Chakra UI).
+    - [ ] Setup `shadcn/ui` for UI components.
     - [ ] Setup theme provider with brand colors and typography (`#fb8346`, `#0a2137`, DM Sans, Inter).
 - [ ] **Core Architecture:**
     - [ ] Setup file structure for components, pages, services, etc.
-    - [ ] Implement routing solution (e.g., React Router).
-    - [ ] Setup state management (e.g., Redux Toolkit, Zustand).
+    - [x] Implement routing solution (e.g., React Router).
+    - [ ] Setup `Zustand` for global client state management.
+    - [ ] Setup `TanStack Query` for server state management (data fetching, caching).
+    - [ ] Install `React Hook Form` and `Zod` for form handling and validation.
 - [ ] **Backend & Database Setup:**
-    - [ ] Setup a Node.js (Express/NestJS) backend project.
-    - [ ] Choose and setup a database (e.g., PostgreSQL, MongoDB).
-    - [ ] Design initial database schema for Users, Drivers, and Vehicles.
+    - [ ] Setup Supabase project (Database, Auth, Storage).
+    - [ ] Design initial database schema for Users, Drivers, and Vehicles in Supabase.
 
 ## Phase 2: Core User Features (Sprints 2-4)
 
 - [ ] **Authentication:**
     - [ ] Implement user registration and login forms.
-    - [ ] Setup JWT-based authentication flow.
+    - [ ] Implement authentication flow using Supabase Auth.
     - [ ] Create protected routes for authenticated users.
 - [ ] **Trip Search & Discovery:**
-    - [ ] Build API endpoint for searching trips (`GET /api/trips`).
+    - [ ] Create Supabase database function (or RPC) for searching trips.
     - [ ] Create the home page with the trip search form (cities, date).
     - [ ] Develop the trip search results page.
     - [ ] Implement filtering logic (seats, car type, driver score).
 - [ ] **Database Schema Expansion:**
-    - [ ] Refine schema for Cities, Stations, Routes, and Trips.
-    - [ ] Design schema for Luggage Policies.
-    - [ ] Design schema for Bookings.
+    - [ ] Refine schema in Supabase for Cities, Stations, Routes, and Trips.
+    - [ ] Design schema in Supabase for Luggage Policies.
+    - [ ] Design schema in Supabase for Bookings.
 
 ## Phase 3: Booking & Payment Flow (Sprints 5-6)
 
 - [ ] **Multi-Step Booking Form:**
-    - [ ] Create the booking page structure.
+    - [ ] Build multi-step booking form using `React Hook Form` and `Zustand`.
     - [ ] **Step 1: Seat Selection:**
         - [ ] Develop the interactive vehicle seat map component.
         - [ ] Implement logic for selecting/deselecting seats.
@@ -47,13 +48,13 @@
         - [ ] Display a comprehensive summary of the booking.
 - [ ] **Payment Integration:**
     - [ ] Integrate Stripe SDK for payment processing.
-    - [ ] Create API endpoints for creating payment intents.
-    - [ ] Handle successful and failed payment webhooks from Stripe.
+    - [ ] Create Supabase Edge Function to handle Stripe payment intent creation.
+    - [ ] Create Supabase Edge Function to handle Stripe webhooks.
 - [ ] **Booking Confirmation:**
-    - [ ] Create API endpoint to finalize a booking after payment (`POST /api/bookings`).
-    - [ ] Setup an email service (e.g., SendGrid, Mailgun).
-    - [ ] Implement email template for receipts and tickets.
-    - [ ] Trigger email confirmation upon successful booking.
+    - [ ] Create Supabase database function to finalize booking after payment.
+    - [ ] Setup `Resend` for transactional emails.
+    - [ ] Implement email templates using `React Email` for receipts and tickets.
+    - [ ] Trigger email confirmation via a Supabase Edge Function upon successful booking.
 
 ## Phase 4: Driver Dashboard & Management (Sprints 7-9)
 
@@ -63,14 +64,14 @@
 - [ ] **Route & Station Management:**
     - [ ] Build UI forms for creating/editing routes (cities, fares).
     - [ ] Build UI for managing stations within cities.
-    - [ ] Develop corresponding backend APIs.
+    - [ ] Develop corresponding Supabase API (RPC functions) for route and station management.
 - [ ] **Trip Management:**
     - [ ] Build UI for creating, updating, and deleting trips.
     - [ ] Link trips to routes, vehicles, and luggage policies.
-    - [ ] Develop corresponding backend APIs.
+    - [ ] Develop corresponding Supabase API for trip management.
 - [ ] **Luggage Policy Management:**
     - [ ] Build UI for defining luggage policies.
-    - [ ] Develop corresponding backend APIs.
+    - [ ] Develop corresponding Supabase API for luggage policy management.
 - [ ] **Reservation Management:**
     - [ ] Create a view to see all reservations for a driver's trips.
     - [ ] Implement actions like viewing passenger details.
@@ -78,14 +79,13 @@
 ## Phase 5: Testing, Deployment & Launch (Sprints 10-11)
 
 - [ ] **Testing:**
-    - [ ] Write unit tests for critical functions and components.
-    - [ ] Write integration tests for the full booking flow.
-    - [ ] Perform end-to-end testing on user and driver flows.
+    - [ ] Write unit/integration tests with `Vitest`.
+    - [ ] Perform end-to-end tests with `Playwright` for user and driver flows.
     - [ ] Conduct user acceptance testing (UAT).
 - [ ] **Deployment:**
-    - [ ] Setup production environment (e.g., Vercel, Netlify, AWS).
+    - [ ] Setup production environment on `Vercel` or `Netlify` for the frontend.
     - [ ] Configure CI/CD pipeline for automated deployments.
-    - [ ] Run database migrations in production.
+    - [ ] Manage Supabase database migrations.
 - [ ] **Launch:**
     - [ ] Final pre-launch checks.
     - [ ] Official launch.
