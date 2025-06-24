@@ -4,17 +4,17 @@
 
 - [x] **Project Initialization:**
     - [x] Setup React project using Vite with TypeScript template.
-    - [ ] Install and configure ESLint, Prettier for code quality.
+    - [x] Install and configure ESLint, Prettier for code quality.
     - [x] Initialize Git repository and setup `main` and `develop` branches.
-- [ ] **UI Framework & Styling:**
-    - [ ] Setup `shadcn/ui` for UI components.
-    - [ ] Setup theme provider with brand colors and typography (`#fb8346`, `#0a2137`, DM Sans, Inter).
-- [ ] **Core Architecture:**
-    - [ ] Setup file structure for components, pages, services, etc.
+- [x] **UI Framework & Styling:**
+    - [x] Setup `shadcn/ui` for UI components.
+    - [x] Setup theme provider with brand colors and typography (`#fb8346`, `#0a2137`, DM Sans, Inter).
+- [x] **Core Architecture:**
+    - [x] Setup file structure for components, pages, services, etc.
     - [x] Implement routing solution (e.g., React Router).
-    - [ ] Setup `Zustand` for global client state management.
-    - [ ] Setup `TanStack Query` for server state management (data fetching, caching).
-    - [ ] Install `React Hook Form` and `Zod` for form handling and validation.
+    - [x] Setup `Zustand` for global client state management.
+    - [x] Setup `TanStack Query` for server state management (data fetching, caching).
+    - [x] Install `React Hook Form` and `Zod` for form handling and validation.
 - [ ] **Backend & Database Setup:**
     - [ ] Setup Supabase project (Database, Auth, Storage).
     - [ ] Design initial database schema for Users, Drivers, and Vehicles in Supabase.
