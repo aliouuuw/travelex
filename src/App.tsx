@@ -3,7 +3,8 @@ import {
   Link,
   RouterProvider,
   Outlet
-} from "react-router";
+} from "react-router-dom";
+import AuthPage from "./pages/auth";
 
 const Header = () => {
   return (
@@ -11,6 +12,7 @@ const Header = () => {
       <div className='flex gap-4 text-white'>
         <Link to="/" className="hover:text-gray-300">Home</Link>
         <Link to="/about" className="hover:text-gray-300">About</Link>
+        <Link to="/auth" className="hover:text-gray-300">Login</Link>
       </div>
     </nav>
   )
@@ -27,8 +29,9 @@ const Layout = ({ hasHeader }: { hasHeader: boolean }) => {
 
 const Home = () => {
   return (
-    <div className='flex flex-col justify-center items-center h-screen w-screen bg-black antialiased'>
-      <h1 className='text-3xl font-bold underline text-white'>Hello World</h1>
+    <div className='flex flex-col justify-center items-center h-screen w-screen antialiased'>
+      <h1 className='text-3xl font-bold'>Welcome to TravelEx</h1>
+      <p className="text-muted-foreground">The best way to travel.</p>
     </div>
   )
 }
@@ -52,6 +55,10 @@ const router = createBrowserRouter([
       {
         path: "/about",
         element: <About />,
+      },
+      {
+        path: "/auth",
+        element: <AuthPage />,
       },
     ]
   },
