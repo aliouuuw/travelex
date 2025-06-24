@@ -6,25 +6,32 @@ import {
 } from "react-router-dom";
 import AuthPage from "./pages/auth";
 import { Toaster } from "sonner";
+import DashboardPage from "./pages/dashboard";
+import { ProtectedRoute } from "./components/protected-route";
 
 const Header = () => {
   return (
-    <nav className='fixed top-0 left-0 right-0 bg-gray-900 p-4'>
-      <div className='flex gap-4 text-white'>
-        <Link to="/" className="hover:text-gray-300">Home</Link>
-        <Link to="/about" className="hover:text-gray-300">About</Link>
-        <Link to="/auth" className="hover:text-gray-300">Login</Link>
-      </div>
-    </nav>
+    <header className="fixed top-0 left-0 right-0 bg-background/95 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60 z-10">
+      <nav className="h-14 flex items-center justify-between px-4 border-b">
+        <Link to="/" className="font-bold text-lg text-primary">TravelEx</Link>
+        <div className="flex items-center gap-4 text-sm">
+          <Link to="/dashboard" className="text-muted-foreground hover:text-foreground">Dashboard</Link>
+          <Link to="/about" className="text-muted-foreground hover:text-foreground">About</Link>
+          <Link to="/auth" className="text-muted-foreground hover:text-foreground">Login</Link>
+        </div>
+      </nav>
+    </header>
   )
 }
 
 const Layout = ({ hasHeader }: { hasHeader: boolean }) => {
   return (
-    <>
+    <div className="relative flex min-h-screen flex-col">
       {hasHeader && <Header />}
-      <Outlet />
-    </>
+      <main className="flex-1 pt-14">
+        <Outlet />
+      </main>
+    </div>
   )
 }
 
@@ -39,8 +46,8 @@ const Home = () => {
 
 const About = () => {
   return (
-    <div className='flex flex-col justify-center items-center h-screen w-screen bg-black antialiased'>
-      <h1 className='text-3xl font-bold underline text-white'>About</h1>
+    <div className='flex flex-col justify-center items-center h-full w-full'>
+      <h1 className='text-3xl font-bold'>About TravelEx</h1>
     </div>
   )
 }
@@ -60,6 +67,15 @@ const router = createBrowserRouter([
       {
         path: "/auth",
         element: <AuthPage />,
+      },
+      {
+        element: <ProtectedRoute />,
+        children: [
+          {
+            path: "/dashboard",
+            element: <DashboardPage />,
+          },
+        ],
       },
     ]
   },
