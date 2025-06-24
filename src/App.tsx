@@ -5,6 +5,7 @@ import {
   Outlet
 } from "react-router-dom";
 import AuthPage from "./pages/auth";
+import { Toaster } from "sonner";
 
 const Header = () => {
   return (
@@ -67,7 +68,8 @@ const router = createBrowserRouter([
 function App() {
   return (
     <div>
-      <RouterProvider router={router} /> 
+      <RouterProvider router={router} />
+      <Toaster />
     </div>
   )
 }
