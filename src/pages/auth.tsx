@@ -143,63 +143,23 @@ export default function AuthPage() {
         },
     });
 
-    const { mutate: setPasswordMutation, isPending: isSettingPassword, isError, error } = useMutation({
-        mutationFn: async (password: string) => {
-            console.log('Starting password update...');
-            const session = await supabase.auth.getSession();
-            console.log('Current user session:', session);
-            
-            if (!session.data.session?.user) {
-                throw new Error('No authenticated user found. Please log in again.');
-            }
-            
-            // Add a timeout to prevent hanging
-            const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('Password update timed out')), 10000);
-            });
-            
-            try {
-                const result = await Promise.race([
-                    updateUserPassword(password),
-                    timeoutPromise
-                ]);
-                console.log('Password update completed successfully:', result);
-                return result;
-            } catch (err) {
-                console.error('Password update failed in mutationFn:', err);
-                throw err;
-            }
-        },
-        onSuccess: (data) => {
-            console.log('Password update mutation succeeded:', data);
+    const { mutate: setPasswordMutation, isPending: isSettingPassword } = useMutation({
+        mutationFn: updateUserPassword,
+        onSuccess: () => {
             toast.success("Password set successfully! Welcome to TravelEx!");
             setPasswordForm.reset();
             
             // Clear any URL parameters and navigate
             window.history.replaceState({}, document.title, window.location.pathname);
             
-            // Wait a moment for the password update to be processed and then navigate
-            setTimeout(() => {
-                console.log('Navigating to driver dashboard...');
-                navigate("/driver/dashboard", { replace: true });
-            }, 1500);
+            // Navigate immediately
+            navigate("/driver/dashboard", { replace: true });
         },
         onError: (error) => {
-            console.error('Password update mutation failed:', error);
-            console.error('Error details:', {
-                message: error.message,
-                stack: error.stack,
-                name: error.name
-            });
+            console.error('Password update failed:', error);
             toast.error(`Failed to update password: ${error.message}`);
         },
-        onSettled: (data, error) => {
-            console.log('Password update mutation settled');
-            console.log('Settled with data:', data);
-            console.log('Settled with error:', error);
-            console.log('isPending:', isSettingPassword);
-        },
-        retry: false, // Don't retry to avoid confusion
+        retry: false,
     });
 
     const onLoginSubmit = (data: LoginFormData) => {
@@ -215,46 +175,19 @@ export default function AuthPage() {
     };
 
     const onSetPasswordSubmit = (data: SetPasswordFormData) => {
-        console.log('Form submitted with data:', { password: '***' });
-        console.log('Calling setPasswordMutation...');
         setPasswordMutation(data.password);
     };
 
     // Set the active tab based on URL mode
     useEffect(() => {
-        console.log('URL mode detected:', mode);
-        console.log('Current URL:', window.location.href);
-        console.log('Search params:', Object.fromEntries(searchParams.entries()));
-        
         if (mode === 'reset-password') {
             setActiveTab('reset-password');
         } else if (mode === 'driver-setup') {
             setActiveTab('driver-setup');
         }
-    }, [mode, searchParams]);
-
-    // Debug current authentication state
-    useEffect(() => {
-        const checkAuthState = async () => {
-            const { data: { session }, error } = await supabase.auth.getSession();
-            console.log('Current auth session:', session);
-            console.log('Auth error:', error);
-            
-            if (session?.user) {
-                console.log('User is authenticated:', {
-                    id: session.user.id,
-                    email: session.user.email,
-                    created_at: session.user.created_at,
-                    confirmed_at: session.user.confirmed_at,
-                    email_confirmed_at: session.user.email_confirmed_at
-                });
-            }
-        };
-        
-        if (mode === 'driver-setup') {
-            checkAuthState();
-        }
     }, [mode]);
+
+
 
     return (
         <div className="container relative h-full flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 lg:px-0">
@@ -435,27 +368,7 @@ export default function AuthPage() {
                                                     "Set Password & Continue"
                                                 )}
                                             </Button>
-                                            {isError && (
-                                                <div className="text-center">
-                                                    <p className="text-red-500 text-sm mb-2">
-                                                        Failed to update password. Please try again.
-                                                    </p>
-                                                    <Button 
-                                                        type="button" 
-                                                        variant="outline" 
-                                                        size="sm"
-                                                        onClick={() => {
-                                                            const formData = setPasswordForm.getValues();
-                                                            if (formData.password && formData.confirmPassword) {
-                                                                setPasswordMutation(formData.password);
-                                                            }
-                                                        }}
-                                                        disabled={isSettingPassword}
-                                                    >
-                                                        Retry
-                                                    </Button>
-                                                </div>
-                                            )}
+
                                         </div>
                                     </form>
                                 </CardContent>

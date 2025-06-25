@@ -51,19 +51,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getSessionAndProfile();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         setSession(session);
         if (session) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", session.user.id)
-            .single();
-          setUser({ ...session.user, profile });
+          // Use setTimeout to avoid deadlock as recommended by Supabase docs
+          setTimeout(async () => {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq("id", session.user.id)
+              .single();
+            setUser({ ...session.user, profile });
+            setIsLoading(false);
+          }, 0);
         } else {
           setUser(null);
+          setIsLoading(false);
         }
-        setIsLoading(false);
       }
     );
 
