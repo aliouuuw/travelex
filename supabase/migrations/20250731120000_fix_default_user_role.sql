@@ -6,8 +6,8 @@ begin
     new.id,
     new.raw_user_meta_data->>'full_name',
     new.raw_user_meta_data->>'avatar_url',
-    coalesce(new.raw_user_meta_data->>'role', 'admin')
+    coalesce(new.raw_user_meta_data->>'role', 'passenger')
   );
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer; 

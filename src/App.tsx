@@ -17,6 +17,7 @@ import AdminDashboard from "./pages/admin/dashboard";
 import DriversPage from "./pages/admin/drivers";
 import { DriverRoute } from "./components/driver-route";
 import DriverDashboard from "./pages/driver/dashboard";
+import NewDriverPage from "./pages/admin/drivers/new";
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -121,6 +122,10 @@ const router = createBrowserRouter([
               {
                 path: "drivers",
                 element: <DriversPage />,
+              },
+              {
+                path: "drivers/new",
+                element: <NewDriverPage />,
               },
             ]
           }
