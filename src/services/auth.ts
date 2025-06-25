@@ -33,4 +33,26 @@ export const signIn = async (credentials: SignInWithPasswordCredentials) => {
 export const signOut = async () => {
     const response = await supabase.auth.signOut();
     return response;
+};
+
+export const updateUserPassword = async (password: string) => {
+    const { data, error } = await supabase.auth.updateUser({ password });
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+};
+
+export const resetPassword = async (email: string) => {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth?mode=reset-password`,
+    });
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
 }; 

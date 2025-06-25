@@ -35,6 +35,18 @@ const Header = () => {
     }
   };
 
+  const getDashboardPath = () => {
+    if (!user || !user.profile) return "/dashboard";
+    switch (user.profile.role) {
+      case "admin":
+        return "/admin/dashboard";
+      case "driver":
+        return "/driver/dashboard";
+      default:
+        return "/dashboard";
+    }
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 bg-background/95 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60 z-10">
       <nav className="h-14 flex items-center justify-between px-4 border-b">
@@ -43,7 +55,7 @@ const Header = () => {
           <Link to="/about" className="text-muted-foreground hover:text-foreground">About</Link>
           {user ? (
             <>
-              <Link to="/dashboard" className="text-muted-foreground hover:text-foreground">Dashboard</Link>
+              <Link to={getDashboardPath()} className="text-muted-foreground hover:text-foreground">Dashboard</Link>
               <Button variant="default" size="sm" onClick={handleSignOut}>Logout</Button>
             </>
           ) : (

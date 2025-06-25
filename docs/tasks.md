@@ -30,8 +30,10 @@
 - [ ] **Admin Dashboard UI:**
     - [ ] Create the main layout for the admin dashboard.
     - [ ] Implement navigation for different management sections.
+    - [ ] Update Header component to provide role-based dashboard links.
 - [ ] **Driver & User Management:**
-    - [ ] Build UI for admins to view and validate new driver accounts.
+    - [ ] Build UI for admins to view a list of all drivers with their login status.
+    - [ ] Build UI for driver's dashboard to display their name and a form to update their password.
     - [ ] Develop corresponding Supabase API (RPC functions) for user management.
 - [ ] **Route & Station Management:**
     - [ ] Build UI forms for creating/editing routes (cities, fares).

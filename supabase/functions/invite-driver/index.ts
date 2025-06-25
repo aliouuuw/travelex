@@ -28,6 +28,7 @@ serve(async (req) => {
           full_name,
           role: 'driver',
         },
+        redirectTo: `${Deno.env.get("SITE_URL") || "http://localhost:5173"}/auth?mode=driver-setup`,
       }
     );
 
