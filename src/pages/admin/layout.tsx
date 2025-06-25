@@ -6,6 +6,7 @@ const AdminSidebar = () => {
             <h2 className="text-xl font-bold mb-4">Admin Menu</h2>
             <nav className="flex flex-col gap-2">
                 <Link to="/admin/dashboard" className="text-muted-foreground hover:text-foreground">Dashboard</Link>
+                <Link to="/admin/signup-requests" className="text-muted-foreground hover:text-foreground">Driver Applications</Link>
                 <Link to="/admin/drivers" className="text-muted-foreground hover:text-foreground">Drivers</Link>
                 <Link to="/admin/passengers" className="text-muted-foreground hover:text-foreground">Passengers</Link>
                 <Link to="/admin/rides" className="text-muted-foreground hover:text-foreground">Rides</Link>

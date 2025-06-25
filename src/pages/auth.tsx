@@ -13,6 +13,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { signIn, signUp, resetPassword, updateUserPassword } from "@/services/auth";
+import { createSignupRequest } from "@/services/signup-requests";
+import { supabase } from "@/services/supabase";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -23,7 +25,7 @@ import { useEffect, useState } from "react";
 const signupFormSchema = z.object({
     full_name: z.string().min(2, "Full name must be at least 2 characters"),
     email: z.string().email(),
-    password: z.string().min(8, "Password must be at least 8 characters"),
+    message: z.string().optional(),
 });
 
 const loginFormSchema = z.object({
@@ -85,7 +87,7 @@ export default function AuthPage() {
         defaultValues: {
             full_name: "",
             email: "",
-            password: "",
+            message: "",
         },
     });
 
@@ -115,14 +117,15 @@ export default function AuthPage() {
     });
 
     const { mutate: signupMutation, isPending: isSigningUp } = useMutation({
-        mutationFn: signUp,
+        mutationFn: createSignupRequest,
         onSuccess: () => {
-            toast.success("Account created successfully! Please check your email to verify.");
+            toast.success("Application submitted successfully! An admin will review your request and send you an invitation if approved.");
+            signupForm.reset();
         },
         onError: (error) => {
             if (error instanceof Error) {
-                if (error.message.includes("User already registered")) {
-                    toast.error("An account with this email already exists. Please log in.");
+                if (error.message.includes("duplicate key")) {
+                    toast.error("An application with this email already exists.");
                 } else {
                     toast.error(error.message);
                 }
@@ -140,15 +143,63 @@ export default function AuthPage() {
         },
     });
 
-    const { mutate: setPasswordMutation, isPending: isSettingPassword } = useMutation({
-        mutationFn: (password: string) => updateUserPassword(password),
-        onSuccess: () => {
-            toast.success("Password set successfully!");
-            navigate("/driver/dashboard");
+    const { mutate: setPasswordMutation, isPending: isSettingPassword, isError, error } = useMutation({
+        mutationFn: async (password: string) => {
+            console.log('Starting password update...');
+            const session = await supabase.auth.getSession();
+            console.log('Current user session:', session);
+            
+            if (!session.data.session?.user) {
+                throw new Error('No authenticated user found. Please log in again.');
+            }
+            
+            // Add a timeout to prevent hanging
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Password update timed out')), 10000);
+            });
+            
+            try {
+                const result = await Promise.race([
+                    updateUserPassword(password),
+                    timeoutPromise
+                ]);
+                console.log('Password update completed successfully:', result);
+                return result;
+            } catch (err) {
+                console.error('Password update failed in mutationFn:', err);
+                throw err;
+            }
+        },
+        onSuccess: (data) => {
+            console.log('Password update mutation succeeded:', data);
+            toast.success("Password set successfully! Welcome to TravelEx!");
+            setPasswordForm.reset();
+            
+            // Clear any URL parameters and navigate
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            // Wait a moment for the password update to be processed and then navigate
+            setTimeout(() => {
+                console.log('Navigating to driver dashboard...');
+                navigate("/driver/dashboard", { replace: true });
+            }, 1500);
         },
         onError: (error) => {
-            toast.error(error.message);
+            console.error('Password update mutation failed:', error);
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack,
+                name: error.name
+            });
+            toast.error(`Failed to update password: ${error.message}`);
         },
+        onSettled: (data, error) => {
+            console.log('Password update mutation settled');
+            console.log('Settled with data:', data);
+            console.log('Settled with error:', error);
+            console.log('isPending:', isSettingPassword);
+        },
+        retry: false, // Don't retry to avoid confusion
     });
 
     const onLoginSubmit = (data: LoginFormData) => {
@@ -164,15 +215,44 @@ export default function AuthPage() {
     };
 
     const onSetPasswordSubmit = (data: SetPasswordFormData) => {
+        console.log('Form submitted with data:', { password: '***' });
+        console.log('Calling setPasswordMutation...');
         setPasswordMutation(data.password);
     };
 
     // Set the active tab based on URL mode
     useEffect(() => {
+        console.log('URL mode detected:', mode);
+        console.log('Current URL:', window.location.href);
+        console.log('Search params:', Object.fromEntries(searchParams.entries()));
+        
         if (mode === 'reset-password') {
             setActiveTab('reset-password');
         } else if (mode === 'driver-setup') {
             setActiveTab('driver-setup');
+        }
+    }, [mode, searchParams]);
+
+    // Debug current authentication state
+    useEffect(() => {
+        const checkAuthState = async () => {
+            const { data: { session }, error } = await supabase.auth.getSession();
+            console.log('Current auth session:', session);
+            console.log('Auth error:', error);
+            
+            if (session?.user) {
+                console.log('User is authenticated:', {
+                    id: session.user.id,
+                    email: session.user.email,
+                    created_at: session.user.created_at,
+                    confirmed_at: session.user.confirmed_at,
+                    email_confirmed_at: session.user.email_confirmed_at
+                });
+            }
+        };
+        
+        if (mode === 'driver-setup') {
+            checkAuthState();
         }
     }, [mode]);
 
@@ -212,7 +292,7 @@ export default function AuthPage() {
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                         <TabsList className="grid w-full grid-cols-2">
                             <TabsTrigger value="login">Login</TabsTrigger>
-                            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                            <TabsTrigger value="signup">Apply as Driver</TabsTrigger>
                         </TabsList>
                         <TabsContent value="login">
                             <Card>
@@ -257,9 +337,9 @@ export default function AuthPage() {
                         <TabsContent value="signup">
                             <Card>
                                 <CardHeader className="text-center">
-                                    <CardTitle>Create an Account</CardTitle>
+                                    <CardTitle>Apply to Become a Driver</CardTitle>
                                     <CardDescription>
-                                        Enter your details below to create your account.
+                                        Submit your application to become a TravelEx driver. An admin will review and contact you.
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
@@ -275,14 +355,14 @@ export default function AuthPage() {
                                             {signupForm.formState.errors.email && <p className="text-red-500 text-xs">{signupForm.formState.errors.email.message}</p>}
                                         </div>
                                         <div className="space-y-1">
-                                            <Label htmlFor="password">Password</Label>
-                                            <Input {...signupForm.register("password")} id="password" type="password" />
-                                            {signupForm.formState.errors.password && <p className="text-red-500 text-xs">{signupForm.formState.errors.password.message}</p>}
+                                            <Label htmlFor="message">Why do you want to be a driver? (Optional)</Label>
+                                            <Input {...signupForm.register("message")} id="message" type="text" placeholder="Tell us why you'd like to join as a driver..." />
+                                            {signupForm.formState.errors.message && <p className="text-red-500 text-xs">{signupForm.formState.errors.message.message}</p>}
                                         </div>
                                         <div className="pt-2">
                                             <Button type="submit" className="w-full" disabled={isSigningUp}>
                                                 {isSigningUp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                Create Account
+                                                Submit Application
                                             </Button>
                                         </div>
                                     </form>
@@ -344,11 +424,38 @@ export default function AuthPage() {
                                             <Input {...setPasswordForm.register("confirmPassword")} id="confirm-password" type="password" />
                                             {setPasswordForm.formState.errors.confirmPassword && <p className="text-red-500 text-xs">{setPasswordForm.formState.errors.confirmPassword.message}</p>}
                                         </div>
-                                        <div className="pt-2">
+                                        <div className="pt-2 space-y-2">
                                             <Button type="submit" className="w-full" disabled={isSettingPassword}>
-                                                {isSettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                Set Password & Continue
+                                                {isSettingPassword ? (
+                                                    <>
+                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                        Setting Password...
+                                                    </>
+                                                ) : (
+                                                    "Set Password & Continue"
+                                                )}
                                             </Button>
+                                            {isError && (
+                                                <div className="text-center">
+                                                    <p className="text-red-500 text-sm mb-2">
+                                                        Failed to update password. Please try again.
+                                                    </p>
+                                                    <Button 
+                                                        type="button" 
+                                                        variant="outline" 
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            const formData = setPasswordForm.getValues();
+                                                            if (formData.password && formData.confirmPassword) {
+                                                                setPasswordMutation(formData.password);
+                                                            }
+                                                        }}
+                                                        disabled={isSettingPassword}
+                                                    >
+                                                        Retry
+                                                    </Button>
+                                                </div>
+                                            )}
                                         </div>
                                     </form>
                                 </CardContent>
