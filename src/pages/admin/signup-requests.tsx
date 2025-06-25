@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Check, X } from "lucide-react";
+import { Loader2, Check, X, UserCheck, Clock, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
@@ -68,22 +68,45 @@ const SignupRequestRow = ({ request }: { request: SignupRequest }) => {
   const getStatusBadge = () => {
     switch (request.status) {
       case 'pending':
-        return <Badge variant="secondary">Pending</Badge>;
+        return (
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+            <Clock className="w-3 h-3 mr-1" />
+            Pending
+          </Badge>
+        );
       case 'approved':
-        return <Badge variant="default">Approved</Badge>;
+        return (
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+            <Check className="w-3 h-3 mr-1" />
+            Approved
+          </Badge>
+        );
       case 'rejected':
-        return <Badge variant="destructive">Rejected</Badge>;
+        return (
+          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+            <X className="w-3 h-3 mr-1" />
+            Rejected
+          </Badge>
+        );
     }
   };
 
   return (
-    <TableRow>
+    <TableRow className="hover:bg-muted/30 transition-colors">
       <TableCell className="font-medium">{request.full_name}</TableCell>
-      <TableCell>{request.email}</TableCell>
+      <TableCell className="text-muted-foreground">{request.email}</TableCell>
       <TableCell className="max-w-md">
-        {request.message || <span className="text-muted-foreground">No message</span>}
+        {request.message ? (
+          <div className="text-sm">
+            <p className="line-clamp-2">{request.message}</p>
+          </div>
+        ) : (
+          <span className="text-muted-foreground italic">No message</span>
+        )}
       </TableCell>
-      <TableCell>{new Date(request.created_at).toLocaleDateString()}</TableCell>
+      <TableCell className="text-muted-foreground">
+        {new Date(request.created_at).toLocaleDateString()}
+      </TableCell>
       <TableCell>{getStatusBadge()}</TableCell>
       <TableCell>
         {request.status === 'pending' && (
@@ -93,7 +116,7 @@ const SignupRequestRow = ({ request }: { request: SignupRequest }) => {
               size="sm"
               onClick={handleApprove}
               disabled={isUpdating}
-              className="text-green-600 hover:text-green-700"
+              className="text-green-600 hover:text-green-700 hover:bg-green-50 hover:border-green-200 transition-all"
             >
               {isUpdating ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -106,7 +129,7 @@ const SignupRequestRow = ({ request }: { request: SignupRequest }) => {
               size="sm"
               onClick={handleReject}
               disabled={isUpdating}
-              className="text-red-600 hover:text-red-700"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200 transition-all"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -129,58 +152,141 @@ export default function SignupRequestsPage() {
   });
 
   const pendingCount = requests?.filter(r => r.status === 'pending').length || 0;
+  const approvedCount = requests?.filter(r => r.status === 'approved').length || 0;
+  const rejectedCount = requests?.filter(r => r.status === 'rejected').length || 0;
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <h1 className="text-2xl font-bold">Driver Applications</h1>
-          {pendingCount > 0 && (
-            <p className="text-muted-foreground">
-              {pendingCount} pending application{pendingCount !== 1 ? 's' : ''}
-            </p>
-          )}
-        </div>
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="space-y-1">
+        <h1 className="font-heading text-3xl font-bold text-foreground">
+          Driver Applications
+        </h1>
+        <p className="text-muted-foreground">
+          Review and manage driver application requests
+        </p>
       </div>
+
+      {/* Stats */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="premium-card">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-yellow-100">
+                <Clock className="w-5 h-5 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Pending Review</p>
+                <p className="text-2xl font-bold text-foreground">{pendingCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="premium-card">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-green-100">
+                <UserCheck className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Approved</p>
+                <p className="text-2xl font-bold text-foreground">{approvedCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="premium-card">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-red-100">
+                <X className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Rejected</p>
+                <p className="text-2xl font-bold text-foreground">{rejectedCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Alert for pending applications */}
+      {pendingCount > 0 && (
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-600" />
+              <div>
+                <p className="font-medium text-yellow-800">
+                  {pendingCount} application{pendingCount !== 1 ? 's' : ''} awaiting review
+                </p>
+                <p className="text-sm text-yellow-700">
+                  Review and approve applications to invite new drivers to join TravelEx.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
-      <Card>
-        <CardHeader>
-          <CardTitle>All Applications</CardTitle>
+      {/* Applications Table */}
+      <Card className="premium-card">
+        <CardHeader className="pb-4">
+          <CardTitle className="font-heading text-xl text-foreground">
+            All Applications
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {isLoading && (
-            <div className="flex justify-center items-center p-8">
-              <Loader2 className="h-8 w-8 animate-spin" />
+            <div className="flex justify-center items-center p-12">
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-6 w-6 animate-spin text-brand-orange" />
+                <span className="text-muted-foreground">Loading applications...</span>
+              </div>
             </div>
           )}
+          
           {isError && (
-            <div className="text-red-500">Error: {error.message}</div>
+            <div className="p-12 text-center">
+              <div className="text-destructive mb-2">Error loading applications</div>
+              <div className="text-sm text-muted-foreground">{error.message}</div>
+            </div>
           )}
-          {requests && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Full Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Message</TableHead>
-                  <TableHead>Applied</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {requests.map((request) => (
-                  <SignupRequestRow key={request.id} request={request} />
-                ))}
-                {requests.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      No applications yet
-                    </TableCell>
+          
+          {requests && requests.length === 0 && (
+            <div className="p-12 text-center">
+              <UserCheck className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+              <h3 className="font-heading text-lg font-semibold text-foreground mb-2">
+                No applications yet
+              </h3>
+              <p className="text-muted-foreground">
+                Driver applications will appear here when users apply to join your platform.
+              </p>
+            </div>
+          )}
+          
+          {requests && requests.length > 0 && (
+            <div className="border-t border-border/40">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border/40">
+                    <TableHead className="font-semibold text-foreground">Full Name</TableHead>
+                    <TableHead className="font-semibold text-foreground">Email</TableHead>
+                    <TableHead className="font-semibold text-foreground">Message</TableHead>
+                    <TableHead className="font-semibold text-foreground">Applied</TableHead>
+                    <TableHead className="font-semibold text-foreground">Status</TableHead>
+                    <TableHead className="font-semibold text-foreground">Actions</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {requests.map((request) => (
+                    <SignupRequestRow key={request.id} request={request} />
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

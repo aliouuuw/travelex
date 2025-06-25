@@ -61,6 +61,8 @@ This project is to build a premium ride-sharing platform, **TravelEx**, connecti
 - **Brand Colors:**
     - Primary: Orange (`#fb8346`)
     - Secondary: Dark Blue (`#0a2137`)
+    - Background: White
+    - Foreground: Black
 - **Typography:**
     - Fonts: DM Sans, Inter
     - Weights: 400 (Regular), 500 (Medium), 700 (Bold)

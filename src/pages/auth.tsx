@@ -17,7 +17,7 @@ import { createSignupRequest } from "@/services/signup-requests";
 import { supabase } from "@/services/supabase";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Car, Shield, CheckCircle } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect, useState } from "react";
@@ -109,7 +109,7 @@ export default function AuthPage() {
     const { mutate: loginMutation, isPending: isLoggingIn } = useMutation({
         mutationFn: signIn,
         onSuccess: () => {
-            toast.success("Login successful!");
+            toast.success("Welcome back to TravelEx!");
         },
         onError: (error) => {
             toast.error(error.message);
@@ -187,113 +187,203 @@ export default function AuthPage() {
         }
     }, [mode]);
 
-
-
     return (
-        <div className="container relative h-full flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 lg:px-0">
-            {/* Left Panel */}
-            <div className="relative hidden h-full flex-col bg-muted p-10 text-white dark:border-r lg:flex">
-                <div className="absolute inset-0 bg-primary" />
-                <div className="relative z-20 flex items-center text-lg font-medium">
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="mr-2 h-6 w-6"
-                    >
-                        <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
-                    </svg>
-                    TravelEx
-                </div>
-                <div className="relative z-20 mt-auto">
-                    <blockquote className="space-y-2">
-                        <p className="text-lg">
-                            &ldquo;This platform has streamlined my travel business and connected me with amazing passengers. Highly recommended!&rdquo;
+        <div className="min-h-screen grid lg:grid-cols-2">
+            {/* Left Panel - Brand & Testimonial */}
+            <div className="relative hidden lg:flex flex-col justify-between p-12 bg-brand-dark-blue text-white">
+                <div className="space-y-6">
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm">
+                            <Car className="w-7 h-7 text-white" />
+                        </div>
+                        <span className="font-heading text-2xl font-bold">TravelEx</span>
+                    </div>
+                    
+                    <div className="space-y-4">
+                        <h1 className="font-heading text-4xl font-bold leading-tight">
+                            Premium Inter-City Travel Platform
+                        </h1>
+                        <p className="text-lg text-white/90 leading-relaxed">
+                            Join our network of professional drivers or experience seamless travel with verified, quality service.
                         </p>
-                        <footer className="text-sm">Sofia Davis, TravelEx Driver</footer>
-                    </blockquote>
+                    </div>
+
+                    <div className="space-y-4 pt-8">
+                        <div className="flex items-center gap-3">
+                            <CheckCircle className="w-5 h-5 text-white/90" />
+                            <span className="text-white/90">Verified professional drivers</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <Shield className="w-5 h-5 text-white/90" />
+                            <span className="text-white/90">Secure payment processing</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <CheckCircle className="w-5 h-5 text-white/90" />
+                            <span className="text-white/90">Premium customer service</span>
+                        </div>
+                    </div>
                 </div>
+
+                <blockquote className="space-y-4">
+                    <p className="text-lg italic text-white/95">
+                        "TravelEx has transformed my driving business. The platform is intuitive, 
+                        the support is excellent, and I've connected with amazing passengers."
+                    </p>
+                    <footer className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                            <span className="text-sm font-semibold">SD</span>
+                        </div>
+                        <div>
+                            <div className="font-medium">Sofia Davis</div>
+                            <div className="text-sm text-white/80">Professional Driver</div>
+                        </div>
+                    </footer>
+                </blockquote>
             </div>
 
-            {/* Right Panel (Auth Form) */}
-            <div className="lg:p-8 flex items-center justify-center">
-                <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[400px]">
+            {/* Right Panel - Auth Forms */}
+            <div className="flex items-center justify-center p-6 lg:p-12 bg-background">
+                <div className="w-full max-w-md space-y-6 animate-slide-up">
+                    <div className="text-center space-y-2 lg:hidden">
+                        <div className="flex items-center justify-center gap-2 mb-4">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand-orange">
+                                <Car className="w-5 h-5 text-white" />
+                            </div>
+                            <span className="font-heading text-xl font-bold text-brand-dark-blue">TravelEx</span>
+                        </div>
+                    </div>
+
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="login">Login</TabsTrigger>
-                            <TabsTrigger value="signup">Apply as Driver</TabsTrigger>
+                        <TabsList className="grid w-full grid-cols-2 h-12 p-1 bg-brand-dark-blue/10 border border-brand-dark-blue/20">
+                            <TabsTrigger 
+                                value="login" 
+                                className="font-medium data-[state=active]:bg-brand-orange data-[state=active]:text-white data-[state=active]:shadow-brand text-brand-dark-blue hover:text-brand-orange transition-colors"
+                            >
+                                Sign In
+                            </TabsTrigger>
+                            <TabsTrigger 
+                                value="signup" 
+                                className="font-medium data-[state=active]:bg-brand-orange data-[state=active]:text-white data-[state=active]:shadow-brand text-brand-dark-blue hover:text-brand-orange transition-colors"
+                            >
+                                Apply as Driver
+                            </TabsTrigger>
                         </TabsList>
-                        <TabsContent value="login">
-                            <Card>
-                                <CardHeader className="text-center">
-                                    <CardTitle>Welcome Back!</CardTitle>
-                                    <CardDescription>
-                                        Enter your credentials to access your account.
+
+                        <TabsContent value="login" className="space-y-4">
+                            <Card className="premium-card border-0 shadow-premium">
+                                <CardHeader className="text-center space-y-2 pb-6">
+                                    <CardTitle className="font-heading text-2xl text-foreground">Welcome Back</CardTitle>
+                                    <CardDescription className="text-muted-foreground">
+                                        Sign in to your TravelEx account
                                     </CardDescription>
                                 </CardHeader>
-                                <CardContent>
-                                    <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-2">
-                                        <div className="space-y-1">
-                                            <Label htmlFor="email">Email</Label>
-                                            <Input {...loginForm.register("email")} id="email" type="email" placeholder="m@example.com" />
-                                            {loginForm.formState.errors.email && <p className="text-red-500 text-xs">{loginForm.formState.errors.email.message}</p>}
+                                <CardContent className="space-y-4">
+                                    <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="login-email" className="text-sm font-medium">Email</Label>
+                                            <Input 
+                                                {...loginForm.register("email")} 
+                                                id="login-email" 
+                                                type="email" 
+                                                placeholder="your@email.com"
+                                                className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                            />
+                                            {loginForm.formState.errors.email && (
+                                                <p className="text-xs text-destructive">{loginForm.formState.errors.email.message}</p>
+                                            )}
                                         </div>
-                                        <div className="space-y-1">
-                                            <Label htmlFor="password">Password</Label>
-                                            <Input {...loginForm.register("password")} id="password" type="password" />
-                                            {loginForm.formState.errors.password && <p className="text-red-500 text-xs">{loginForm.formState.errors.password.message}</p>}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="login-password" className="text-sm font-medium">Password</Label>
+                                            <Input 
+                                                {...loginForm.register("password")} 
+                                                id="login-password" 
+                                                type="password"
+                                                className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                            />
+                                            {loginForm.formState.errors.password && (
+                                                <p className="text-xs text-destructive">{loginForm.formState.errors.password.message}</p>
+                                            )}
                                         </div>
                                         <div className="pt-2">
-                                            <Button type="submit" className="w-full" disabled={isLoggingIn}>
-                                                {isLoggingIn && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                Login
-                                            </Button>
-                                        </div>
-                                        <div className="text-center">
                                             <Button 
-                                                type="button" 
-                                                variant="link" 
-                                                onClick={() => setActiveTab('reset-password')}
-                                                className="text-sm"
+                                                type="submit" 
+                                                disabled={isLoggingIn} 
+                                                className="w-full h-11 bg-brand-orange hover:bg-brand-orange-600 text-white shadow-brand hover:shadow-brand-hover transition-all font-medium"
                                             >
-                                                Forgot your password?
+                                                {isLoggingIn && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                Sign In
                                             </Button>
                                         </div>
                                     </form>
+                                    
+                                    <div className="text-center">
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveTab('reset-password')}
+                                            className="text-sm text-brand-orange hover:text-brand-orange/80 transition-colors font-medium"
+                                        >
+                                            Forgot your password?
+                                        </button>
+                                    </div>
                                 </CardContent>
                             </Card>
                         </TabsContent>
-                        <TabsContent value="signup">
-                            <Card>
-                                <CardHeader className="text-center">
-                                    <CardTitle>Apply to Become a Driver</CardTitle>
-                                    <CardDescription>
+
+                        <TabsContent value="signup" className="space-y-4">
+                            <Card className="premium-card border-0 shadow-premium">
+                                <CardHeader className="text-center space-y-2 pb-6">
+                                    <CardTitle className="font-heading text-2xl text-foreground">Apply to Become a Driver</CardTitle>
+                                    <CardDescription className="text-muted-foreground">
                                         Submit your application to become a TravelEx driver. An admin will review and contact you.
                                     </CardDescription>
                                 </CardHeader>
-                                <CardContent>
-                                    <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-2">
-                                        <div className="space-y-1">
-                                            <Label htmlFor="full_name">Full Name</Label>
-                                            <Input {...signupForm.register("full_name")} id="full_name" type="text" placeholder="John Doe" />
-                                            {signupForm.formState.errors.full_name && <p className="text-red-500 text-xs">{signupForm.formState.errors.full_name.message}</p>}
+                                <CardContent className="space-y-4">
+                                    <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="full_name" className="text-sm font-medium">Full Name</Label>
+                                            <Input 
+                                                {...signupForm.register("full_name")} 
+                                                id="full_name" 
+                                                type="text" 
+                                                placeholder="John Doe"
+                                                className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                            />
+                                            {signupForm.formState.errors.full_name && (
+                                                <p className="text-xs text-destructive">{signupForm.formState.errors.full_name.message}</p>
+                                            )}
                                         </div>
-                                        <div className="space-y-1">
-                                            <Label htmlFor="email">Email</Label>
-                                            <Input {...signupForm.register("email")} id="email" type="email" placeholder="m@example.com" />
-                                            {signupForm.formState.errors.email && <p className="text-red-500 text-xs">{signupForm.formState.errors.email.message}</p>}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                                            <Input 
+                                                {...signupForm.register("email")} 
+                                                id="email" 
+                                                type="email" 
+                                                placeholder="m@example.com"
+                                                className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                            />
+                                            {signupForm.formState.errors.email && (
+                                                <p className="text-xs text-destructive">{signupForm.formState.errors.email.message}</p>
+                                            )}
                                         </div>
-                                        <div className="space-y-1">
-                                            <Label htmlFor="message">Why do you want to be a driver? (Optional)</Label>
-                                            <Input {...signupForm.register("message")} id="message" type="text" placeholder="Tell us why you'd like to join as a driver..." />
-                                            {signupForm.formState.errors.message && <p className="text-red-500 text-xs">{signupForm.formState.errors.message.message}</p>}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="message" className="text-sm font-medium">Why do you want to be a driver? (Optional)</Label>
+                                            <Input 
+                                                {...signupForm.register("message")} 
+                                                id="message" 
+                                                type="text" 
+                                                placeholder="Tell us why you'd like to join as a driver..."
+                                                className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                            />
+                                            {signupForm.formState.errors.message && (
+                                                <p className="text-xs text-destructive">{signupForm.formState.errors.message.message}</p>
+                                            )}
                                         </div>
                                         <div className="pt-2">
-                                            <Button type="submit" className="w-full" disabled={isSigningUp}>
+                                                                                         <Button 
+                                                type="submit" 
+                                                disabled={isSigningUp} 
+                                                className="w-full h-11 bg-brand-orange hover:bg-brand-orange-600 text-white shadow-brand hover:shadow-brand-hover transition-all font-medium"
+                                             >
                                                 {isSigningUp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                                 Submit Application
                                             </Button>
@@ -302,63 +392,95 @@ export default function AuthPage() {
                                 </CardContent>
                             </Card>
                         </TabsContent>
-                        <TabsContent value="reset-password">
-                            <Card>
-                                <CardHeader className="text-center">
-                                    <CardTitle>Reset Password</CardTitle>
-                                    <CardDescription>
+
+                        <TabsContent value="reset-password" className="space-y-4">
+                            <Card className="premium-card border-0 shadow-premium">
+                                <CardHeader className="text-center space-y-2 pb-6">
+                                    <CardTitle className="font-heading text-2xl text-foreground">Reset Password</CardTitle>
+                                    <CardDescription className="text-muted-foreground">
                                         Enter your email address and we'll send you a password reset link.
                                     </CardDescription>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="space-y-4">
                                     <form onSubmit={resetPasswordForm.handleSubmit(onResetPasswordSubmit)} className="space-y-4">
-                                        <div className="space-y-1">
-                                            <Label htmlFor="reset-email">Email</Label>
-                                            <Input {...resetPasswordForm.register("email")} id="reset-email" type="email" placeholder="m@example.com" />
-                                            {resetPasswordForm.formState.errors.email && <p className="text-red-500 text-xs">{resetPasswordForm.formState.errors.email.message}</p>}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="reset-email" className="text-sm font-medium">Email</Label>
+                                            <Input 
+                                                {...resetPasswordForm.register("email")} 
+                                                id="reset-email" 
+                                                type="email" 
+                                                placeholder="m@example.com"
+                                                className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                            />
+                                            {resetPasswordForm.formState.errors.email && (
+                                                <p className="text-xs text-destructive">{resetPasswordForm.formState.errors.email.message}</p>
+                                            )}
                                         </div>
                                         <div className="pt-2">
-                                            <Button type="submit" className="w-full" disabled={isResettingPassword}>
+                                                                                         <Button 
+                                                type="submit" 
+                                                disabled={isResettingPassword} 
+                                                className="w-full h-11 bg-brand-orange hover:bg-brand-orange-600 text-white shadow-brand hover:shadow-brand-hover transition-all font-medium"
+                                             >
                                                 {isResettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                                 Send Reset Link
                                             </Button>
                                         </div>
-                                        <div className="text-center">
-                                            <Button 
-                                                type="button" 
-                                                variant="link" 
-                                                onClick={() => setActiveTab('login')}
-                                                className="text-sm"
-                                            >
-                                                Back to Login
-                                            </Button>
-                                        </div>
                                     </form>
+                                    
+                                    <div className="text-center">
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveTab('login')}
+                                            className="text-sm text-brand-orange hover:text-brand-orange/80 transition-colors font-medium"
+                                        >
+                                            Back to Login
+                                        </button>
+                                    </div>
                                 </CardContent>
                             </Card>
                         </TabsContent>
-                        <TabsContent value="driver-setup">
-                            <Card>
-                                <CardHeader className="text-center">
-                                    <CardTitle>Welcome to TravelEx!</CardTitle>
-                                    <CardDescription>
+
+                        <TabsContent value="driver-setup" className="space-y-4">
+                            <Card className="premium-card border-0 shadow-premium">
+                                <CardHeader className="text-center space-y-2 pb-6">
+                                    <CardTitle className="font-heading text-2xl text-foreground">Welcome to TravelEx!</CardTitle>
+                                    <CardDescription className="text-muted-foreground">
                                         Please set your password to complete your driver account setup.
                                     </CardDescription>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="space-y-4">
                                     <form onSubmit={setPasswordForm.handleSubmit(onSetPasswordSubmit)} className="space-y-4">
-                                        <div className="space-y-1">
-                                            <Label htmlFor="new-password">New Password</Label>
-                                            <Input {...setPasswordForm.register("password")} id="new-password" type="password" />
-                                            {setPasswordForm.formState.errors.password && <p className="text-red-500 text-xs">{setPasswordForm.formState.errors.password.message}</p>}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="new-password" className="text-sm font-medium">New Password</Label>
+                                            <Input 
+                                                {...setPasswordForm.register("password")} 
+                                                id="new-password" 
+                                                type="password"
+                                                className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                            />
+                                            {setPasswordForm.formState.errors.password && (
+                                                <p className="text-xs text-destructive">{setPasswordForm.formState.errors.password.message}</p>
+                                            )}
                                         </div>
-                                        <div className="space-y-1">
-                                            <Label htmlFor="confirm-password">Confirm Password</Label>
-                                            <Input {...setPasswordForm.register("confirmPassword")} id="confirm-password" type="password" />
-                                            {setPasswordForm.formState.errors.confirmPassword && <p className="text-red-500 text-xs">{setPasswordForm.formState.errors.confirmPassword.message}</p>}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="confirm-password" className="text-sm font-medium">Confirm Password</Label>
+                                            <Input 
+                                                {...setPasswordForm.register("confirmPassword")} 
+                                                id="confirm-password" 
+                                                type="password"
+                                                className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                            />
+                                            {setPasswordForm.formState.errors.confirmPassword && (
+                                                <p className="text-xs text-destructive">{setPasswordForm.formState.errors.confirmPassword.message}</p>
+                                            )}
                                         </div>
                                         <div className="pt-2 space-y-2">
-                                            <Button type="submit" className="w-full" disabled={isSettingPassword}>
+                                            <Button 
+                                                type="submit" 
+                                                disabled={isSettingPassword} 
+                                                className="w-full h-11 bg-brand-orange hover:bg-brand-orange-600 text-white shadow-brand hover:shadow-brand-hover transition-all font-medium"
+                                            >
                                                 {isSettingPassword ? (
                                                     <>
                                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -368,7 +490,6 @@ export default function AuthPage() {
                                                     "Set Password & Continue"
                                                 )}
                                             </Button>
-
                                         </div>
                                     </form>
                                 </CardContent>
