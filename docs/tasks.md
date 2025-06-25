@@ -39,6 +39,11 @@
     - [x] Create Supabase Edge Function for secure driver invitation with email.
     - [x] Develop corresponding Supabase API (RPC functions) for user management.
     - [x] Implement driver creation flow with temporary password email invitation.
+    - [x] **NEW:** Implement signup request approval workflow for better driver onboarding.
+    - [x] **NEW:** Create admin page for reviewing and approving driver applications.
+    - [x] **NEW:** Add password reset functionality for existing drivers.
+    - [x] **NEW:** Resolve RLS permission issues with signup requests table.
+    - [x] **NEW:** Enhance driver invitation flow with proper password setup pages.
 - [ ] **Route & Station Management:**
     - [ ] Build UI forms for creating/editing routes (cities, fares).
     - [ ] Build UI for managing stations within cities.
