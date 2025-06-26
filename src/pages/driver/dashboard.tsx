@@ -204,23 +204,25 @@ export default function DriverDashboard() {
             </Card>
           </Link>
 
-          <Card className="premium-card hover:shadow-premium-hover transition-all cursor-pointer group">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-purple-100 group-hover:bg-purple-200 transition-colors">
-                  <Car className="w-6 h-6 text-purple-600" />
+          <Link to="/driver/vehicles">
+            <Card className="premium-card hover:shadow-premium-hover transition-all cursor-pointer group">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-purple-100 group-hover:bg-purple-200 transition-colors">
+                    <Car className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-heading text-lg font-semibold text-foreground mb-1">
+                      My Vehicles
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Manage your vehicle fleet and settings
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-heading text-lg font-semibold text-foreground mb-1">
-                    Vehicle Settings
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Manage your vehicle information
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
 
           <Card className="premium-card hover:shadow-premium-hover transition-all cursor-pointer group">
             <CardContent className="p-6">
