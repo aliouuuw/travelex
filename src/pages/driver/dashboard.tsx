@@ -7,7 +7,8 @@ import { updateUserPassword } from "@/services/auth";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Loader2, Car, Calendar, DollarSign, Users, Settings, Lock, Gauge } from "lucide-react";
+import { Loader2, Car, Calendar, DollarSign, Users, Settings, Lock, Gauge, Route } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const StatCard = ({ 
   title, 
@@ -163,23 +164,25 @@ export default function DriverDashboard() {
           Quick Actions
         </h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <Card className="premium-card hover:shadow-premium-hover transition-all cursor-pointer group">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-blue-100 group-hover:bg-blue-200 transition-colors">
-                  <Calendar className="w-6 h-6 text-blue-600" />
+          <Link to="/driver/routes">
+            <Card className="premium-card hover:shadow-premium-hover transition-all cursor-pointer group">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-blue-100 group-hover:bg-blue-200 transition-colors">
+                    <Route className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-heading text-lg font-semibold text-foreground mb-1">
+                      My Routes
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      View and manage your assigned routes
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-heading text-lg font-semibold text-foreground mb-1">
-                    Manage Schedule
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    View and update your upcoming trips
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
 
           <Card className="premium-card hover:shadow-premium-hover transition-all cursor-pointer group">
             <CardContent className="p-6">

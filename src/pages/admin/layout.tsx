@@ -4,8 +4,6 @@ import {
     Users, 
     UserCheck, 
     Car, 
-    Route, 
-    MapPin,
     Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -32,18 +30,7 @@ const navigation = [
         icon: Users,
         disabled: true,
     },
-    {
-        name: "Routes",
-        href: "/admin/routes",
-        icon: Route,
-        disabled: true,
-    },
-    {
-        name: "Stations",
-        href: "/admin/stations",
-        icon: MapPin,
-        disabled: true,
-    },
+
     {
         name: "Rides",
         href: "/admin/rides",

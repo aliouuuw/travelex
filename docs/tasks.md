@@ -44,110 +44,129 @@
     - [x] **NEW:** Add password reset functionality for existing drivers.
     - [x] **NEW:** Resolve RLS permission issues with signup requests table.
     - [x] **NEW:** Enhance driver invitation flow with proper password setup pages.
-- [ ] **Route & Station Management:**
-    - [ ] Build UI forms for creating/editing routes (cities, fares).
-    - [ ] Build UI for managing stations within cities.
-    - [ ] Develop corresponding Supabase API for route and station management.
-- [ ] **Trip Management:**
-    - [ ] Build UI for creating, updating, and deleting trips.
-    - [ ] Link trips to routes, vehicles, and luggage policies.
-    - [ ] Develop corresponding Supabase API for trip management.
+
+## Phase 3: Route Template & Trip Management (Current Focus)
+
+- [x] **Route Template Management (Driver-focused):**
+    - [x] Build driver route management UI with visual flowchart layout
+    - [x] Implement horizontal city connections with station lists per city
+    - [x] Create route template structure for intercity connections
+    - [x] Design visual representation showing cities → stations relationship
+    - [x] Add route template to driver dashboard navigation
+- [ ] **Route Template Core Features:**
+    - [ ] Implement route template creation/editing forms
+    - [ ] Build city sequence management (drag-and-drop ordering)
+    - [ ] Add station selection interface for each city
+    - [ ] Implement segment pricing configuration (intercity rates)
+    - [ ] Create route template validation and save functionality
+    - [ ] Develop corresponding Supabase API for route template management
+- [ ] **Trip Scheduling from Templates:**
+    - [ ] Build trip scheduling UI using route templates
+    - [ ] Implement station pre-selection for scheduled trips
+    - [ ] Add departure/arrival time configuration
+    - [ ] Link trips to vehicles and luggage policies
+    - [ ] Create trip calendar/timeline view for drivers
+    - [ ] Develop corresponding Supabase API for trip management
+- [ ] **Enhanced Trip Management:**
+    - [ ] Build trip editing and cancellation functionality
+    - [ ] Add trip status management (scheduled, in-progress, completed, cancelled)
+    - [ ] Implement real-time trip updates
+    - [ ] Create trip analytics for drivers (earnings, passenger counts, etc.)
 - [ ] **Luggage Policy Management:**
-    - [ ] Build UI for defining luggage policies.
-    - [ ] Develop corresponding Supabase API for luggage policy management.
-- [ ] **Reservation Management:**
-    - [ ] Create a view to see all reservations for a driver's trips.
-    - [ ] Implement actions like viewing passenger details.
+    - [ ] Build UI for defining luggage policies
+    - [ ] Develop corresponding Supabase API for luggage policy management
+- [ ] **Reservation Management (Driver View):**
+    - [ ] Create a view to see all reservations for a driver's trips
+    - [ ] Implement actions like viewing passenger details
+    - [ ] Add segment-based reservation display (pickup/dropoff stations)
+    - [ ] Build reservation approval/management workflow
 
-## Phase 3: Public-Facing Features (Postponed)
+## Phase 4: Passenger Search & Segment Booking (Future)
 
-- [ ] **Trip Search & Discovery:**
-    - [ ] Create Supabase database function (or RPC) for searching trips.
-    - [ ] Create the home page with the trip search form (cities, date).
-    - [ ] Develop the trip search results page.
-    - [ ] Implement filtering logic (seats, car type, driver score).
-- [ ] **Database Schema Expansion:**
-    - [ ] Refine schema in Supabase for Cities, Stations, Routes, and Trips.
-    - [ ] Design schema in Supabase for Luggage Policies.
-    - [ ] Design schema in Supabase for Bookings.
+- [ ] **Advanced Trip Search:**
+    - [ ] Create Supabase database function for segment-based trip search
+    - [ ] Implement search for "Tamala to Kumasi" finding "Tamale→Kumasi→Accra" trips
+    - [ ] Build trip search results with segment highlighting
+    - [ ] Add filtering logic (seats, car type, driver score, price range)
+    - [ ] Show full route context to encourage extended trip planning
+- [ ] **Segment-Based Booking Flow:**
+    - [ ] Build multi-step booking form with pickup/dropoff station selection
+    - [ ] Implement seat selection for segment passengers
+    - [ ] Add luggage options and pricing calculation
+    - [ ] Create booking summary with full route visibility
+    - [ ] Handle payment processing for segment bookings
 
-## Phase 4: Booking & Payment Flow (Postponed)
+## Phase 5: Payment & Booking Completion (Future)
 
-- [ ] **Multi-Step Booking Form:**
-    - [ ] Build multi-step booking form using `React Hook Form` and `Zustand`.
-    - [ ] **Step 1: Seat Selection:**
-    - [ ] **Step 2: Luggage Options:**
-    - [ ] **Step 3: Review & Summary:**
 - [ ] **Payment Integration:**
-    - [ ] Integrate Stripe SDK for payment processing.
-    - [ ] Create Supabase Edge Function to handle Stripe payment intent creation.
-    - [ ] Create Supabase Edge Function to handle Stripe webhooks.
+    - [ ] Integrate Stripe SDK for payment processing
+    - [ ] Create Supabase Edge Function to handle Stripe payment intent creation
+    - [ ] Create Supabase Edge Function to handle Stripe webhooks
 - [ ] **Booking Confirmation:**
-    - [ ] Create Supabase database function to finalize booking after payment.
-    - [ ] Setup `Resend` for transactional emails.
-    - [ ] Implement email templates using `React Email` for receipts and tickets.
-    - [ ] Trigger email confirmation via a Supabase Edge Function upon successful booking.
+    - [ ] Create Supabase database function to finalize booking after payment
+    - [ ] Setup `Resend` for transactional emails
+    - [ ] Implement email templates using `React Email` for receipts and tickets
+    - [ ] Trigger email confirmation via a Supabase Edge Function upon successful booking
 
-## Phase 5: Testing, Deployment & Launch (Sprints 5-6)
+## Phase 6: Testing, Deployment & Launch (Sprints 5-6)
 
 - [ ] **Testing:**
-    - [ ] Write unit/integration tests with `Vitest`.
-    - [ ] Perform end-to-end tests with `Playwright` for admin and driver flows.
-    - [ ] Conduct user acceptance testing (UAT).
+    - [ ] Write unit/integration tests with `Vitest`
+    - [ ] Perform end-to-end tests with `Playwright` for admin and driver flows
+    - [ ] Conduct user acceptance testing (UAT)
 - [ ] **Deployment:**
-    - [ ] Setup production environment on `Vercel` or `Netlify` for the frontend.
-    - [ ] Configure CI/CD pipeline for automated deployments.
-    - [ ] Manage Supabase database migrations.
+    - [ ] Setup production environment on `Vercel` or `Netlify` for the frontend
+    - [ ] Configure CI/CD pipeline for automated deployments
+    - [ ] Manage Supabase database migrations
 - [ ] **Launch:**
-    - [ ] Final pre-launch checks.
-    - [ ] Official launch.
-    - [ ] Monitor application performance and logs.
+    - [ ] Final pre-launch checks
+    - [ ] Official launch
+    - [ ] Monitor application performance and logs
 
 ## Post-Launch
-- [ ] Gather user feedback for future iterations.
-- [ ] Prioritize and fix bugs.
-- [ ] Plan for V2 features.
+- [ ] Gather user feedback for future iterations
+- [ ] Prioritize and fix bugs
+- [ ] Plan for V2 features
 
 ---
 
-## Session Recap 3 (For Next Chat)
+## Session Recap 5 (Route Template Design - Current Session)
 
-**Objective:** Implement role-based authentication, create admin and driver dashboards, and build driver management functionality.
+**Objective:** Implement Phase 3 - Route Template and Trip Management with driver-focused visual interface
 
-**Session Summary:**
-- **Enhanced Authentication Flow:** Upgraded the `AuthProvider` to fetch user profiles including roles from the database. Implemented role-based redirection where admins go to `/admin/dashboard`, drivers to `/driver/dashboard`, and regular users to `/dashboard`.
+**Major Conceptual Breakthrough:** 
+- **Routes as Templates:** Routes are now intercity connection templates, not specific scheduled trips
+- **Segment-Based Booking:** Passengers can book any valid segment of a scheduled trip (e.g., Kumasi→Accra from Tamale→Kumasi→Accra)
+- **Driver Workflow:** Drivers create route templates → schedule trips using templates → passengers book segments
 
-- **Role-Based Route Protection:** Created `AdminRoute` and `DriverRoute` components that check user roles and redirect unauthorized users with appropriate error messages. Updated the Header component to dynamically link to the correct dashboard based on user role.
+**Key Design Decisions:**
+- **Visual Flowchart Layout:** Horizontal city progression with vertical station lists
+- **Template Structure:** Cities contain multiple available stations, driver pre-selects for trips  
+- **Pricing Model:** Fixed rates for intercity segments (not per-station)
+- **Station Selection:** Driver pre-selection for operational efficiency and passenger clarity
 
-- **Admin Dashboard Implementation:** 
-  - Built a complete admin layout with sidebar navigation
-  - Created a drivers list page that displays all registered drivers with their email, last sign-in date, and status (Active/Pending)
-  - Implemented a "Add Driver" form that sends email invitations with temporary passwords
-  - Created Supabase Edge Function `invite-driver` to securely handle driver invitations server-side
+**Implementation Progress:**
+- ✅ Created driver route management interface with visual flowchart
+- ✅ Designed route template data structure with city sequences
+- ✅ Implemented horizontal layout showing city → station relationships
+- ✅ Updated data model for route templates and segment booking
+- ✅ Added route management to driver dashboard navigation
 
-- **Driver Dashboard Implementation:**
-  - Built a personalized driver dashboard that welcomes users by name
-  - Added a password update form allowing drivers to change their temporary passwords
-  - Implemented secure password update functionality using Supabase Auth
+**Updated Data Model (v3):**
+- `route_templates` - Reusable intercity connection patterns
+- `route_template_cities` - City sequences in templates  
+- `route_template_stations` - Available stations per city
+- `trip_stations` - Driver's selected stations for scheduled trips
+- `segment_pricing` - Fixed intercity rates
+- Enhanced reservations with pickup/dropoff stations for segment booking
 
-- **Database & Security Enhancements:**
-  - Fixed the problematic migration that defaulted all new users to 'admin' role
-  - Created new migration to ensure regular signups default to 'passenger' role
-  - Built `get_drivers` RPC function with proper security permissions to fetch driver data
-  - Resolved complex Supabase permission issues for accessing auth.users table
+**Next Priority:**
+1. Implement route template creation/editing forms
+2. Build trip scheduling from templates
+3. Add station pre-selection for trips
+4. Develop segment pricing management
 
-- **Technical Challenges Resolved:**
-  - Fixed CORS issues in Supabase Edge Functions
-  - Resolved TypeScript type errors with Badge component variants
-  - Debugged and fixed persistent "permission denied for table users" errors through proper function security configuration
-
-**Current State:** The platform now has a fully functional admin panel for managing drivers and a basic driver dashboard. Admins can create drivers who receive email invitations, and drivers can log in and update their passwords.
-
-**Next Steps:** 
-- Implement route and station management for admins
-- Add trip management functionality  
-- Build reservation/booking management
-- Enhance driver dashboard with ride management features 
+**Current State:** Route management foundation established with visual interface and proper data model for intercity template system.
 
 ---
 
@@ -205,23 +224,43 @@
 
 **Current State:** Phase 2 (Admin Dashboard & Core Management) is now **100% complete**. The platform has a fully functional admin panel with driver management, secure authentication flows, and a working driver dashboard.
 
-**Ready for Phase 3: Route & Trip Management**
+---
 
-**Next Priority Tasks:**
-1. **Route & Station Management:**
-   - Build UI forms for creating/editing routes (cities, fares)
-   - Build UI for managing stations within cities  
-   - Develop corresponding Supabase API for route and station management
+## Session Recap 3 (For Next Chat)
 
-2. **Trip Management:**
-   - Build UI for creating, updating, and deleting trips
-   - Link trips to routes, vehicles, and luggage policies
-   - Develop corresponding Supabase API for trip management
+**Objective:** Implement role-based authentication, create admin and driver dashboards, and build driver management functionality.
 
-3. **Luggage Policy Management:**
-   - Build UI for defining luggage policies
-   - Develop corresponding Supabase API for luggage policy management
+**Session Summary:**
+- **Enhanced Authentication Flow:** Upgraded the `AuthProvider` to fetch user profiles including roles from the database. Implemented role-based redirection where admins go to `/admin/dashboard`, drivers to `/driver/dashboard`, and regular users to `/dashboard`.
 
-4. **Reservation Management:**
-   - Create a view to see all reservations for a driver's trips
-   - Implement actions like viewing passenger details 
+- **Role-Based Route Protection:** Created `AdminRoute` and `DriverRoute` components that check user roles and redirect unauthorized users with appropriate error messages. Updated the Header component to dynamically link to the correct dashboard based on user role.
+
+- **Admin Dashboard Implementation:** 
+  - Built a complete admin layout with sidebar navigation
+  - Created a drivers list page that displays all registered drivers with their email, last sign-in date, and status (Active/Pending)
+  - Implemented a "Add Driver" form that sends email invitations with temporary passwords
+  - Created Supabase Edge Function `invite-driver` to securely handle driver invitations server-side
+
+- **Driver Dashboard Implementation:**
+  - Built a personalized driver dashboard that welcomes users by name
+  - Added a password update form allowing drivers to change their temporary passwords
+  - Implemented secure password update functionality using Supabase Auth
+
+- **Database & Security Enhancements:**
+  - Fixed the problematic migration that defaulted all new users to 'admin' role
+  - Created new migration to ensure regular signups default to 'passenger' role
+  - Built `get_drivers` RPC function with proper security permissions to fetch driver data
+  - Resolved complex Supabase permission issues for accessing auth.users table
+
+- **Technical Challenges Resolved:**
+  - Fixed CORS issues in Supabase Edge Functions
+  - Resolved TypeScript type errors with Badge component variants
+  - Debugged and fixed persistent "permission denied for table users" errors through proper function security configuration
+
+**Current State:** The platform now has a fully functional admin panel for managing drivers and a basic driver dashboard. Admins can create drivers who receive email invitations, and drivers can log in and update their passwords.
+
+**Next Steps:** 
+- Implement route and station management for admins
+- Add trip management functionality  
+- Build reservation/booking management
+- Enhance driver dashboard with ride management features 

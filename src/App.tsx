@@ -19,6 +19,8 @@ import { DriverRoute } from "./components/driver-route";
 import DriverDashboard from "./pages/driver/dashboard";
 import NewDriverPage from "./pages/admin/drivers/new";
 import SignupRequestsPage from "./pages/admin/signup-requests";
+
+import DriverRoutesPage from "./pages/driver/routes";
 import { User, LogOut } from "lucide-react";
 
 const Header = () => {
@@ -249,6 +251,7 @@ const router = createBrowserRouter([
                 path: "drivers/new",
                 element: <NewDriverPage />,
               },
+
             ]
           }
         ]
@@ -259,6 +262,10 @@ const router = createBrowserRouter([
           {
             path: "/driver/dashboard",
             element: <DriverDashboard />,
+          },
+          {
+            path: "/driver/routes",
+            element: <DriverRoutesPage />,
           },
         ],
       }
