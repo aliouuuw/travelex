@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { extractAndSaveCitiesFromRoute } from './reusable-cities-stations';
 
 // Types matching the database schema
 export type RouteTemplateStatus = 'draft' | 'active' | 'inactive';
@@ -135,6 +136,14 @@ export const createRouteTemplate = async (
     throw new Error(error.message);
   }
 
+  // Save cities and stations to reusable collection
+  try {
+    await extractAndSaveCitiesFromRoute(routeData.cities);
+  } catch (extractError) {
+    console.warn('Failed to save reusable cities/stations:', extractError);
+    // Don't fail the route creation if reusable save fails
+  }
+
   return data;
 };
 
@@ -158,6 +167,14 @@ export const updateRouteTemplate = async (
   if (error) {
     console.error('Error updating route template:', error);
     throw new Error(error.message);
+  }
+
+  // Save cities and stations to reusable collection
+  try {
+    await extractAndSaveCitiesFromRoute(routeData.cities);
+  } catch (extractError) {
+    console.warn('Failed to save reusable cities/stations:', extractError);
+    // Don't fail the route update if reusable save fails
   }
 
   return data;

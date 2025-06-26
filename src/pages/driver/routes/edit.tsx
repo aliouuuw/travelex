@@ -27,6 +27,7 @@ import {
   type CityWithStations,
   type InterCityFare
 } from "@/services/route-templates";
+import { CityStationInput } from "@/components/shared/city-station-input";
 import { toast } from "sonner";
 
 // Reusable Station Manager Component
@@ -170,7 +171,7 @@ const CityManager = ({
         >
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-1">
                 <GripVertical className="w-5 h-5 text-gray-400 cursor-move" />
                 <div className={`
                   flex items-center justify-center w-8 h-8 rounded-lg text-sm font-medium
@@ -182,12 +183,21 @@ const CityManager = ({
                 `}>
                   {cityIndex + 1}
                 </div>
-                <Input
-                  value={city.cityName}
-                  onChange={(e) => onUpdate(cityIndex, { ...city, cityName: e.target.value })}
-                  placeholder="City name"
-                  className="font-medium"
-                />
+                
+                {/* City Selection */}
+                <div className="flex-1">
+                  <CityStationInput
+                    selectedCityName={city.cityName}
+                    selectedStations={city.stations}
+                    onCityChange={(cityName: string, stations: Array<{ name: string; address: string }>) => {
+                      onUpdate(cityIndex, { 
+                        cityName, 
+                        stations 
+                      });
+                    }}
+                    label=""
+                  />
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 {cityIndex === 0 && <Badge variant="outline" className="text-green-600">Origin</Badge>}
