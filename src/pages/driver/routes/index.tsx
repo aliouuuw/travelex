@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Route, Clock, DollarSign, MapPin, ArrowRight, Edit, Eye, Users, Loader2 } from "lucide-react";
+import { Plus, Route, Clock, DollarSign, MapPin, ArrowRight, Edit, Eye, Users, Loader2, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { getDriverRouteTemplates, type RouteTemplate } from "@/services/route-templates";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getDriverRouteTemplates, deleteRouteTemplate, type RouteTemplate } from "@/services/route-templates";
 import { toast } from "sonner";
 
 // Types are now imported from the service layer
@@ -195,6 +195,8 @@ const RouteFlowChart = ({ route }: { route: RouteTemplate }) => {
 
 // DriverRouteCard Component - Updated for intercity route templates
 const DriverRouteCard = ({ route }: { route: RouteTemplate }) => {
+  const queryClient = useQueryClient();
+  
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-800';
@@ -204,6 +206,24 @@ const DriverRouteCard = ({ route }: { route: RouteTemplate }) => {
   };
 
   const totalRouteFare = calculateTotalRouteFare(route);
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: deleteRouteTemplate,
+    onSuccess: () => {
+      toast.success("Route template deleted successfully!");
+      queryClient.invalidateQueries({ queryKey: ['driver-route-templates'] });
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delete route template: ${error.message}`);
+    }
+  });
+
+  const handleDelete = () => {
+    if (window.confirm(`Are you sure you want to delete "${route.name}"? This action cannot be undone.`)) {
+      deleteMutation.mutate(route.id);
+    }
+  };
 
   return (
     <Card className="premium-card hover:shadow-premium-hover transition-all">
@@ -247,6 +267,19 @@ const DriverRouteCard = ({ route }: { route: RouteTemplate }) => {
               <Link to={`/driver/routes/${route.id}/edit`}>
                 <Edit className="w-4 h-4" />
               </Link>
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
             </Button>
           </div>
         </div>
