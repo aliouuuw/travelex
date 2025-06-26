@@ -1,139 +1,53 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Route, Clock, DollarSign, MapPin, ArrowRight, Edit, Eye, Users } from "lucide-react";
+import { Plus, Route, Clock, DollarSign, MapPin, ArrowRight, Edit, Eye, Users, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { getDriverRouteTemplates, type RouteTemplate } from "@/services/route-templates";
+import { toast } from "sonner";
 
-// Types for intercity route templates
-type Station = {
-  id: number;
-  name: string;
-  address?: string;
-};
+// Types are now imported from the service layer
 
-type CityWithStations = {
-  cityName: string;
-  stations: Station[];
-};
-
-type RouteTemplate = {
-  id: number;
-  name: string;
-  cities: CityWithStations[];
-  estimatedDuration: string;
-  basePrice: number;
-  status: 'active' | 'draft';
-  scheduledTrips: number;
-  completedTrips: number;
-  totalEarnings: number;
-  createdAt: string;
-};
-
-// Mock data for intercity route templates
-const mockDriverRoutes: RouteTemplate[] = [
-  {
-    id: 1,
-    name: "Northern Express",
-    cities: [
-      {
-        cityName: "Tamale",
-        stations: [
-          { id: 1, name: "Central Station", address: "Downtown Tamale" },
-          { id: 2, name: "University Station", address: "University for Development Studies" },
-          { id: 3, name: "Market Station", address: "Tamale Central Market" }
-        ]
-      },
-      {
-        cityName: "Kumasi",
-        stations: [
-          { id: 4, name: "Kejetia Terminal", address: "Kejetia Market Area" },
-          { id: 5, name: "Tech Junction", address: "KNUST Area" },
-          { id: 6, name: "Airport Station", address: "Near Kumasi Airport" },
-          { id: 7, name: "Adum Station", address: "Adum Commercial Area" }
-        ]
-      },
-      {
-        cityName: "Accra",
-        stations: [
-          { id: 8, name: "Circle Station", address: "Kwame Nkrumah Circle" },
-          { id: 9, name: "37 Station", address: "37 Military Hospital Area" },
-          { id: 10, name: "Kaneshie Terminal", address: "Kaneshie Market" },
-          { id: 11, name: "Achimota Station", address: "Achimota Mall" }
-        ]
-      }
-    ],
-    estimatedDuration: "8 hours",
-    basePrice: 120,
-    status: "active",
-    scheduledTrips: 3,
-    completedTrips: 24,
-    totalEarnings: 2880,
-    createdAt: "2024-01-15"
-  },
-  {
-    id: 2,
-    name: "Eastern Corridor",
-    cities: [
-      {
-        cityName: "Accra",
-        stations: [
-          { id: 12, name: "37 Station", address: "37 Military Hospital Area" },
-          { id: 13, name: "Madina Station", address: "Madina Market" }
-        ]
-      },
-      {
-        cityName: "Koforidua",
-        stations: [
-          { id: 14, name: "Central Station", address: "Koforidua Town Center" },
-          { id: 15, name: "New Juaben Station", address: "New Juaben Municipal" },
-          { id: 16, name: "Polytechnic Station", address: "Koforidua Technical University" }
-        ]
-      }
-    ],
-    estimatedDuration: "2.5 hours",
-    basePrice: 35,
-    status: "active",
-    scheduledTrips: 2,
-    completedTrips: 18,
-    totalEarnings: 630,
-    createdAt: "2024-02-01"
-  },
-  {
-    id: 3,
-    name: "Western Route",
-    cities: [
-      {
-        cityName: "Accra",
-        stations: [
-          { id: 17, name: "Circle Station", address: "Kwame Nkrumah Circle" },
-          { id: 18, name: "Kasoa Station", address: "Kasoa Central" }
-        ]
-      },
-      {
-        cityName: "Cape Coast",
-        stations: [
-          { id: 19, name: "Central Terminal", address: "Cape Coast Castle Area" },
-          { id: 20, name: "University Station", address: "University of Cape Coast" }
-        ]
-      },
-      {
-        cityName: "Takoradi",
-        stations: [
-          { id: 21, name: "Market Circle", address: "Takoradi Market Circle" },
-          { id: 22, name: "Harbor Station", address: "Takoradi Harbor" }
-        ]
-      }
-    ],
-    estimatedDuration: "5 hours",
-    basePrice: 80,
-    status: "draft",
-    scheduledTrips: 0,
-    completedTrips: 0,
-    totalEarnings: 0,
-    createdAt: "2024-02-15"
+// Utility function to calculate total route fare from intercity fares
+const calculateTotalRouteFare = (route: RouteTemplate): number => {
+  if (!route.intercityFares || route.intercityFares.length === 0) {
+    return route.basePrice; // Fallback to base price if no intercity fares defined
   }
-];
+
+  // Find the total route fare (from first city to last city)
+  if (route.cities.length >= 2) {
+    const originCity = route.cities[0]?.cityName;
+    const destinationCity = route.cities[route.cities.length - 1]?.cityName;
+    
+    // Look for direct origin-to-destination fare
+    const totalFare = route.intercityFares.find(
+      fare => fare.fromCity === originCity && fare.toCity === destinationCity
+    );
+    
+    if (totalFare) {
+      return totalFare.fare;
+    }
+    
+    // If no direct fare exists, sum up segment fares
+    let totalFromSegments = 0;
+    for (let i = 0; i < route.cities.length - 1; i++) {
+      const fromCity = route.cities[i].cityName;
+      const toCity = route.cities[i + 1].cityName;
+      const segmentFare = route.intercityFares.find(
+        fare => fare.fromCity === fromCity && fare.toCity === toCity
+      );
+      if (segmentFare) {
+        totalFromSegments += segmentFare.fare;
+      }
+    }
+    
+    return totalFromSegments > 0 ? totalFromSegments : route.basePrice;
+  }
+  
+  return route.basePrice;
+};
 
 // RouteFlowChart Component for intercity route templates
 const RouteFlowChart = ({ route }: { route: RouteTemplate }) => {
@@ -192,15 +106,89 @@ const RouteFlowChart = ({ route }: { route: RouteTemplate }) => {
               </div>
             </div>
             
-            {/* Arrow Connector */}
+            {/* Arrow Connector with Fare */}
             {cityIndex < route.cities.length - 1 && (
-              <div className="flex items-center justify-center mx-6 self-start mt-8">
+              <div className="flex flex-col items-center justify-center mx-6 self-start mt-8">
                 <ArrowRight className="w-8 h-8 text-gray-400" />
+                {(() => {
+                  const fromCity = city.cityName;
+                  const toCity = route.cities[cityIndex + 1].cityName;
+                  const fare = route.intercityFares?.find(
+                    f => f.fromCity === fromCity && f.toCity === toCity
+                  );
+                  return fare ? (
+                    <div className="mt-2 px-2 py-1 bg-white border border-gray-300 rounded-md shadow-sm">
+                      <span className="text-xs font-medium text-gray-700">₵{fare.fare}</span>
+                    </div>
+                  ) : null;
+                })()}
               </div>
             )}
           </div>
         ))}
       </div>
+      
+      {/* Pricing Summary */}
+      {route.intercityFares && route.intercityFares.length > 0 && (
+        <div className="mt-6 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium text-gray-700">Route Pricing</h4>
+            <div className="flex items-center gap-1 text-brand-dark-blue font-semibold">
+              <DollarSign className="w-4 h-4" />
+              <span>Total: ₵{calculateTotalRouteFare(route)}</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {route.intercityFares
+              .filter(fare => {
+                // Show segment fares (adjacent cities) and total route fare
+                const isSegment = route.cities.some((city, index) => 
+                  index < route.cities.length - 1 && 
+                  city.cityName === fare.fromCity && 
+                  route.cities[index + 1].cityName === fare.toCity
+                );
+                const isTotal = fare.fromCity === route.cities[0]?.cityName && 
+                               fare.toCity === route.cities[route.cities.length - 1]?.cityName &&
+                               route.cities.length > 2;
+                return isSegment || isTotal;
+              })
+              .sort((a, b) => {
+                // Sort: segments first, then total
+                const aIsTotal = a.fromCity === route.cities[0]?.cityName && 
+                                a.toCity === route.cities[route.cities.length - 1]?.cityName &&
+                                route.cities.length > 2;
+                const bIsTotal = b.fromCity === route.cities[0]?.cityName && 
+                                b.toCity === route.cities[route.cities.length - 1]?.cityName &&
+                                route.cities.length > 2;
+                if (aIsTotal && !bIsTotal) return 1;
+                if (!aIsTotal && bIsTotal) return -1;
+                return 0;
+              })
+              .map((fare, index) => {
+                const isTotal = fare.fromCity === route.cities[0]?.cityName && 
+                               fare.toCity === route.cities[route.cities.length - 1]?.cityName &&
+                               route.cities.length > 2;
+                return (
+                  <div 
+                    key={index} 
+                    className={`flex items-center justify-between px-3 py-2 rounded-md text-xs ${
+                      isTotal 
+                        ? 'bg-brand-dark-blue/10 border border-brand-dark-blue/20 text-brand-dark-blue font-medium' 
+                        : 'bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1">
+                      {isTotal && <span className="font-bold">📍</span>}
+                      <span>{fare.fromCity} → {fare.toCity}</span>
+                      {isTotal && <span className="text-[10px] opacity-75">(Total)</span>}
+                    </div>
+                    <span className="font-medium">₵{fare.fare}</span>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -214,6 +202,8 @@ const DriverRouteCard = ({ route }: { route: RouteTemplate }) => {
       default: return 'bg-blue-100 text-blue-800';
     }
   };
+
+  const totalRouteFare = calculateTotalRouteFare(route);
 
   return (
     <Card className="premium-card hover:shadow-premium-hover transition-all">
@@ -230,14 +220,14 @@ const DriverRouteCard = ({ route }: { route: RouteTemplate }) => {
                   {route.status}
                 </Badge>
               </div>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-6 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Clock className="w-4 h-4" />
                   <span>{route.estimatedDuration}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <DollarSign className="w-4 h-4" />
-                  <span>₵{route.basePrice}</span>
+                  <span>₵{totalRouteFare}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Users className="w-4 h-4" />
@@ -287,17 +277,79 @@ const DriverRouteCard = ({ route }: { route: RouteTemplate }) => {
 export default function DriverRoutesPage() {
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'draft'>('all');
 
-  const filteredRoutes = mockDriverRoutes.filter(route => 
+  // Fetch route templates from API
+  const { 
+    data: routeTemplates = [], 
+    isLoading, 
+    error,
+    refetch 
+  } = useQuery<RouteTemplate[], Error>({
+    queryKey: ['driver-route-templates'],
+    queryFn: getDriverRouteTemplates,
+    retry: 1
+  });
+
+  // Show error toast when error occurs
+  useEffect(() => {
+    if (error) {
+      toast.error(`Failed to load route templates: ${error.message}`);
+    }
+  }, [error]);
+
+  const filteredRoutes = routeTemplates.filter((route) => 
     selectedStatus === 'all' || route.status === selectedStatus
   );
 
   const stats = {
-    total: mockDriverRoutes.length,
-    active: mockDriverRoutes.filter(r => r.status === 'active').length,
-    draft: mockDriverRoutes.filter(r => r.status === 'draft').length,
-    totalEarnings: mockDriverRoutes.reduce((acc, r) => acc + r.totalEarnings, 0),
-    scheduledTrips: mockDriverRoutes.reduce((acc, r) => acc + r.scheduledTrips, 0)
+    total: routeTemplates.length,
+    active: routeTemplates.filter((r) => r.status === 'active').length,
+    draft: routeTemplates.filter((r) => r.status === 'draft').length,
+    totalEarnings: routeTemplates.reduce((acc, r) => acc + r.totalEarnings, 0),
+    scheduledTrips: routeTemplates.reduce((acc, r) => acc + r.scheduledTrips, 0)
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center py-12">
+          <div className="flex items-center gap-3">
+            <Loader2 className="w-6 h-6 animate-spin text-brand-orange" />
+            <span className="text-lg text-muted-foreground">Loading route templates...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="p-6 space-y-6 max-w-7xl mx-auto">
+        <Card className="premium-card">
+          <CardContent className="p-12 text-center">
+            <div className="space-y-4">
+              <div className="text-red-500">
+                <Route className="w-12 h-12 mx-auto mb-4" />
+              </div>
+              <h3 className="font-heading text-lg font-semibold text-foreground">
+                Failed to load route templates
+              </h3>
+              <p className="text-muted-foreground">
+                {error instanceof Error ? error.message : 'An unexpected error occurred'}
+              </p>
+              <Button 
+                onClick={() => refetch()}
+                className="bg-brand-orange hover:bg-brand-orange-600 text-white"
+              >
+                Try Again
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">

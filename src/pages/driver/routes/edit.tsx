@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,33 +17,17 @@ import {
 } from "lucide-react";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { useParams, useNavigate, Link } from "react-router-dom";
-
-// Types
-type Station = {
-  id?: number;
-  name: string;
-  address: string;
-};
-
-type CitySection = {
-  cityName: string;
-  stations: Station[];
-};
-
-type InterCityFare = {
-  fromCity: string;
-  toCity: string;
-  fare: number;
-};
-
-type RouteFormData = {
-  name: string;
-  estimatedDuration: string;
-  basePrice: number;
-  status: 'active' | 'draft';
-  cities: CitySection[];
-  intercityFares: InterCityFare[];
-};
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { 
+  createRouteTemplate, 
+  updateRouteTemplate, 
+  getRouteTemplateById,
+  type RouteTemplateFormData,
+  type Station,
+  type CityWithStations,
+  type InterCityFare
+} from "@/services/route-templates";
+import { toast } from "sonner";
 
 // Reusable Station Manager Component
 const StationManager = ({ 
@@ -149,10 +133,10 @@ const CityManager = ({
   onUpdate, 
   onReorder 
 }: {
-  cities: CitySection[];
+  cities: CityWithStations[];
   onAdd: () => void;
   onRemove: (index: number) => void;
-  onUpdate: (index: number, city: CitySection) => void;
+  onUpdate: (index: number, city: CityWithStations) => void;
   onReorder: (fromIndex: number, toIndex: number) => void;
 }) => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -274,19 +258,33 @@ const InterCityFareManager = ({
   fares, 
   onChange 
 }: {
-  cities: CitySection[];
+  cities: CityWithStations[];
   fares: InterCityFare[];
   onChange: (fares: InterCityFare[]) => void;
 }) => {
-  // Generate all possible city pairs
+  // Generate city pairs with proper ordering: segments first, then total route
   const generateCityPairs = () => {
-    const pairs: { from: string; to: string }[] = [];
+    const segments: { from: string; to: string; isTotal: boolean }[] = [];
+    
+    // Add individual segments (adjacent cities)
     for (let i = 0; i < cities.length - 1; i++) {
-      for (let j = i + 1; j < cities.length; j++) {
-        pairs.push({ from: cities[i].cityName, to: cities[j].cityName });
-      }
+      segments.push({ 
+        from: cities[i].cityName, 
+        to: cities[i + 1].cityName, 
+        isTotal: false 
+      });
     }
-    return pairs;
+    
+    // Add origin to destination (total route) if more than 2 cities
+    if (cities.length > 2) {
+      segments.push({ 
+        from: cities[0].cityName, 
+        to: cities[cities.length - 1].cityName, 
+        isTotal: true 
+      });
+    }
+    
+    return segments;
   };
 
   const cityPairs = generateCityPairs();
@@ -303,30 +301,118 @@ const InterCityFareManager = ({
     return fares.find(f => f.fromCity === fromCity && f.toCity === toCity)?.fare || 0;
   };
 
+  // Calculate total fare from origin to destination by summing segments
+  const calculateTotalFare = () => {
+    if (cities.length < 2) return 0;
+    
+    let totalFare = 0;
+    for (let i = 0; i < cities.length - 1; i++) {
+      const fromCity = cities[i].cityName;
+      const toCity = cities[i + 1].cityName;
+      totalFare += getFare(fromCity, toCity);
+    }
+    return totalFare;
+  };
+
+  // Auto-calculate and set the origin-to-destination fare
+  const autoCalculateOriginToDestination = () => {
+    if (cities.length < 2) {
+      toast.error("Add at least 2 cities to auto-calculate fares");
+      return;
+    }
+
+    const originCity = cities[0].cityName;
+    const destinationCity = cities[cities.length - 1].cityName;
+    
+    if (!originCity || !destinationCity) {
+      toast.error("Please name your origin and destination cities first");
+      return;
+    }
+
+    const totalFare = calculateTotalFare();
+    
+    if (totalFare === 0) {
+      toast.error("Set individual segment fares first to auto-calculate total");
+      return;
+    }
+
+    updateFare(originCity, destinationCity, totalFare);
+    toast.success(`Auto-calculated ${originCity} → ${destinationCity}: ₵${totalFare}`);
+  };
+
   return (
     <Card className="premium-card">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <DollarSign className="w-5 h-5 text-brand-orange" />
-          Intercity Fares
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-brand-orange" />
+            Intercity Fares
+          </CardTitle>
+          {cities.length >= 2 && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={autoCalculateOriginToDestination}
+              className="text-brand-orange border-brand-orange hover:bg-brand-orange hover:text-white"
+            >
+              <DollarSign className="w-4 h-4 mr-1" />
+              Auto-Calculate Total
+            </Button>
+          )}
+        </div>
+        {cities.length >= 2 && (
+          <p className="text-sm text-muted-foreground">
+            Auto-calculate will set {cities[0]?.cityName || "Origin"} → {cities[cities.length - 1]?.cityName || "Destination"} 
+            fare by summing all segment prices (Total: ₵{calculateTotalFare()})
+          </p>
+        )}
       </CardHeader>
       <CardContent className="space-y-3">
-        {cityPairs.map(({ from, to }, index) => (
-          <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+        {cityPairs.map(({ from, to, isTotal }, index) => (
+          <div 
+            key={index} 
+            className={`
+              flex items-center gap-3 p-3 rounded-lg transition-all
+              ${isTotal 
+                ? 'bg-brand-dark-blue/10 border-2 border-brand-dark-blue/30 shadow-sm' 
+                : 'bg-gray-50 hover:bg-gray-100'
+              }
+            `}
+          >
             <div className="flex items-center gap-2 flex-1">
-              <span className="font-medium text-sm">{from}</span>
-              <ArrowRight className="w-4 h-4 text-gray-400" />
-              <span className="font-medium text-sm">{to}</span>
+              {isTotal && (
+                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-brand-dark-blue text-white text-xs font-bold mr-2">
+                  T
+                </div>
+              )}
+              <span className={`font-medium text-sm ${isTotal ? 'text-brand-dark-blue' : ''}`}>
+                {from}
+              </span>
+              <ArrowRight className={`w-4 h-4 ${isTotal ? 'text-brand-dark-blue' : 'text-gray-400'}`} />
+              <span className={`font-medium text-sm ${isTotal ? 'text-brand-dark-blue' : ''}`}>
+                {to}
+              </span>
+              {isTotal && (
+                <Badge variant="secondary" className="ml-2 bg-brand-dark-blue/20 text-brand-dark-blue text-xs">
+                  Total Route
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm">₵</span>
+              <span className={`text-sm ${isTotal ? 'text-brand-dark-blue font-medium' : ''}`}>₵</span>
               <Input
                 type="number"
                 value={getFare(from, to)}
                 onChange={(e) => updateFare(from, to, parseFloat(e.target.value) || 0)}
                 placeholder="0"
-                className="w-20 h-8 text-sm"
+                className={`
+                  w-20 h-8 text-sm 
+                  ${isTotal 
+                    ? 'border-brand-dark-blue focus:border-brand-dark-blue focus:ring-brand-dark-blue/20 font-medium' 
+                    : ''
+                  }
+                `}
                 min="0"
                 step="0.01"
               />
@@ -344,7 +430,7 @@ const InterCityFareManager = ({
 };
 
 // Route Preview Component
-const RoutePreview = ({ cities }: { cities: CitySection[] }) => {
+const RoutePreview = ({ cities }: { cities: CityWithStations[] }) => {
   return (
     <Card className="premium-card">
       <CardHeader>
@@ -390,7 +476,14 @@ export default function RouteEditor() {
   const navigate = useNavigate();
   const isEditing = !!id;
 
-  const { control, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm<RouteFormData>({
+  // Load existing route data for editing
+  const { data: existingRoute } = useQuery({
+    queryKey: ['route-template', id],
+    queryFn: () => getRouteTemplateById(id!),
+    enabled: isEditing,
+  });
+
+  const { control, handleSubmit, watch, setValue, trigger, reset, formState: { errors } } = useForm<RouteTemplateFormData>({
     defaultValues: {
       name: "",
       estimatedDuration: "",
@@ -404,6 +497,45 @@ export default function RouteEditor() {
     }
   });
 
+  // Reset form when existing route data loads
+  useEffect(() => {
+    if (existingRoute) {
+      reset({
+        name: existingRoute.name,
+        estimatedDuration: existingRoute.estimatedDuration,
+        basePrice: existingRoute.basePrice,
+        status: existingRoute.status,
+        cities: existingRoute.cities,
+        intercityFares: existingRoute.intercityFares
+      });
+    }
+  }, [existingRoute, reset]);
+
+  // Create route mutation
+  const createRouteMutation = useMutation({
+    mutationFn: createRouteTemplate,
+    onSuccess: () => {
+      toast.success("Route template created successfully!");
+      navigate("/driver/routes");
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to create route template: ${error.message}`);
+    }
+  });
+
+  // Update route mutation
+  const updateRouteMutation = useMutation({
+    mutationFn: ({ id, routeData }: { id: string; routeData: RouteTemplateFormData }) => 
+      updateRouteTemplate(id, routeData),
+    onSuccess: () => {
+      toast.success("Route template updated successfully!");
+      navigate("/driver/routes");
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to update route template: ${error.message}`);
+    }
+  });
+
   const { append: appendCity, remove: removeCity, move: moveCity } = useFieldArray({
     control,
     name: "cities"
@@ -412,10 +544,12 @@ export default function RouteEditor() {
   const watchedCities = watch("cities");
   const watchedFares = watch("intercityFares");
 
-  const onSubmit = (data: RouteFormData) => {
-    console.log("Route data:", data);
-    // TODO: Save to backend
-    navigate("/driver/routes");
+  const onSubmit = (data: RouteTemplateFormData) => {
+    if (isEditing) {
+      updateRouteMutation.mutate({ id: id!, routeData: data });
+    } else {
+      createRouteMutation.mutate(data);
+    }
   };
 
   const addCity = () => {
@@ -426,7 +560,7 @@ export default function RouteEditor() {
     moveCity(fromIndex, toIndex);
   };
 
-  const updateCity = async (index: number, city: CitySection) => {
+  const updateCity = async (index: number, city: CityWithStations) => {
     setValue(`cities.${index}`, city, { shouldDirty: true });
     await trigger(`cities.${index}`);
   };
