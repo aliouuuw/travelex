@@ -139,11 +139,11 @@ const mockDriverRoutes: RouteTemplate[] = [
 const RouteFlowChart = ({ route }: { route: RouteTemplate }) => {
   return (
     <div className="bg-gray-50 rounded-lg p-6 overflow-x-auto">
-      <div className="flex items-center justify-center min-w-max">
+      <div className="flex items-start justify-center min-w-max pr-6 md:pr-0">
         {route.cities.map((city, cityIndex) => (
           <div key={city.cityName} className="flex items-center">
             {/* City Node */}
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center h-80">
               {/* City Header */}
               <div className={`
                 flex items-center justify-center w-32 h-16 rounded-xl border-2 shadow-sm
@@ -161,38 +161,40 @@ const RouteFlowChart = ({ route }: { route: RouteTemplate }) => {
                 </div>
               </div>
               
-              {/* Available Stations */}
-              <div className="mt-4 space-y-2">
-                <div className="text-xs font-medium text-gray-600 mb-2">
+              {/* Available Stations - Fixed Height Container */}
+              <div className="mt-4 flex flex-col h-60 w-full">
+                <div className="text-xs font-medium text-gray-600 mb-2 text-center">
                   Available Stations ({city.stations.length})
                 </div>
-                {city.stations.slice(0, 3).map((station) => (
-                  <div
-                    key={station.id}
-                    className="px-3 py-2 rounded-lg text-xs font-medium text-center min-w-[120px] bg-white border border-gray-300 text-gray-800"
-                  >
-                    <div className="flex items-center justify-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      <span>{station.name}</span>
-                    </div>
-                    {station.address && (
-                      <div className="text-[10px] opacity-75 mt-0.5">
-                        {station.address}
+                <div className="flex-1 space-y-2 overflow-y-auto">
+                  {city.stations.slice(0, 3).map((station) => (
+                    <div
+                      key={station.id}
+                      className="px-3 py-2 rounded-lg text-xs font-medium text-center min-w-[120px] bg-white border border-gray-300 text-gray-800"
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        <span>{station.name}</span>
                       </div>
-                    )}
-                  </div>
-                ))}
-                {city.stations.length > 3 && (
-                  <div className="text-xs text-gray-500 text-center">
-                    +{city.stations.length - 3} more stations
-                  </div>
-                )}
+                      {station.address && (
+                        <div className="text-[10px] opacity-75 mt-0.5">
+                          {station.address}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {city.stations.length > 3 && (
+                    <div className="text-xs text-gray-500 text-center pt-2">
+                      +{city.stations.length - 3} more stations
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             
             {/* Arrow Connector */}
             {cityIndex < route.cities.length - 1 && (
-              <div className="flex items-center justify-center mx-6">
+              <div className="flex items-center justify-center mx-6 self-start mt-8">
                 <ArrowRight className="w-8 h-8 text-gray-400" />
               </div>
             )}
@@ -385,7 +387,7 @@ export default function DriverRoutesPage() {
             variant={selectedStatus === status ? "default" : "outline"}
             size="sm"
             onClick={() => setSelectedStatus(status)}
-            className={selectedStatus === status ? "bg-brand-orange hover:bg-brand-orange-600" : ""}
+            className={selectedStatus === status ? "bg-brand-orange text-white hover:bg-brand-orange-600" : ""}
           >
             {status.charAt(0).toUpperCase() + status.slice(1)}
             <Badge variant="secondary" className="ml-2">
