@@ -1,4 +1,4 @@
-/// TravelEx Database Model for dbdiagram.io - v3 (Route Templates & Segment Booking)
+/// TravelEx Database Model for dbdiagram.io - v4 (Implemented Route Templates & Reusable Cities)
 
 // Note: This schema is designed for Supabase.
 // The 'profiles' table is intended to link to Supabase's built-in 'auth.users' table.
@@ -6,6 +6,7 @@
 Table profiles {
   id           uuid      [pk, ref: > auth.users.id]
   full_name    varchar   [not null]
+  email        varchar   [not null] // Added for better data management
   role         varchar   [not null, default: 'passenger']
   rating       float     [default: 0]
   avatar_url   varchar
@@ -13,40 +14,63 @@ Table profiles {
   updated_at   timestamptz [default: `now()`]
 }
 
-Table cities {
-  id    uuid     [pk, default: `gen_random_uuid()`]
-  name  varchar  [not null, unique]
-}
-
-Table stations {
-  id       uuid     [pk, default: `gen_random_uuid()`]
-  city_id  uuid     [ref: > cities.id]
-  name     varchar  [not null]
-  address  varchar
-}
-
-// Route Templates - Define intercity connections and available stations per city
+// Main Route Templates - Define intercity connections 
 Table route_templates {
-  id          uuid       [pk, default: `gen_random_uuid()`]
-  driver_id   uuid       [ref: > profiles.id]
-  name        varchar    [not null]
-  description varchar    // e.g., "Express service between Tamale and Accra"
-  created_at  timestamptz  [default: `now()`]
+  id                 uuid       [pk, default: `gen_random_uuid()`]
+  driver_id          uuid       [ref: > profiles.id]
+  name               varchar    [not null]
+  estimated_duration varchar    [not null] // e.g., "4 hours"
+  base_price         decimal(10,2) [not null, default: 0]
+  status             varchar    [not null, default: 'draft'] // draft, active, inactive
+  created_at         timestamptz  [default: `now()`]
+  updated_at         timestamptz  [default: `now()`]
 }
 
 // Cities in route templates with their sequence (Tamale → Kumasi → Accra)
 Table route_template_cities {
   id                uuid     [pk, default: `gen_random_uuid()`]
   route_template_id uuid     [ref: > route_templates.id]
-  city_id           uuid     [ref: > cities.id]
-  sequence          int      [not null]  // 1, 2, 3... for city order
+  city_name         varchar  [not null] // Storing city name directly
+  sequence_order    int      [not null]  // 0, 1, 2... for city order
+  created_at        timestamptz [default: `now()`]
 }
 
 // Available stations per city in route templates
 Table route_template_stations {
   id                      uuid     [pk, default: `gen_random_uuid()`]
   route_template_city_id  uuid     [ref: > route_template_cities.id]
-  station_id              uuid     [ref: > stations.id]
+  station_name            varchar  [not null]
+  station_address         varchar  [not null]
+  created_at              timestamptz [default: `now()`]
+}
+
+// Intercity segment pricing (between adjacent cities)
+Table route_template_pricing {
+  id                uuid        [pk, default: `gen_random_uuid()`]
+  route_template_id uuid        [ref: > route_templates.id]
+  from_city         varchar     [not null]
+  to_city           varchar     [not null]
+  price             decimal(10,2) [not null]
+  created_at        timestamptz [default: `now()`]
+}
+
+// Reusable Cities - For efficiency across route templates
+Table reusable_cities {
+  id         uuid       [pk, default: `gen_random_uuid()`]
+  driver_id  uuid       [ref: > profiles.id]
+  city_name  varchar    [not null]
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+}
+
+// Reusable Stations - Linked to reusable cities
+Table reusable_stations {
+  id                uuid       [pk, default: `gen_random_uuid()`]
+  reusable_city_id  uuid       [ref: > reusable_cities.id]
+  station_name      varchar    [not null]
+  station_address   varchar    [not null]
+  created_at        timestamptz [default: `now()`]
+  updated_at        timestamptz [default: `now()`]
 }
 
 // Scheduled trips using route templates
@@ -140,12 +164,21 @@ Table ratings {
   created_at timestamptz  [default: `now()`]
 }
 
-// Key Changes in v3:
-// 1. Routes are now "route_templates" - reusable intercity connection patterns
-// 2. Added route_template_cities for defining city sequences
-// 3. Added route_template_stations for available stations per city
-// 4. Added trip_stations for driver's selected stations per scheduled trip
-// 5. Added segment_pricing for fixed intercity rates
-// 6. Reservations now support pickup/dropoff stations for segment booking
-// 7. This enables passengers to book any valid segment (e.g., Kumasi-Accra from Tamale-Kumasi-Accra trip)
+// Key Changes in v4 (Implemented):
+// 1. Completed route template system with comprehensive UI and backend
+// 2. Added reusable_cities and reusable_stations for efficiency
+// 3. Route templates now store city names directly for simplicity
+// 4. Added route_template_pricing for intercity segment pricing
+// 5. Enhanced profiles table with email field for better data management
+// 6. Implemented full CRUD operations for route template management
+// 7. Added status field to route templates (draft, active, inactive)
+// 8. Pricing system supports both segment and total route fare calculation
+
+// Features Implemented:
+// - Complete route template creation and editing with drag-and-drop UI
+// - Reusable cities and stations system with tabbed interface
+// - Visual pricing configuration with auto-calculation
+// - Route template deletion with safety confirmations
+// - Real-time route visualization with flowchart display
+// - Integration with TanStack Query for caching and state management
 
