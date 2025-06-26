@@ -22,6 +22,7 @@ import SignupRequestsPage from "./pages/admin/signup-requests";
 
 import DriverRoutesPage from "./pages/driver/routes";
 import RouteEditor from "./pages/driver/routes/edit";
+import LuggagePoliciesPage from "./pages/driver/luggage-policies";
 import { User, LogOut } from "lucide-react";
 
 const Header = () => {
@@ -68,12 +69,6 @@ const Header = () => {
     <header className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-md supports-[backdrop-filter]:bg-white/80 z-50 border-b border-border/40 shadow-sm">
       <nav className="h-16 flex items-center justify-between px-6 mx-auto max-w-7xl">
         <Link to="/" className="flex items-center gap-2 group">
-          {/* <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand-orange">
-            <Car className="w-5 h-5 text-white" />
-          </div>
-          <span className="font-heading text-xl font-bold text-brand-dark-blue group-hover:text-brand-orange transition-colors">
-            TravelEx
-          </span> */}
           <img src="/logo.png" alt="TravelEx" className="w-12 lg:w-18 xl:w-20 h-auto" />
         </Link>
         
@@ -275,6 +270,10 @@ const router = createBrowserRouter([
           {
             path: "/driver/routes/:id/edit", 
             element: <RouteEditor />,
+          },
+          {
+            path: "/driver/luggage-policies",
+            element: <LuggagePoliciesPage />,
           },
         ],
       }

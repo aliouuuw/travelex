@@ -7,7 +7,7 @@ import { updateUserPassword } from "@/services/auth";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Loader2, Car, Calendar, DollarSign, Users, Settings, Lock, Gauge, Route } from "lucide-react";
+import { Loader2, Car, Calendar, DollarSign, Users, Settings, Lock, Gauge, Route, Package } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const StatCard = ({ 
@@ -184,11 +184,31 @@ export default function DriverDashboard() {
             </Card>
           </Link>
 
+          <Link to="/driver/luggage-policies">
+            <Card className="premium-card hover:shadow-premium-hover transition-all cursor-pointer group">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-green-100 group-hover:bg-green-200 transition-colors">
+                    <Package className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-heading text-lg font-semibold text-foreground mb-1">
+                      Luggage Policies
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Manage your luggage rules and pricing
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
           <Card className="premium-card hover:shadow-premium-hover transition-all cursor-pointer group">
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-green-100 group-hover:bg-green-200 transition-colors">
-                  <Car className="w-6 h-6 text-green-600" />
+                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-purple-100 group-hover:bg-purple-200 transition-colors">
+                  <Car className="w-6 h-6 text-purple-600" />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-heading text-lg font-semibold text-foreground mb-1">
