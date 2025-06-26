@@ -253,8 +253,10 @@ const DriverRouteCard = ({ route }: { route: RouteTemplate }) => {
                 View Trips
               </Link>
             </Button>
-            <Button variant="ghost" size="sm">
-              <Edit className="w-4 h-4" />
+            <Button variant="ghost" size="sm" asChild>
+              <Link to={`/driver/routes/${route.id}/edit`}>
+                <Edit className="w-4 h-4" />
+              </Link>
             </Button>
           </div>
         </div>
@@ -313,7 +315,7 @@ export default function DriverRoutesPage() {
           asChild 
           className="bg-brand-orange hover:bg-brand-orange-600 text-white shadow-brand hover:shadow-brand-hover transition-all"
         >
-          <Link to="/driver/routes/new" className="flex items-center gap-2">
+          <Link to="/driver/routes/edit" className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Create Route
           </Link>
@@ -420,7 +422,7 @@ export default function DriverRoutesPage() {
                 asChild 
                 className="bg-brand-orange hover:bg-brand-orange-600 text-white"
               >
-                <Link to="/driver/routes/new" className="flex items-center gap-2">
+                <Link to="/driver/routes/edit" className="flex items-center gap-2">
                   <Plus className="h-4 w-4" />
                   Create Route
                 </Link>
