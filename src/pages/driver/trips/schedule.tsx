@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DateTimePickerField } from "@/components/ui/datetime-picker";
 import { 
   Calendar, 
   Clock, 
@@ -188,7 +189,14 @@ export default function ScheduleTripPage() {
   );
 
   const canProceedToStations = useMemo(() => {
-    return Boolean(routeTemplateId && vehicleId && departureTime && arrivalTime);
+    return routeTemplateId && 
+           routeTemplateId.trim() !== '' && 
+           vehicleId && 
+           vehicleId.trim() !== '' && 
+           departureTime && 
+           departureTime.trim() !== '' && 
+           arrivalTime && 
+           arrivalTime.trim() !== '';
   }, [routeTemplateId, vehicleId, departureTime, arrivalTime]);
 
   const handleStationToggle = (stationId: string) => {
@@ -426,11 +434,14 @@ export default function ScheduleTripPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="departureTime">Departure Time</Label>
-                    <Input
-                      id="departureTime"
-                      type="datetime-local"
-                      {...form.register('departureTime')}
-                      min={new Date().toISOString().slice(0, 16)}
+                    <DateTimePickerField
+                      value={form.watch('departureTime')}
+                      onChange={(date) => {
+                        form.setValue('departureTime', date.toISOString().slice(0, 16));
+                        form.trigger('departureTime');
+                      }}
+                      placeholder="Select departure time"
+                      minDate={new Date()}
                     />
                     {form.formState.errors.departureTime && (
                       <p className="text-sm text-red-600">{form.formState.errors.departureTime.message}</p>
@@ -439,11 +450,14 @@ export default function ScheduleTripPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="arrivalTime">Arrival Time</Label>
-                    <Input
-                      id="arrivalTime"
-                      type="datetime-local"
-                      {...form.register('arrivalTime')}
-                      min={form.watch('departureTime') || new Date().toISOString().slice(0, 16)}
+                    <DateTimePickerField
+                      value={form.watch('arrivalTime')}
+                      onChange={(date) => {
+                        form.setValue('arrivalTime', date.toISOString().slice(0, 16));
+                        form.trigger('arrivalTime');
+                      }}
+                      placeholder="Select arrival time"
+                      minDate={departureTime ? new Date(departureTime) : new Date()}
                     />
                     {form.formState.errors.arrivalTime && (
                       <p className="text-sm text-red-600">{form.formState.errors.arrivalTime.message}</p>

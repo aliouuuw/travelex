@@ -1,15 +1,19 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ChevronLeft, 
   ChevronRight, 
   Calendar as CalendarIcon,
-  Plus
+  Plus,
+  CalendarDays,
+  Grid3X3
 } from "lucide-react";
 import { type Trip } from "@/services/trips";
-import DroppableCalendarTile from "./droppable-calendar-tile";
+import CalendarTile from "./droppable-calendar-tile";
 import QuickScheduleModal from "./quick-schedule-modal";
+import DaySummaryModal from "./day-summary-modal";
 
 // Trip with enhanced date properties for calendar display
 interface CalendarTrip extends Trip {
@@ -39,8 +43,12 @@ export default function EnhancedCalendarView({
   onDateSelect
 }: EnhancedCalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [calendarView, setCalendarView] = useState<'month' | 'week'>('month');
   const [showQuickSchedule, setShowQuickSchedule] = useState(false);
   const [quickScheduleDate, setQuickScheduleDate] = useState<Date | null>(null);
+  const [showDaySummary, setShowDaySummary] = useState(false);
+  const [summaryDate, setSummaryDate] = useState<Date | null>(null);
+  const [summaryTrips, setSummaryTrips] = useState<CalendarTrip[]>([]);
 
   // Get first day of current month
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
@@ -54,8 +62,8 @@ export default function EnhancedCalendarView({
   const lastDayOfCalendar = new Date(lastDayOfMonth);
   lastDayOfCalendar.setDate(lastDayOfCalendar.getDate() + (6 - lastDayOfMonth.getDay()));
 
-  // Generate calendar days
-  const calendarDays = useMemo(() => {
+  // Generate calendar days for month view
+  const monthCalendarDays = useMemo(() => {
     const days = [];
     const current = new Date(firstDayOfCalendar);
     
@@ -66,6 +74,24 @@ export default function EnhancedCalendarView({
     
     return days;
   }, [firstDayOfCalendar, lastDayOfCalendar]);
+
+  // Generate calendar days for week view
+  const weekCalendarDays = useMemo(() => {
+    const startOfWeek = new Date(currentDate);
+    startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+    
+    const days = [];
+    const current = new Date(startOfWeek);
+    
+    for (let i = 0; i < 7; i++) {
+      days.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    }
+    
+    return days;
+  }, [currentDate]);
+
+  const calendarDays = calendarView === 'month' ? monthCalendarDays : weekCalendarDays;
 
   // Group trips by date
   const tripsByDate = useMemo(() => {
@@ -82,17 +108,35 @@ export default function EnhancedCalendarView({
     return grouped;
   }, [trips]);
 
-  const handlePrevMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  const handlePrevious = () => {
+    if (calendarView === 'month') {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    } else {
+      const newDate = new Date(currentDate);
+      newDate.setDate(currentDate.getDate() - 7);
+      setCurrentDate(newDate);
+    }
   };
 
-  const handleNextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  const handleNext = () => {
+    if (calendarView === 'month') {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    } else {
+      const newDate = new Date(currentDate);
+      newDate.setDate(currentDate.getDate() + 7);
+      setCurrentDate(newDate);
+    }
   };
 
   const handleScheduleClick = (date: Date) => {
     setQuickScheduleDate(date);
     setShowQuickSchedule(true);
+  };
+
+  const handleDayClick = (date: Date, trips: CalendarTrip[]) => {
+    setSummaryDate(date);
+    setSummaryTrips(trips);
+    setShowDaySummary(true);
   };
 
   const handleTodayClick = () => {
@@ -119,26 +163,49 @@ export default function EnhancedCalendarView({
     <>
       <Card className="premium-card">
         <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <CardTitle className="flex items-center gap-2">
-                <CalendarIcon className="w-5 h-5" />
-                Interactive Calendar
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={handlePrevMonth}>
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <h3 className="text-lg font-semibold min-w-[140px] text-center">
-                  {MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}
-                </h3>
-                <Button variant="outline" size="sm" onClick={handleNextMonth}>
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
+          {/* Header Row 1: Title and View Selector */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+            <CardTitle className="flex items-center gap-2">
+              <CalendarIcon className="w-5 h-5" />
+              Interactive Calendar
+            </CardTitle>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleTodayClick}>
+              <Tabs value={calendarView} onValueChange={(value) => setCalendarView(value as 'month' | 'week')}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="month" className="flex items-center gap-1">
+                    <Grid3X3 className="w-3 h-3" />
+                    <span className="hidden sm:inline">Month</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="week" className="flex items-center gap-1">
+                    <CalendarDays className="w-3 h-3" />
+                    <span className="hidden sm:inline">Week</span>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          </div>
+
+          {/* Header Row 2: Navigation and Actions */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* Navigation */}
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={handlePrevious}>
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <h3 className="text-lg font-semibold min-w-[120px] sm:min-w-[140px] text-center">
+                {calendarView === 'month' 
+                  ? `${MONTHS[currentDate.getMonth()]} ${currentDate.getFullYear()}`
+                  : `Week of ${currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                }
+              </h3>
+              <Button variant="outline" size="sm" onClick={handleNext}>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="bg-brand-dark-blue hover:bg-brand-dark-blue-600 text-white" onClick={handleTodayClick}>
                 Today
               </Button>
               <Button 
@@ -146,8 +213,8 @@ export default function EnhancedCalendarView({
                 onClick={() => handleScheduleClick(new Date())}
                 className="bg-brand-orange hover:bg-brand-orange-600 text-white"
               >
-                <Plus className="w-4 h-4 mr-1" />
-                Schedule
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline ml-1">Schedule</span>
               </Button>
             </div>
           </div>
@@ -169,21 +236,23 @@ export default function EnhancedCalendarView({
             </div>
             
             {/* Calendar Days */}
-            <div className="grid grid-cols-7 min-h-[600px]">
+            <div className={`grid grid-cols-7 ${calendarView === 'month' ? 'min-h-[600px]' : 'min-h-[200px]'}`}>
               {calendarDays.map((date, index) => {
                 const dateKey = date.toDateString();
                 const dayTrips = tripsByDate[dateKey] || [];
                 
                 return (
-                  <DroppableCalendarTile
+                  <CalendarTile
                     key={index}
                     date={date}
                     trips={dayTrips}
                     onTripSelect={onTripSelect}
                     onScheduleClick={handleScheduleClick}
-                    isCurrentMonth={isCurrentMonth(date)}
+                    onDayClick={handleDayClick}
+                    isCurrentMonth={calendarView === 'month' ? isCurrentMonth(date) : true}
                     isToday={isToday(date)}
                     isSelected={isSelected(date)}
+                    isWeekView={calendarView === 'week'}
                   />
                 );
               })}
@@ -212,7 +281,7 @@ export default function EnhancedCalendarView({
                 </div>
               </div>
               <div className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
-                💡 Click empty dates to schedule • Drag trips to reschedule • Right-click for options
+                💡 Click empty dates to schedule • Click trip counts for details
               </div>
             </div>
           </div>
@@ -228,6 +297,21 @@ export default function EnhancedCalendarView({
             setQuickScheduleDate(null);
           }}
           selectedDate={quickScheduleDate}
+        />
+      )}
+
+      {/* Day Summary Modal */}
+      {showDaySummary && summaryDate && (
+        <DaySummaryModal
+          isOpen={showDaySummary}
+          onClose={() => {
+            setShowDaySummary(false);
+            setSummaryDate(null);
+            setSummaryTrips([]);
+          }}
+          selectedDate={summaryDate}
+          trips={summaryTrips}
+          onTripSelect={onTripSelect}
         />
       )}
     </>

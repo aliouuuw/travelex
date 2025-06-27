@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useDrag, useDrop } from "react-dnd";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -15,7 +14,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   getStatusColor,
   deleteTrip,
-  updateTrip,
   type Trip 
 } from "@/services/trips";
 import { toast } from "sonner";
@@ -28,18 +26,13 @@ interface CalendarTrip extends Trip {
   endDate: Date;
 }
 
-interface DraggableTripProps {
+interface TripCardProps {
   trip: CalendarTrip;
   onTripSelect: (trip: CalendarTrip) => void;
-  onEdit?: (trip: CalendarTrip) => void;
   compact?: boolean;
 }
 
-interface DropResult {
-  date: Date;
-}
-
-export default function DraggableTrip({ trip, onTripSelect, onEdit, compact = false }: DraggableTripProps) {
+export default function TripCard({ trip, onTripSelect, compact = false }: TripCardProps) {
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
   const queryClient = useQueryClient();
@@ -54,53 +47,6 @@ export default function DraggableTrip({ trip, onTripSelect, onEdit, compact = fa
       toast.error(`Failed to delete trip: ${error.message}`);
     },
   });
-
-  // Drag functionality
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: 'trip',
-    item: { trip },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-    end: (item, monitor) => {
-      const dropResult = monitor.getDropResult<DropResult>();
-      if (item && dropResult && dropResult.date) {
-        handleReschedule(dropResult.date);
-      }
-    },
-  }));
-
-  const handleReschedule = async (newDate: Date) => {
-    try {
-      const currentDeparture = new Date(trip.departureTime);
-      const currentArrival = new Date(trip.arrivalTime);
-      
-      // Calculate time difference
-      const timeDiff = currentArrival.getTime() - currentDeparture.getTime();
-      
-      // Set new departure time maintaining the original time of day
-      const newDeparture = new Date(newDate);
-      newDeparture.setHours(currentDeparture.getHours(), currentDeparture.getMinutes());
-      
-      // Set new arrival time maintaining the duration
-      const newArrival = new Date(newDeparture.getTime() + timeDiff);
-
-      const tripData = {
-        routeTemplateId: trip.routeTemplateId,
-        vehicleId: trip.vehicleId || '',
-        luggagePolicyId: trip.luggagePolicyId,
-        departureTime: newDeparture.toISOString(),
-        arrivalTime: newArrival.toISOString(),
-        selectedStations: [], // This would need to be properly handled
-      };
-
-      await updateTrip(trip.id, tripData);
-      queryClient.invalidateQueries({ queryKey: ['driver-trips'] });
-      toast.success(`Trip rescheduled to ${newDate.toLocaleDateString()}`);
-    } catch (error) {
-      toast.error('Failed to reschedule trip');
-    }
-  };
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -119,24 +65,20 @@ export default function DraggableTrip({ trip, onTripSelect, onEdit, compact = fa
   const departureTime = new Date(trip.departureTime);
   const arrivalTime = new Date(trip.arrivalTime);
   
-  const routePath = trip.routeCities
-    .map(city => city.cityName)
-    .join(' → ');
+  // Use route template name instead of empty routeCities
+  const routePath = trip.routeTemplateName || 'Unknown Route';
 
   return (
     <>
       <div
-        ref={drag}
         className={`
           trip-event cursor-pointer rounded transition-all group
-          ${isDragging ? 'opacity-50 transform rotate-2' : ''}
           ${compact ? 'p-1.5 border-l-2 bg-white/90 hover:bg-white shadow-sm hover:shadow' : 'p-3 mb-2 border-l-4 bg-white shadow-sm hover:shadow-md'}
         `}
         style={{ 
           borderLeftColor: trip.status === 'completed' ? '#10b981' : 
                            trip.status === 'in_progress' ? '#f59e0b' : 
-                           trip.status === 'cancelled' ? '#ef4444' : '#3b82f6',
-          cursor: isDragging ? 'grabbing' : 'grab'
+                           trip.status === 'cancelled' ? '#ef4444' : '#3b82f6'
         }}
         onClick={() => onTripSelect(trip)}
         onContextMenu={handleContextMenu}
@@ -166,7 +108,7 @@ export default function DraggableTrip({ trip, onTripSelect, onEdit, compact = fa
             </Badge>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <MapPin className="w-3 h-3 shrink-0" />
-              <span className="truncate text-xs">{routePath.split(' → ')[0]}</span>
+              <span className="truncate text-xs">{routePath}</span>
             </div>
           </div>
         )}

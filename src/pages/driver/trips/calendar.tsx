@@ -1,7 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { DndProvider } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +30,7 @@ import {
   type Trip 
 } from "@/services/trips";
 import EnhancedCalendarView from "@/components/trip-calendar/enhanced-calendar-view";
-import DraggableTrip from "@/components/trip-calendar/draggable-trip";
+import TripCard from "@/components/trip-calendar/trip-card";
 
 // Calendar value type
 type CalendarValue = Date | null;
@@ -53,7 +51,7 @@ type CalendarViewType = 'month' | 'timeline';
 // Timeline Event Component
 const TimelineEvent = ({ trip, onClick }: { trip: CalendarTrip; onClick: () => void }) => {
   return (
-    <DraggableTrip
+                      <TripCard
       trip={trip}
       onTripSelect={onClick}
       compact={false}
@@ -69,9 +67,8 @@ const TripDetailsPanel = ({ trip }: { trip: CalendarTrip | null }) => {
   const arrivalDate = new Date(trip.arrivalTime);
   const duration = formatTripDuration(trip.departureTime, trip.arrivalTime);
   
-  const routePath = trip.routeCities
-    .map(city => city.cityName)
-    .join(' → ');
+  // Use route template name instead of empty routeCities
+  const routePath = trip.routeTemplateName || 'Unknown Route';
 
   return (
     <Card className="premium-card">
@@ -265,7 +262,6 @@ export default function TripCalendarPage() {
   }
 
   return (
-    <DndProvider backend={HTML5Backend}>
       <div className="p-6 space-y-6 max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -290,7 +286,7 @@ export default function TripCalendarPage() {
               <TabsList>
                 <TabsTrigger value="month" className="flex items-center gap-2">
                   <Grid className="w-4 h-4" />
-                  Month
+                  Calendar
                 </TabsTrigger>
                 <TabsTrigger value="timeline" className="flex items-center gap-2">
                   <List className="w-4 h-4" />
@@ -302,7 +298,7 @@ export default function TripCalendarPage() {
               variant="outline"
               size="sm"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="flex items-center gap-2"
+              className="bg-brand-dark-blue hover:bg-brand-dark-blue-600 text-white shadow-brand hover:shadow-brand-hover transition-all flex items-center gap-2"
               title={`${sidebarCollapsed ? 'Show' : 'Hide'} Panel (Ctrl+B)`}
             >
               {sidebarCollapsed ? (
@@ -316,15 +312,6 @@ export default function TripCalendarPage() {
                   <span className="hidden sm:inline">Hide Panel</span>
                 </>
               )}
-            </Button>
-            <Button 
-              asChild 
-              className="bg-brand-orange hover:bg-brand-orange-600 text-white shadow-brand hover:shadow-brand-hover transition-all"
-            >
-              <Link to="/driver/trips/schedule" className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Schedule Trip
-              </Link>
             </Button>
           </div>
         </div>
@@ -489,7 +476,7 @@ export default function TripCalendarPage() {
             variant="outline"
             size="sm"
             onClick={() => setSidebarCollapsed(false)}
-            className="fixed bottom-6 right-6 z-50 shadow-lg bg-white hover:bg-gray-50 border-2 animate-in fade-in slide-in-from-bottom duration-300"
+            className="fixed bg-brand-dark-blue hover:bg-brand-dark-blue-600 text-white shadow-brand hover:shadow-brand-hover transition-all bottom-6 right-6 z-50 shadow-lg border-2 animate-in fade-in slide-in-from-bottom duration-300"
             title="Show Panel (Ctrl+B)"
           >
             <PanelRightOpen className="w-4 h-4 mr-2" />
@@ -497,6 +484,5 @@ export default function TripCalendarPage() {
           </Button>
         )}
       </div>
-    </DndProvider>
   );
 }

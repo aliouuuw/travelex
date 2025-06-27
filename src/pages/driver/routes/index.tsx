@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Route, Clock, DollarSign, MapPin, ArrowRight, Edit, Eye, Users, Loader2, Trash2 } from "lucide-react";
+import { Plus, Route, Clock, DollarSign, MapPin, ArrowRight, Edit, Users, Loader2, Trash2, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDriverRouteTemplates, deleteRouteTemplate, type RouteTemplate } from "@/services/route-templates";
