@@ -390,6 +390,12 @@ export default function DriverTripsPage() {
           />
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/driver/trips/calendar" className="flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              Calendar
+            </Link>
+          </Button>
           {(['all', 'scheduled', 'in_progress', 'completed', 'cancelled'] as const).map((status) => (
             <Button
               key={status}

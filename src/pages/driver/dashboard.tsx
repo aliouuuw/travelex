@@ -163,7 +163,7 @@ export default function DriverDashboard() {
         <h2 className="font-heading text-xl font-semibold text-foreground">
           Quick Actions
         </h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <Link to="/driver/routes">
             <Card className="premium-card hover:shadow-premium-hover transition-all cursor-pointer group">
               <CardContent className="p-6">
@@ -237,6 +237,26 @@ export default function DriverDashboard() {
                     </h3>
                     <p className="text-sm text-muted-foreground">
                       Manage your vehicle fleet and settings
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link to="/driver/trips/calendar">
+            <Card className="premium-card hover:shadow-premium-hover transition-all cursor-pointer group">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-100 group-hover:bg-indigo-200 transition-colors">
+                    <Calendar className="w-6 h-6 text-indigo-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-heading text-lg font-semibold text-foreground mb-1">
+                      Trip Calendar
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Visual schedule management
                     </p>
                   </div>
                 </div>

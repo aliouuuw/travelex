@@ -29,6 +29,7 @@ import EditVehiclePage from "./pages/driver/vehicles/edit";
 import DriverTripsPage from "./pages/driver/trips";
 import ScheduleTripPage from "./pages/driver/trips/schedule";
 import EditTripPage from "./pages/driver/trips/edit";
+import TripCalendarPage from "./pages/driver/trips/calendar";
 import { User, LogOut } from "lucide-react";
 
 const Header = () => {
@@ -288,6 +289,10 @@ const router = createBrowserRouter([
           {
             path: "/driver/trips/:id/edit",
             element: <EditTripPage />,
+          },
+          {
+            path: "/driver/trips/calendar",
+            element: <TripCalendarPage />,
           },
           {
             path: "/driver/luggage-policies",
