@@ -258,9 +258,9 @@ const DriverRouteCard = ({ route }: { route: RouteTemplate }) => {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" asChild>
-              <Link to={`/driver/routes/${route.id}/trips`}>
-                <Eye className="w-4 h-4 mr-1" />
-                View Trips
+              <Link to={`/driver/trips/schedule?route=${route.id}`}>
+                <Calendar className="w-4 h-4 mr-1" />
+                Schedule Trip
               </Link>
             </Button>
             <Button variant="ghost" size="sm" asChild>

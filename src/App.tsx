@@ -26,6 +26,9 @@ import LuggagePoliciesPage from "./pages/driver/luggage-policies";
 import VehiclesPage from "./pages/driver/vehicles";
 import NewVehiclePage from "./pages/driver/vehicles/new";
 import EditVehiclePage from "./pages/driver/vehicles/edit";
+import DriverTripsPage from "./pages/driver/trips";
+import ScheduleTripPage from "./pages/driver/trips/schedule";
+import EditTripPage from "./pages/driver/trips/edit";
 import { User, LogOut } from "lucide-react";
 
 const Header = () => {
@@ -273,6 +276,18 @@ const router = createBrowserRouter([
           {
             path: "/driver/routes/:id/edit", 
             element: <RouteEditor />,
+          },
+          {
+            path: "/driver/trips",
+            element: <DriverTripsPage />,
+          },
+          {
+            path: "/driver/trips/schedule",
+            element: <ScheduleTripPage />,
+          },
+          {
+            path: "/driver/trips/:id/edit",
+            element: <EditTripPage />,
           },
           {
             path: "/driver/luggage-policies",
