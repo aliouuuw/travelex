@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Calendar from 'react-calendar';
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +20,9 @@ import {
   ChevronRight,
   List,
   Grid,
-  DollarSign
+  DollarSign,
+  PanelRightClose,
+  PanelRightOpen
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { 
@@ -28,10 +31,11 @@ import {
   getStatusColor,
   type Trip 
 } from "@/services/trips";
-import 'react-calendar/dist/Calendar.css';
+import EnhancedCalendarView from "@/components/trip-calendar/enhanced-calendar-view";
+import DraggableTrip from "@/components/trip-calendar/draggable-trip";
 
-// Calendar value type for react-calendar
-type CalendarValue = Date | null | [Date | null, Date | null];
+// Calendar value type
+type CalendarValue = Date | null;
 
 // Trip with enhanced date properties for calendar display
 interface CalendarTrip extends Trip {
@@ -44,256 +48,21 @@ interface CalendarTrip extends Trip {
 // Calendar view type
 type CalendarViewType = 'month' | 'timeline';
 
-// Custom CSS for react-calendar integration
-const calendarStyles = `
-  .react-calendar {
-    width: 100%;
-    max-width: 100%;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    font-family: inherit;
-    line-height: 1.125em;
-  }
-  
-  .react-calendar--doubleView {
-    width: 700px;
-  }
-  
-  .react-calendar--doubleView .react-calendar__viewContainer {
-    display: flex;
-    margin: -0.5em;
-  }
-  
-  .react-calendar--doubleView .react-calendar__viewContainer > * {
-    width: 50%;
-    margin: 0.5em;
-  }
-  
-  .react-calendar *,
-  .react-calendar *:before,
-  .react-calendar *:after {
-    -moz-box-sizing: border-box;
-    -webkit-box-sizing: border-box;
-    box-sizing: border-box;
-  }
-  
-  .react-calendar button {
-    margin: 0;
-    border: 0;
-    outline: none;
-  }
-  
-  .react-calendar button:enabled:hover,
-  .react-calendar button:enabled:focus {
-    background-color: #f3f4f6;
-  }
-  
-  .react-calendar__navigation {
-    display: flex;
-    height: 44px;
-    margin-bottom: 1em;
-    padding: 0 1rem;
-  }
-  
-  .react-calendar__navigation button {
-    min-width: 44px;
-    background: none;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: 500;
-  }
-  
-  .react-calendar__navigation button:enabled:hover,
-  .react-calendar__navigation button:enabled:focus {
-    background-color: #f3f4f6;
-  }
-  
-  .react-calendar__month-view__weekdays {
-    text-align: center;
-    text-transform: uppercase;
-    font-weight: 600;
-    font-size: 0.75em;
-    color: #6b7280;
-    padding: 0 1rem;
-  }
-  
-  .react-calendar__month-view__weekdays__weekday {
-    padding: 0.5em;
-  }
-  
-  .react-calendar__month-view__weekNumbers .react-calendar__tile {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.75em;
-    color: #6b7280;
-    font-weight: 600;
-  }
-  
-  .react-calendar__month-view__days__day--weekend {
-    color: #ef4444;
-  }
-  
-  .react-calendar__month-view__days__day--neighboringMonth {
-    color: #9ca3af;
-  }
-  
-  .react-calendar__year-view .react-calendar__tile,
-  .react-calendar__decade-view .react-calendar__tile,
-  .react-calendar__century-view .react-calendar__tile {
-    padding: 2em 0.5em;
-  }
-  
-  .react-calendar__tile {
-    max-width: 100%;
-    padding: 10px 6px;
-    background: none;
-    text-align: center;
-    line-height: 16px;
-    border-radius: 8px;
-    position: relative;
-    margin: 2px;
-  }
-  
-  .react-calendar__tile:enabled:hover,
-  .react-calendar__tile:enabled:focus {
-    background-color: #f3f4f6;
-  }
-  
-  .react-calendar__tile--now {
-    background: #fb8346;
-    color: white;
-    font-weight: 600;
-  }
-  
-  .react-calendar__tile--now:enabled:hover,
-  .react-calendar__tile--now:enabled:focus {
-    background: #ea7c41;
-  }
-  
-  .react-calendar__tile--hasActive {
-    background: #0a2137;
-    color: white;
-  }
-  
-  .react-calendar__tile--hasActive:enabled:hover,
-  .react-calendar__tile--hasActive:enabled:focus {
-    background: #1a365d;
-  }
-  
-  .react-calendar__tile--active {
-    background: #0a2137;
-    color: white;
-    font-weight: 600;
-  }
-  
-  .react-calendar__tile--active:enabled:hover,
-  .react-calendar__tile--active:enabled:focus {
-    background: #1a365d;
-  }
-  
-  .react-calendar__tile--range {
-    background: #f0f9ff;
-    color: #0369a1;
-  }
-  
-  .react-calendar__tile--rangeStart {
-    background: #0369a1;
-    color: white;
-  }
-  
-  .react-calendar__tile--rangeEnd {
-    background: #0369a1;
-    color: white;
-  }
-  
-  .react-calendar__tile--rangeBothEnds {
-    background: #0369a1;
-    color: white;
-  }
-  
-  .react-calendar__tile--range:enabled:hover,
-  .react-calendar__tile--range:enabled:focus {
-    background: #e0f2fe;
-  }
-  
-  .trip-indicator {
-    position: absolute;
-    bottom: 2px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #fb8346;
-  }
-  
-  .multiple-trips {
-    background: linear-gradient(45deg, #fb8346, #0a2137);
-  }
-`;
+
 
 // Timeline Event Component
 const TimelineEvent = ({ trip, onClick }: { trip: CalendarTrip; onClick: () => void }) => {
-  const departureDate = new Date(trip.departureTime);
-  const arrivalDate = new Date(trip.arrivalTime);
-  const duration = formatTripDuration(trip.departureTime, trip.arrivalTime);
-  
-  // Generate route path display
-  const routePath = trip.routeCities
-    .map(city => city.cityName)
-    .join(' → ');
-
   return (
-    <div 
-      className="timeline-event cursor-pointer p-4 border-l-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all"
-      style={{ borderLeftColor: trip.status === 'completed' ? '#10b981' : 
-                                 trip.status === 'in_progress' ? '#f59e0b' : 
-                                 trip.status === 'cancelled' ? '#ef4444' : '#3b82f6' }}
-      onClick={onClick}
-    >
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <h4 className="font-semibold text-sm text-foreground">{trip.routeTemplateName}</h4>
-          <Badge className={getStatusColor(trip.status)} style={{ fontSize: '10px' }}>
-            {trip.status.replace('_', ' ')}
-          </Badge>
-        </div>
-        <div className="text-xs text-muted-foreground">
-          {departureDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </div>
-      </div>
-      
-      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-        <MapPin className="w-3 h-3" />
-        <span className="truncate">{routePath}</span>
-      </div>
-      
-      <div className="flex items-center justify-between text-xs">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1">
-            <Clock className="w-3 h-3" />
-            <span>{duration}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Users className="w-3 h-3" />
-            <span>{trip.availableSeats}/{trip.totalSeats}</span>
-          </div>
-        </div>
-        {trip.totalEarnings && trip.totalEarnings > 0 && (
-          <div className="flex items-center gap-1 text-brand-orange">
-            <DollarSign className="w-3 h-3" />
-            <span>₵{trip.totalEarnings}</span>
-          </div>
-        )}
-      </div>
-    </div>
+    <DraggableTrip
+      trip={trip}
+      onTripSelect={onClick}
+      compact={false}
+    />
   );
 };
 
 // Trip Details Modal/Sidebar Component
-const TripDetailsPanel = ({ trip, onClose }: { trip: CalendarTrip | null; onClose: () => void }) => {
+const TripDetailsPanel = ({ trip }: { trip: CalendarTrip | null }) => {
   if (!trip) return null;
 
   const departureDate = new Date(trip.departureTime);
@@ -393,12 +162,12 @@ export default function TripCalendarPage() {
   const [selectedTrip, setSelectedTrip] = useState<CalendarTrip | null>(null);
   const [viewType, setViewType] = useState<CalendarViewType>('month');
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Fetch trips from API
   const { 
     data: trips = [], 
     isLoading, 
-    error, 
   } = useQuery<Trip[], Error>({
     queryKey: ['driver-trips'],
     queryFn: getDriverTrips,
@@ -455,30 +224,6 @@ export default function TripCalendarPage() {
       .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
   }, [calendarTrips, currentMonth]);
 
-  // Custom tile content for calendar
-  const tileContent = ({ date, view }: { date: Date; view: string }) => {
-    if (view !== 'month') return null;
-    
-    const dateKey = date.toDateString();
-    const dayTrips = tripsByDate[dateKey];
-    
-    if (!dayTrips || dayTrips.length === 0) return null;
-    
-    return (
-      <div className="trip-indicator" style={{
-        background: dayTrips.length > 1 ? 
-          'linear-gradient(45deg, #fb8346, #0a2137)' : 
-          '#fb8346'
-      }} />
-    );
-  };
-
-  // Handle calendar date selection
-  const handleDateChange = (value: CalendarValue) => {
-    setSelectedDate(value);
-    setSelectedTrip(null);
-  };
-
   // Handle trip selection
   const handleTripSelect = (trip: CalendarTrip) => {
     setSelectedTrip(trip);
@@ -492,6 +237,19 @@ export default function TripCalendarPage() {
   const handleNextMonth = () => {
     setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
   };
+
+  // Keyboard shortcut to toggle sidebar (Ctrl/Cmd + B)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'b') {
+        event.preventDefault();
+        setSidebarCollapsed(prev => !prev);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   if (isLoading) {
     return (
@@ -507,8 +265,7 @@ export default function TripCalendarPage() {
   }
 
   return (
-    <>
-      <style>{calendarStyles}</style>
+    <DndProvider backend={HTML5Backend}>
       <div className="p-6 space-y-6 max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -541,6 +298,25 @@ export default function TripCalendarPage() {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="flex items-center gap-2"
+              title={`${sidebarCollapsed ? 'Show' : 'Hide'} Panel (Ctrl+B)`}
+            >
+              {sidebarCollapsed ? (
+                <>
+                  <PanelRightOpen className="w-4 h-4" />
+                  <span className="hidden sm:inline">Show Panel</span>
+                </>
+              ) : (
+                <>
+                  <PanelRightClose className="w-4 h-4" />
+                  <span className="hidden sm:inline">Hide Panel</span>
+                </>
+              )}
+            </Button>
             <Button 
               asChild 
               className="bg-brand-orange hover:bg-brand-orange-600 text-white shadow-brand hover:shadow-brand-hover transition-all"
@@ -553,30 +329,17 @@ export default function TripCalendarPage() {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className={`grid gap-6 transition-all duration-300 ${sidebarCollapsed ? 'lg:grid-cols-1' : 'lg:grid-cols-3'}`}>
           {/* Calendar/Timeline View */}
-          <div className="lg:col-span-2">
+          <div className={`transition-all duration-300 ${sidebarCollapsed ? 'lg:col-span-1' : 'lg:col-span-2'}`}>
             <Tabs value={viewType} onValueChange={(value) => setViewType(value as CalendarViewType)}>
               <TabsContent value="month">
-                <Card className="premium-card">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center gap-2">
-                      <CalendarIcon className="w-5 h-5" />
-                      Monthly Calendar View
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Calendar
-                      onChange={handleDateChange}
-                      value={selectedDate}
-                      tileContent={tileContent}
-                      className="w-full"
-                      prev2Label={null}
-                      next2Label={null}
-                      showNeighboringMonth={false}
-                    />
-                  </CardContent>
-                </Card>
+                <EnhancedCalendarView
+                  trips={calendarTrips}
+                  onTripSelect={handleTripSelect}
+                  selectedDate={selectedDate as Date | null}
+                  onDateSelect={(date) => setSelectedDate(date)}
+                />
               </TabsContent>
 
               <TabsContent value="timeline">
@@ -636,7 +399,8 @@ export default function TripCalendarPage() {
           </div>
 
           {/* Trip Details Sidebar */}
-          <div className="space-y-6">
+          {!sidebarCollapsed && (
+            <div className="space-y-6 animate-in slide-in-from-right duration-300">
             {/* Selected Date Trips (Month View) */}
             {viewType === 'month' && (
               <Card className="premium-card">
@@ -684,10 +448,7 @@ export default function TripCalendarPage() {
 
             {/* Trip Details Panel */}
             {selectedTrip && (
-              <TripDetailsPanel
-                trip={selectedTrip}
-                onClose={() => setSelectedTrip(null)}
-              />
+              <TripDetailsPanel trip={selectedTrip} />
             )}
 
             {/* Quick Stats */}
@@ -718,9 +479,24 @@ export default function TripCalendarPage() {
                 </div>
               </CardContent>
             </Card>
-          </div>
+            </div>
+          )}
         </div>
+
+        {/* Floating Toggle Button (when sidebar is collapsed) */}
+        {sidebarCollapsed && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSidebarCollapsed(false)}
+            className="fixed bottom-6 right-6 z-50 shadow-lg bg-white hover:bg-gray-50 border-2 animate-in fade-in slide-in-from-bottom duration-300"
+            title="Show Panel (Ctrl+B)"
+          >
+            <PanelRightOpen className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">Show Panel</span>
+          </Button>
+        )}
       </div>
-    </>
+    </DndProvider>
   );
 }
