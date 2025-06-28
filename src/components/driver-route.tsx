@@ -20,7 +20,12 @@ export function DriverRoute() {
     }
 
     if (user.profile?.role !== "driver") {
-        toast.error("You are not authorized to access this page.");
+        console.error("Driver access denied:", {
+            currentRole: user.profile?.role,
+            expectedRole: "driver",
+            redirectingTo: "/dashboard"
+        });
+        toast.error(`Access denied. Current role: ${user.profile?.role || 'none'}`);
         return <Navigate to="/dashboard" replace />;
     }
 

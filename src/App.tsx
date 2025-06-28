@@ -33,6 +33,7 @@ import EditTripPage from "./pages/driver/trips/edit";
 import ReservationsPage from "./pages/driver/reservations";
 import ReservationDetailPage from "./pages/driver/reservations/[id]";
 import AccountSettings from "./pages/settings";
+import SearchPage from "./pages/search";
 import { LogOut, LayoutDashboard, ChevronDown, Settings } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./components/ui/avatar";
 import { 
@@ -103,12 +104,20 @@ const Header = () => {
         
         <div className="flex items-center gap-6">
           {!isInDashboard && (
-            <Link 
-              to="/about" 
-              className="text-sm font-medium text-muted-foreground hover:text-brand-orange transition-colors"
-            >
-              About
-            </Link>
+            <>
+              <Link 
+                to="/search" 
+                className="text-sm font-medium text-muted-foreground hover:text-brand-orange transition-colors"
+              >
+                Search Trips
+              </Link>
+              <Link 
+                to="/about" 
+                className="text-sm font-medium text-muted-foreground hover:text-brand-orange transition-colors"
+              >
+                About
+              </Link>
+            </>
           )}
           
           {user ? (
@@ -208,7 +217,7 @@ const Home = () => {
             size="lg" 
             className="bg-brand-orange hover:bg-brand-orange-600 text-white shadow-brand hover:shadow-brand-hover transition-all text-base px-8 py-3"
           >
-            <Link to="/auth">Join as Driver</Link>
+            <Link to="/search">Search Trips</Link>
           </Button>
           <Button 
             asChild 
@@ -216,7 +225,7 @@ const Home = () => {
             size="lg"
             className="border-border/60 hover:border-brand-orange hover:text-brand-orange hover:bg-brand-orange-50 transition-all text-base px-8 py-3"
           >
-            <Link to="/about">Learn More</Link>
+            <Link to="/auth">Join as Driver</Link>
           </Button>
         </div>
       </div>
@@ -257,6 +266,10 @@ const router = createBrowserRouter([
       {
         path: "/about",
         element: <About />,
+      },
+      {
+        path: "/search",
+        element: <SearchPage />,
       },
       {
         path: "/auth",
