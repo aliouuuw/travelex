@@ -254,17 +254,11 @@ export default function AuthPage() {
                     </div>
 
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 h-12 p-1 bg-brand-dark-blue/10 border border-brand-dark-blue/20">
-                            <TabsTrigger 
-                                value="login" 
-                                className="font-medium data-[state=active]:bg-brand-orange data-[state=active]:text-white data-[state=active]:shadow-brand text-brand-dark-blue hover:text-brand-orange transition-colors"
-                            >
+                        <TabsList>
+                            <TabsTrigger value="login">
                                 Sign In
                             </TabsTrigger>
-                            <TabsTrigger 
-                                value="signup" 
-                                className="font-medium data-[state=active]:bg-brand-orange data-[state=active]:text-white data-[state=active]:shadow-brand text-brand-dark-blue hover:text-brand-orange transition-colors"
-                            >
+                            <TabsTrigger value="signup">
                                 Apply as Driver
                             </TabsTrigger>
                         </TabsList>

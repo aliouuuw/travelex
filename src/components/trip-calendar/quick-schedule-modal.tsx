@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DateTimePickerField } from "@/components/ui/datetime-picker";
 import { 
   Calendar as CalendarIcon, 
@@ -284,18 +285,21 @@ export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: Qu
             {/* Route Selection */}
             <div className="space-y-2">
               <Label htmlFor="routeTemplateId" className="text-sm font-medium">Route Template</Label>
-              <select
-                id="routeTemplateId"
-                {...form.register('routeTemplateId')}
-                className="w-full p-3 border border-border rounded-lg bg-white focus:ring-2 focus:ring-brand-orange focus:border-transparent"
+              <Select
+                value={form.watch('routeTemplateId')}
+                onValueChange={(value) => form.setValue('routeTemplateId', value)}
               >
-                <option value="">Select a route...</option>
-                {routeTemplates.map((route) => (
-                  <option key={route.id} value={route.id}>
-                    {route.name} ({route.cities.map(c => c.cityName).join(' → ')})
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full h-12 px-3 bg-white focus:ring-2 focus:ring-brand-orange focus:border-transparent">
+                  <SelectValue placeholder="Select a route..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {routeTemplates.map((route) => (
+                    <SelectItem key={route.id} value={route.id}>
+                      {route.name} ({route.cities.map(c => c.cityName).join(' → ')})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {form.formState.errors.routeTemplateId && (
                 <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{form.formState.errors.routeTemplateId.message}</p>
               )}
@@ -305,20 +309,23 @@ export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: Qu
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="vehicleId" className="text-sm font-medium">Vehicle</Label>
-                <select
-                  id="vehicleId"
-                  {...form.register('vehicleId')}
-                  className="w-full p-3 border border-border rounded-lg bg-white focus:ring-2 focus:ring-brand-orange focus:border-transparent"
+                <Select
+                  value={form.watch('vehicleId')}
+                  onValueChange={(value) => form.setValue('vehicleId', value)}
                 >
-                  <option value="">Select vehicle...</option>
-                  {vehicles
-                    .filter(v => v.status === 'active')
-                    .map((vehicle) => (
-                    <option key={vehicle.id} value={vehicle.id}>
-                      {vehicle.make} {vehicle.model} ({vehicle.capacity} seats)
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full h-12 px-3 bg-white focus:ring-2 focus:ring-brand-orange focus:border-transparent">
+                    <SelectValue placeholder="Select vehicle..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vehicles
+                      .filter(v => v.status === 'active')
+                      .map((vehicle) => (
+                      <SelectItem key={vehicle.id} value={vehicle.id}>
+                        {vehicle.make} {vehicle.model} ({vehicle.capacity} seats)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {form.formState.errors.vehicleId && (
                   <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{form.formState.errors.vehicleId.message}</p>
                 )}
@@ -326,18 +333,22 @@ export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: Qu
 
               <div className="space-y-2">
                 <Label htmlFor="luggagePolicyId" className="text-sm font-medium">Luggage Policy <span className="text-muted-foreground">(Optional)</span></Label>
-                <select
-                  id="luggagePolicyId"
-                  {...form.register('luggagePolicyId')}
-                  className="w-full p-3 border border-border rounded-lg bg-white focus:ring-2 focus:ring-brand-orange focus:border-transparent"
+                <Select
+                  value={form.watch('luggagePolicyId') || undefined}
+                  onValueChange={(value) => form.setValue('luggagePolicyId', value === 'none' ? undefined : value)}
                 >
-                  <option value="">Default policy</option>
-                  {luggagePolicies.map((policy) => (
-                    <option key={policy.id} value={policy.id}>
-                      {policy.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full h-12 px-3 bg-white focus:ring-2 focus:ring-brand-orange focus:border-transparent">
+                    <SelectValue placeholder="Default policy" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Default policy</SelectItem>
+                    {luggagePolicies.map((policy) => (
+                      <SelectItem key={policy.id} value={policy.id}>
+                        {policy.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

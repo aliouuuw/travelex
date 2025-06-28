@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DateTimePickerField } from "@/components/ui/datetime-picker";
 import { 
   Calendar, 
@@ -314,18 +315,21 @@ export default function ScheduleTripPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="routeTemplateId">Route Template</Label>
-                  <select
-                    id="routeTemplateId"
-                    {...form.register('routeTemplateId')}
-                    className="w-full p-3 border border-border rounded-lg bg-background"
+                  <Select
+                    value={form.watch('routeTemplateId')}
+                    onValueChange={(value) => form.setValue('routeTemplateId', value)}
                   >
-                    <option value="">Select a route template...</option>
-                    {routeTemplates.map((route) => (
-                      <option key={route.id} value={route.id}>
-                        {route.name} ({route.cities.map(c => c.cityName).join(' → ')})
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full h-12 px-3 bg-background">
+                      <SelectValue placeholder="Select a route template..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {routeTemplates.map((route) => (
+                        <SelectItem key={route.id} value={route.id}>
+                          {route.name} ({route.cities.map(c => c.cityName).join(' → ')})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {form.formState.errors.routeTemplateId && (
                     <p className="text-sm text-red-600">{form.formState.errors.routeTemplateId.message}</p>
                   )}
@@ -365,20 +369,23 @@ export default function ScheduleTripPage() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="vehicleId">Vehicle</Label>
-                    <select
-                      id="vehicleId"
-                      {...form.register('vehicleId')}
-                      className="w-full p-3 border border-border rounded-lg bg-background"
+                    <Select
+                      value={form.watch('vehicleId')}
+                      onValueChange={(value) => form.setValue('vehicleId', value)}
                     >
-                      <option value="">Select a vehicle...</option>
-                      {vehicles
-                        .filter(v => v.status === 'active')
-                        .map((vehicle) => (
-                        <option key={vehicle.id} value={vehicle.id}>
-                          {vehicle.make} {vehicle.model} ({vehicle.year}) - {vehicle.capacity} seats
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="w-full h-12 px-3 bg-background">
+                        <SelectValue placeholder="Select a vehicle..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {vehicles
+                          .filter(v => v.status === 'active')
+                          .map((vehicle) => (
+                          <SelectItem key={vehicle.id} value={vehicle.id}>
+                            {vehicle.make} {vehicle.model} ({vehicle.year}) - {vehicle.capacity} seats
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {form.formState.errors.vehicleId && (
                       <p className="text-sm text-red-600">{form.formState.errors.vehicleId.message}</p>
                     )}
@@ -405,18 +412,22 @@ export default function ScheduleTripPage() {
                 <CardContent>
                   <div className="space-y-2">
                     <Label htmlFor="luggagePolicyId">Luggage Policy (Optional)</Label>
-                    <select
-                      id="luggagePolicyId"
-                      {...form.register('luggagePolicyId')}
-                      className="w-full p-3 border border-border rounded-lg bg-background"
+                    <Select
+                      value={form.watch('luggagePolicyId') || undefined}
+                      onValueChange={(value) => form.setValue('luggagePolicyId', value === 'none' ? undefined : value)}
                     >
-                      <option value="">No specific policy</option>
-                      {luggagePolicies.map((policy) => (
-                        <option key={policy.id} value={policy.id}>
-                          {policy.name}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="w-full h-12 px-3 bg-background">
+                        <SelectValue placeholder="No specific policy" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No specific policy</SelectItem>
+                        {luggagePolicies.map((policy) => (
+                          <SelectItem key={policy.id} value={policy.id}>
+                            {policy.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </CardContent>
               </Card>

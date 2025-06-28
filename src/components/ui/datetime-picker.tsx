@@ -124,9 +124,9 @@ export const DateTimePickerField = forwardRef<HTMLButtonElement, DateTimePickerF
             ref={ref}
             variant="outline"
             className={cn(
-              "w-full justify-start text-left font-normal transition-colors",
+              "w-full justify-start text-left font-normal transition-all duration-150",
               !dateValue && "text-muted-foreground",
-              dateValue && "border-brand-orange/50 hover:border-brand-orange focus:border-brand-orange focus:ring-brand-orange",
+              dateValue && "border-brand-dark-blue/50 hover:border-brand-dark-blue focus:border-brand-dark-blue focus:ring-1 focus:ring-brand-dark-blue",
               className
             )}
             disabled={disabled}
@@ -160,9 +160,9 @@ export const DateTimePickerField = forwardRef<HTMLButtonElement, DateTimePickerF
                 return false;
               }}
               initialFocus
-              className="[&_.rdp-day_selected]:bg-brand-orange [&_.rdp-day_selected]:text-white [&_.rdp-day_selected]:hover:bg-brand-orange-600 [&_.rdp-day]:hover:bg-brand-orange/10 [&_.rdp-day]:hover:text-brand-orange [&_.rdp-button]:hover:bg-brand-orange/10 [&_.rdp-nav_button]:hover:bg-brand-orange/10 [&_.rdp-nav_button]:hover:text-brand-orange [&_.rdp-day_today]:bg-brand-orange/20 [&_.rdp-day_today]:text-brand-orange [&_.rdp-day_today]:font-semibold"
+              className="[&_.rdp-day_selected]:bg-brand-dark-blue [&_.rdp-day_selected]:text-white [&_.rdp-day_selected]:hover:bg-brand-dark-blue [&_.rdp-day]:hover:bg-brand-dark-blue/5 [&_.rdp-day]:hover:text-brand-dark-blue [&_.rdp-button]:hover:bg-brand-dark-blue/5 [&_.rdp-nav_button]:hover:bg-brand-dark-blue/5 [&_.rdp-nav_button]:hover:text-brand-dark-blue [&_.rdp-day_today]:bg-brand-dark-blue/10 [&_.rdp-day_today]:text-brand-dark-blue [&_.rdp-day_today]:font-semibold"
             />
-            <div className="flex flex-col sm:flex-row sm:h-[300px] divide-y sm:divide-y-0 sm:divide-x divide-brand-orange/20 bg-white">
+            <div className="flex flex-col sm:flex-row sm:h-[300px] divide-y sm:divide-y-0 sm:divide-x divide-brand-dark-blue/20 bg-white">
               <ScrollArea className="w-64 sm:w-auto bg-white">
                 <div className="flex sm:flex-col p-2 bg-white">
                   {Array.from({ length: 12 }, (_, i) => i + 1)
@@ -198,12 +198,12 @@ export const DateTimePickerField = forwardRef<HTMLButtonElement, DateTimePickerF
                               ? "default"
                               : "ghost"
                           }
-                          className={`sm:w-full shrink-0 aspect-square transition-colors ${
+                          className={`sm:w-full shrink-0 aspect-square transition-all duration-150 ${
                             dateValue &&
                             (dateValue.getHours() % 12 === hour % 12 || 
                              (hour === 12 && dateValue.getHours() % 12 === 0))
-                              ? "bg-brand-orange hover:bg-brand-orange-600 text-white"
-                              : "hover:bg-brand-orange/10 hover:text-brand-orange"
+                              ? "bg-brand-dark-blue hover:bg-brand-dark-blue text-white"
+                              : "hover:bg-brand-dark-blue/5 hover:text-brand-dark-blue"
                           }`}
                           disabled={isHourDisabled()}
                           onClick={() =>
@@ -248,11 +248,11 @@ export const DateTimePickerField = forwardRef<HTMLButtonElement, DateTimePickerF
                               ? "default"
                               : "ghost"
                           }
-                          className={`sm:w-full shrink-0 aspect-square transition-colors ${
+                          className={`sm:w-full shrink-0 aspect-square transition-all duration-150 ${
                             dateValue &&
                             dateValue.getMinutes() === minute
-                              ? "bg-brand-orange hover:bg-brand-orange-600 text-white"
-                              : "hover:bg-brand-orange/10 hover:text-brand-orange"
+                              ? "bg-brand-dark-blue hover:bg-brand-dark-blue text-white"
+                              : "hover:bg-brand-dark-blue/5 hover:text-brand-dark-blue"
                           }`}
                           disabled={isMinuteDisabled()}
                           onClick={() =>
@@ -306,14 +306,14 @@ export const DateTimePickerField = forwardRef<HTMLButtonElement, DateTimePickerF
                             ? "default"
                             : "ghost"
                         }
-                        className={`sm:w-full shrink-0 aspect-square transition-colors ${
+                        className={`sm:w-full shrink-0 aspect-square transition-all duration-150 ${
                           dateValue &&
                           ((ampm === "AM" &&
                             dateValue.getHours() < 12) ||
                             (ampm === "PM" &&
                               dateValue.getHours() >= 12))
-                            ? "bg-brand-orange hover:bg-brand-orange-600 text-white"
-                            : "hover:bg-brand-orange/10 hover:text-brand-orange"
+                            ? "bg-brand-dark-blue hover:bg-brand-dark-blue text-white"
+                            : "hover:bg-brand-dark-blue/5 hover:text-brand-dark-blue"
                         }`}
                         disabled={isAmPmDisabled()}
                         onClick={() => handleTimeChange("ampm", ampm)}
@@ -385,9 +385,9 @@ export function DateTimePickerForm() {
                     <Button
                       variant={"outline"}
                       className={cn(
-                        "w-full pl-3 text-left font-normal transition-colors",
+                        "w-full pl-3 text-left font-normal transition-all duration-150",
                         !field.value && "text-muted-foreground",
-                        field.value && "border-brand-orange/50 hover:border-brand-orange focus:border-brand-orange focus:ring-brand-orange"
+                        field.value && "border-brand-dark-blue/50 hover:border-brand-dark-blue focus:border-brand-dark-blue focus:ring-1 focus:ring-brand-dark-blue"
                       )}
                     >
                       {field.value ? (
@@ -406,9 +406,9 @@ export function DateTimePickerForm() {
                       selected={field.value}
                       onSelect={handleDateSelect}
                       initialFocus
-                      className="[&_.rdp-day_selected]:bg-brand-orange [&_.rdp-day_selected]:text-white [&_.rdp-day_selected]:hover:bg-brand-orange-600 [&_.rdp-day]:hover:bg-brand-orange/10 [&_.rdp-day]:hover:text-brand-orange [&_.rdp-button]:hover:bg-brand-orange/10 [&_.rdp-nav_button]:hover:bg-brand-orange/10 [&_.rdp-nav_button]:hover:text-brand-orange [&_.rdp-day_today]:bg-brand-orange/20 [&_.rdp-day_today]:text-brand-orange [&_.rdp-day_today]:font-semibold"
+                      className="[&_.rdp-day_selected]:bg-brand-dark-blue [&_.rdp-day_selected]:text-white [&_.rdp-day_selected]:hover:bg-brand-dark-blue [&_.rdp-day]:hover:bg-brand-dark-blue/5 [&_.rdp-day]:hover:text-brand-dark-blue [&_.rdp-button]:hover:bg-brand-dark-blue/5 [&_.rdp-nav_button]:hover:bg-brand-dark-blue/5 [&_.rdp-nav_button]:hover:text-brand-dark-blue [&_.rdp-day_today]:bg-brand-dark-blue/10 [&_.rdp-day_today]:text-brand-dark-blue [&_.rdp-day_today]:font-semibold"
                     />
-                    <div className="flex flex-col sm:flex-row sm:h-[300px] divide-y sm:divide-y-0 sm:divide-x divide-brand-orange/20 bg-white">
+                    <div className="flex flex-col sm:flex-row sm:h-[300px] divide-y sm:divide-y-0 sm:divide-x divide-brand-dark-blue/20 bg-white">
                       <ScrollArea className="w-64 sm:w-auto bg-white">
                         <div className="flex sm:flex-col p-2 bg-white">
                           {Array.from({ length: 12 }, (_, i) => i + 1)
@@ -423,11 +423,11 @@ export function DateTimePickerForm() {
                                     ? "default"
                                     : "ghost"
                                 }
-                                className={`sm:w-full shrink-0 aspect-square transition-colors ${
+                                className={`sm:w-full shrink-0 aspect-square transition-all duration-150 ${
                                   field.value &&
                                   field.value.getHours() % 12 === hour % 12
-                                    ? "bg-brand-orange hover:bg-brand-orange-600 text-white"
-                                    : "hover:bg-brand-orange/10 hover:text-brand-orange"
+                                    ? "bg-brand-dark-blue hover:bg-brand-dark-blue text-white"
+                                    : "hover:bg-brand-dark-blue/5 hover:text-brand-dark-blue"
                                 }`}
                                 onClick={() =>
                                   handleTimeChange("hour", hour.toString())
@@ -455,11 +455,11 @@ export function DateTimePickerForm() {
                                     ? "default"
                                     : "ghost"
                                 }
-                                className={`sm:w-full shrink-0 aspect-square transition-colors ${
+                                className={`sm:w-full shrink-0 aspect-square transition-all duration-150 ${
                                   field.value &&
                                   field.value.getMinutes() === minute
-                                    ? "bg-brand-orange hover:bg-brand-orange-600 text-white"
-                                    : "hover:bg-brand-orange/10 hover:text-brand-orange"
+                                    ? "bg-brand-dark-blue hover:bg-brand-dark-blue text-white"
+                                    : "hover:bg-brand-dark-blue/5 hover:text-brand-dark-blue"
                                 }`}
                                 onClick={() =>
                                   handleTimeChange("minute", minute.toString())
@@ -478,29 +478,29 @@ export function DateTimePickerForm() {
                       <ScrollArea className="bg-white">
                         <div className="flex sm:flex-col p-2 bg-white">
                           {["AM", "PM"].map((ampm) => (
-                                                          <Button
-                                key={ampm}
-                                size="icon"
-                                variant={
-                                  field.value &&
-                                  ((ampm === "AM" &&
-                                    field.value.getHours() < 12) ||
-                                    (ampm === "PM" &&
-                                      field.value.getHours() >= 12))
-                                    ? "default"
-                                    : "ghost"
-                                }
-                                className={`sm:w-full shrink-0 aspect-square transition-colors ${
-                                  field.value &&
-                                  ((ampm === "AM" &&
-                                    field.value.getHours() < 12) ||
-                                    (ampm === "PM" &&
-                                      field.value.getHours() >= 12))
-                                    ? "bg-brand-orange hover:bg-brand-orange-600 text-white"
-                                    : "hover:bg-brand-orange/10 hover:text-brand-orange"
-                                }`}
-                                onClick={() => handleTimeChange("ampm", ampm)}
-                              >
+                            <Button
+                              key={ampm}
+                              size="icon"
+                              variant={
+                                field.value &&
+                                ((ampm === "AM" &&
+                                  field.value.getHours() < 12) ||
+                                  (ampm === "PM" &&
+                                    field.value.getHours() >= 12))
+                                  ? "default"
+                                  : "ghost"
+                              }
+                              className={`sm:w-full shrink-0 aspect-square transition-all duration-150 ${
+                                field.value &&
+                                ((ampm === "AM" &&
+                                  field.value.getHours() < 12) ||
+                                  (ampm === "PM" &&
+                                    field.value.getHours() >= 12))
+                                  ? "bg-brand-dark-blue hover:bg-brand-dark-blue text-white"
+                                  : "hover:bg-brand-dark-blue/5 hover:text-brand-dark-blue"
+                              }`}
+                              onClick={() => handleTimeChange("ampm", ampm)}
+                            >
                               {ampm}
                             </Button>
                           ))}

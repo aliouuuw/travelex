@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   ArrowLeft, 
   Car, 
@@ -342,17 +343,21 @@ export default function VehicleForm() {
 
                   <div className="space-y-2">
                     <Label htmlFor="vehicle_type">Vehicle Type *</Label>
-                    <select
-                      id="vehicle_type"
-                      {...form.register("vehicle_type")}
-                      className="flex h-11 w-full rounded-md border border-border/60 bg-background px-3 py-2 text-sm ring-offset-background focus:border-brand-orange focus:ring-brand-orange/20 focus:outline-none focus:ring-2 focus:ring-offset-2"
+                    <Select
+                      value={form.watch("vehicle_type")}
+                      onValueChange={(value) => form.setValue("vehicle_type", value as any)}
                     >
-                      {VEHICLE_TYPES.map((type) => (
-                        <option key={type.value} value={type.value}>
-                          {type.label}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="w-full h-11 px-3 bg-background border-border/60 focus:border-brand-orange focus:ring-brand-orange/20">
+                        <SelectValue placeholder="Select vehicle type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {VEHICLE_TYPES.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {form.formState.errors.vehicle_type && (
                       <p className="text-xs text-destructive">{form.formState.errors.vehicle_type.message}</p>
                     )}
@@ -360,17 +365,21 @@ export default function VehicleForm() {
 
                   <div className="space-y-2">
                     <Label htmlFor="fuel_type">Fuel Type *</Label>
-                    <select
-                      id="fuel_type"
-                      {...form.register("fuel_type")}
-                      className="flex h-11 w-full rounded-md border border-border/60 bg-background px-3 py-2 text-sm ring-offset-background focus:border-brand-orange focus:ring-brand-orange/20 focus:outline-none focus:ring-2 focus:ring-offset-2"
+                    <Select
+                      value={form.watch("fuel_type")}
+                      onValueChange={(value) => form.setValue("fuel_type", value as any)}
                     >
-                      {FUEL_TYPES.map((type) => (
-                        <option key={type.value} value={type.value}>
-                          {type.label}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="w-full h-11 px-3 bg-background border-border/60 focus:border-brand-orange focus:ring-brand-orange/20">
+                        <SelectValue placeholder="Select fuel type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FUEL_TYPES.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {form.formState.errors.fuel_type && (
                       <p className="text-xs text-destructive">{form.formState.errors.fuel_type.message}</p>
                     )}
@@ -442,17 +451,21 @@ export default function VehicleForm() {
                       {isEditing && (
                         <div className="space-y-2">
                           <Label htmlFor="status">Status</Label>
-                          <select
-                            id="status"
-                            {...form.register("status")}
-                            className="flex h-11 w-full rounded-md border border-border/60 bg-background px-3 py-2 text-sm ring-offset-background focus:border-brand-orange focus:ring-brand-orange/20 focus:outline-none focus:ring-2 focus:ring-offset-2"
+                          <Select
+                            value={form.watch("status")}
+                            onValueChange={(value) => form.setValue("status", value as any)}
                           >
-                            {VEHICLE_STATUS.map((status) => (
-                              <option key={status.value} value={status.value}>
-                                {status.label}
-                              </option>
-                            ))}
-                          </select>
+                            <SelectTrigger className="w-full h-11 px-3 bg-background border-border/60 focus:border-brand-orange focus:ring-brand-orange/20">
+                              <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {VEHICLE_STATUS.map((status) => (
+                                <SelectItem key={status.value} value={status.value}>
+                                  {status.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                       )}
                     </div>
