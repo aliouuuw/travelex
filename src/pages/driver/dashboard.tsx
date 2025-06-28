@@ -91,8 +91,22 @@ const UpdatePasswordForm = () => {
 }
 
 export default function DriverDashboard() {
+  const { user } = useAuth();
+  
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="font-heading text-2xl font-bold text-foreground">
+            Welcome back, {user?.profile?.full_name?.split(' ')[0] || 'Driver'}!
+          </h1>
+          <p className="text-muted-foreground">
+            Here's your driver dashboard overview and recent activity
+          </p>
+        </div>
+      </div>
+
       {/* Key Metrics */}
       <div className="bg-white rounded-lg border border-border/40 p-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">

@@ -255,7 +255,7 @@ export default function VehiclesPage() {
 
   if (error) {
     return (
-      <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      <div className="space-y-6">
         <div className="text-center py-12">
           <Car className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="font-heading text-lg font-semibold text-foreground mb-2">
@@ -270,11 +270,11 @@ export default function VehiclesPage() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="font-heading text-3xl font-bold text-foreground">
+          <h1 className="font-heading text-2xl font-bold text-foreground">
             My Vehicles
           </h1>
           <p className="text-muted-foreground">
@@ -282,7 +282,7 @@ export default function VehiclesPage() {
           </p>
         </div>
         <Link to="/driver/vehicles/new">
-          <Button className="bg-brand-orange hover:bg-brand-orange-600 text-white shadow-brand hover:shadow-brand-hover transition-all">
+          <Button className="bg-brand-orange hover:bg-brand-orange-600 text-white">
             <Plus className="w-4 h-4 mr-2" />
             Add Vehicle
           </Button>

@@ -30,6 +30,8 @@ import EditVehiclePage from "./pages/driver/vehicles/edit";
 import DriverTripsPage from "./pages/driver/trips";
 import ScheduleTripPage from "./pages/driver/trips/schedule";
 import EditTripPage from "./pages/driver/trips/edit";
+import ReservationsPage from "./pages/driver/reservations";
+import ReservationDetailPage from "./pages/driver/reservations/[id]";
 import AccountSettings from "./pages/settings";
 import { LogOut, LayoutDashboard, ChevronDown, Settings } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./components/ui/avatar";
@@ -335,6 +337,14 @@ const router = createBrowserRouter([
               {
                 path: "trips/:id/edit",
                 element: <EditTripPage />,
+              },
+              {
+                path: "reservations",
+                element: <ReservationsPage />,
+              },
+              {
+                path: "reservations/:id",
+                element: <ReservationDetailPage />,
               },
               {
                 path: "luggage-policies",

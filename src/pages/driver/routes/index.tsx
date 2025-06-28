@@ -344,7 +344,7 @@ export default function DriverRoutesPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      <div className="space-y-6">
         <div className="flex items-center justify-center py-12">
           <div className="flex items-center gap-3">
             <Loader2 className="w-6 h-6 animate-spin text-brand-orange" />
@@ -358,7 +358,7 @@ export default function DriverRoutesPage() {
   // Error state
   if (error) {
     return (
-      <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      <div className="space-y-6">
         <Card className="premium-card">
           <CardContent className="p-12 text-center">
             <div className="space-y-4">
@@ -385,11 +385,11 @@ export default function DriverRoutesPage() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="font-heading text-3xl font-bold text-foreground">
+          <h1 className="font-heading text-2xl font-bold text-foreground">
             My Route Templates
           </h1>
           <p className="text-muted-foreground">
@@ -398,7 +398,7 @@ export default function DriverRoutesPage() {
         </div>
         <Button 
           asChild 
-          className="bg-brand-orange hover:bg-brand-orange-600 text-white shadow-brand hover:shadow-brand-hover transition-all"
+          className="bg-brand-orange hover:bg-brand-orange-600 text-white"
         >
           <Link to="/driver/routes/edit" className="flex items-center gap-2">
             <Plus className="h-4 w-4" />

@@ -7,12 +7,16 @@ const navigation = [
         href: "/driver/dashboard",
     },
     {
-        name: "Routes",
-        href: "/driver/routes",
+        name: "Reservations",
+        href: "/driver/reservations",
     },
     {
         name: "Trips",
         href: "/driver/trips",
+    },
+    {
+        name: "Routes",
+        href: "/driver/routes",
     },
     {
         name: "Vehicles",
