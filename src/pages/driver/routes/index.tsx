@@ -60,7 +60,7 @@ const RouteFlowChart = ({ route }: { route: RouteTemplate }) => {
             <div className="flex flex-col items-center h-80">
               {/* City Header */}
               <div className={`
-                flex items-center justify-center w-32 h-16 rounded-xl border-2 shadow-sm
+                flex items-center justify-center w-32 h-20 rounded-xl border-2 shadow-sm
                 ${cityIndex === 0 
                   ? 'bg-green-100 border-green-300 text-green-800' 
                   : cityIndex === route.cities.length - 1
@@ -69,7 +69,13 @@ const RouteFlowChart = ({ route }: { route: RouteTemplate }) => {
               `}>
                 <div className="text-center">
                   <div className="font-semibold text-sm">{city.cityName}</div>
-                  <div className="text-xs opacity-75">
+                  {city.countryCode && (
+                    <div className="text-xs opacity-75 flex items-center justify-center gap-1 mt-1">
+                      {city.flagEmoji && <span>{city.flagEmoji}</span>}
+                      <span>{city.countryCode}</span>
+                    </div>
+                  )}
+                  <div className="text-xs opacity-75 mt-1">
                     {cityIndex === 0 ? 'Origin' : cityIndex === route.cities.length - 1 ? 'Destination' : 'Stop'}
                   </div>
                 </div>

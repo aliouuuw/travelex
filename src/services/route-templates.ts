@@ -12,6 +12,9 @@ export interface Station {
 
 export interface CityWithStations {
   cityName: string;
+  countryCode?: string;
+  countryName?: string;
+  flagEmoji?: string;
   sequenceOrder?: number;
   stations: Station[];
 }
@@ -45,6 +48,7 @@ export interface RouteTemplate extends RouteTemplateFormData {
 const transformCitiesForDB = (cities: CityWithStations[]) => {
   return cities.map((city, index) => ({
     cityName: city.cityName,
+    countryCode: city.countryCode,
     sequenceOrder: index,
     stations: city.stations
   }));
@@ -213,4 +217,85 @@ export const toggleRouteTemplateStatus = async (
   }
 
   return true;
+};
+
+// =============================================
+// COUNTRY-AWARE ROUTE FUNCTIONS
+// =============================================
+
+// Create route template with explicit country codes (enhanced version)
+export const createRouteTemplateWithCountries = async (
+  routeData: RouteTemplateFormData
+): Promise<string> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const transformedCities = transformCitiesForDB(routeData.cities).map(city => ({
+    ...city,
+    countryCode: routeData.cities.find(c => c.cityName === city.cityName)?.countryCode
+  }));
+
+  const { data, error } = await supabase.rpc('create_route_template_with_countries', {
+    p_driver_id: user.id,
+    p_name: routeData.name,
+    p_estimated_duration: routeData.estimatedDuration,
+    p_base_price: routeData.basePrice,
+    p_status: routeData.status,
+    p_cities: transformedCities,
+    p_intercity_fares: routeData.intercityFares
+  });
+
+  if (error) {
+    console.error('Error creating route template with countries:', error);
+    throw new Error(error.message);
+  }
+
+  // Save cities and stations to reusable collection
+  try {
+    await extractAndSaveCitiesFromRoute(routeData.cities);
+  } catch (extractError) {
+    console.warn('Failed to save reusable cities/stations:', extractError);
+  }
+
+  return data;
+};
+
+// Validate countries for a route template
+export interface RouteCountryValidation {
+  cityName: string;
+  countryCode: string;
+  countryName: string;
+  isValid: boolean;
+  validationMessage: string;
+}
+
+export const validateRouteCountries = async (routeId: string): Promise<RouteCountryValidation[]> => {
+  const { data, error } = await supabase.rpc('validate_route_countries', {
+    p_route_template_id: routeId
+  });
+
+  if (error) {
+    console.error('Error validating route countries:', error);
+    throw new Error(error.message);
+  }
+
+  return data?.map((item: any) => ({
+    cityName: item.city_name,
+    countryCode: item.country_code,
+    countryName: item.country_name,
+    isValid: item.is_valid,
+    validationMessage: item.validation_message,
+  })) || [];
+};
+
+// Auto-assign countries to routes that don't have them
+export const autoAssignCountriesToRoutes = async (): Promise<number> => {
+  const { data, error } = await supabase.rpc('auto_assign_countries_to_routes');
+
+  if (error) {
+    console.error('Error auto-assigning countries:', error);
+    throw new Error(error.message);
+  }
+
+  return data || 0;
 }; 

@@ -27,11 +27,13 @@ Table route_templates {
   updated_at         timestamptz  [default: `now()`]
 }
 
-// Cities in route templates with their sequence (Tamale → Kumasi → Accra)
+// Cities in route templates with their sequence (Dakar → Ottawa → Toronto)
 Table route_template_cities {
   id                uuid     [pk, default: `gen_random_uuid()`]
   route_template_id uuid     [ref: > route_templates.id]
   city_name         varchar  [not null] // Storing city name directly
+  country_id        uuid     [ref: > countries.id]
+  country_code      varchar  // Denormalized for performance
   sequence_order    int      [not null]  // 0, 1, 2... for city order
   created_at        timestamptz [default: `now()`]
 }
@@ -55,13 +57,25 @@ Table route_template_pricing {
   created_at        timestamptz [default: `now()`]
 }
 
-// Reusable Cities - For efficiency across route templates
-Table reusable_cities {
+// Countries reference table
+Table countries {
   id         uuid       [pk, default: `gen_random_uuid()`]
-  driver_id  uuid       [ref: > profiles.id]
-  city_name  varchar    [not null]
+  name       varchar    [not null, unique]
+  code       varchar    [not null, unique] // ISO 3166-1 alpha-2
+  flag_emoji varchar    // Optional flag emoji for UI
   created_at timestamptz [default: `now()`]
   updated_at timestamptz [default: `now()`]
+}
+
+// Reusable Cities - For efficiency across route templates
+Table reusable_cities {
+  id          uuid       [pk, default: `gen_random_uuid()`]
+  driver_id   uuid       [ref: > profiles.id]
+  city_name   varchar    [not null]
+  country_id  uuid       [ref: > countries.id]
+  country_code varchar   // Denormalized for performance
+  created_at  timestamptz [default: `now()`]
+  updated_at  timestamptz [default: `now()`]
 }
 
 // Reusable Stations - Linked to reusable cities
@@ -93,6 +107,12 @@ Table trip_stations {
   trip_id                 uuid     [ref: > trips.id]
   route_template_city_id  uuid     [ref: > route_template_cities.id]
   station_id              uuid     [ref: > stations.id]
+  city_name               varchar  [not null] // Denormalized city name
+  country_id              uuid     [ref: > countries.id]
+  country_code            varchar  // Denormalized for performance
+  sequence_order          int      [not null] // City sequence in route
+  is_pickup_point         boolean  [default: true]
+  is_dropoff_point        boolean  [default: true]
   estimated_time          timestamptz  // When the trip will reach this station
 }
 
@@ -211,4 +231,25 @@ Table ratings {
 //   - Trip Calendar/Timeline View - COMPLETE
 //   - Reservation Management (Driver View) - COMPLETE ✅
 // 🔄 Next: Passenger-Facing Platform for public trip search and booking
+
+// =============================================
+// COUNTRIES FEATURE ADDITION (2025)
+// =============================================
+
+// Added country support to improve UX for city search at scale:
+// ✅ Countries reference table with Senegal (SN) and Canada (CA) 
+// ✅ Country fields added to route_template_cities, reusable_cities, trip_stations
+// ✅ Auto-detection function for mapping cities to countries
+// ✅ Country-aware search functions (get_available_countries, get_available_cities_by_country)
+// ✅ Enhanced trip search with optional country filtering
+// ✅ Backward compatibility maintained for existing search functions
+// ✅ Denormalized country_code fields for performance
+// ✅ Triggers for automatic country assignment on new cities
+
+// Cities supported:
+// Senegal (SN): Dakar, Thiès  
+// Canada (CA): Ottawa, Kingston, Toronto
+
+// This enhancement solves the UX scaling problem when thousands of cities would 
+// make search interfaces unusable. Users can now filter by country first.
 

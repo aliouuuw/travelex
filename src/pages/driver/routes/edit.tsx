@@ -28,7 +28,7 @@ import {
   type CityWithStations,
   type InterCityFare
 } from "@/services/route-templates";
-import { CityStationInput } from "@/components/shared/city-station-input";
+import { CountryCitySelector } from "@/components/shared/country-city-selector";
 import { toast } from "sonner";
 
 // Reusable Station Manager Component
@@ -187,16 +187,19 @@ const CityManager = ({
                 
                 {/* City Selection */}
                 <div className="flex-1">
-                  <CityStationInput
-                    selectedCityName={city.cityName}
-                    selectedStations={city.stations}
-                    onCityChange={(cityName: string, stations: Array<{ name: string; address: string }>) => {
+                  <CountryCitySelector
+                    selectedCountry={city.countryCode}
+                    selectedCity={city.cityName}
+                    onSelection={(countryCode: string, cityName: string) => {
                       onUpdate(cityIndex, { 
+                        ...city,
                         cityName, 
-                        stations 
+                        countryCode,
+                        stations: city.stations // Keep existing stations
                       });
                     }}
                     label=""
+                    placeholder="Select country and city..."
                   />
                 </div>
               </div>
@@ -457,14 +460,24 @@ const RoutePreview = ({ cities }: { cities: CityWithStations[] }) => {
               <div key={cityIndex} className="flex items-center gap-4">
                 <div className="flex flex-col items-center">
                   <div className={`
-                    flex items-center justify-center w-20 h-12 rounded-lg border-2 shadow-sm
+                    flex items-center justify-center w-32 h-16 rounded-lg border-2 shadow-sm relative
                     ${cityIndex === 0 
                       ? 'bg-green-100 border-green-300 text-green-800' 
                       : cityIndex === cities.length - 1
                       ? 'bg-red-100 border-red-300 text-red-800'
                       : 'bg-blue-100 border-blue-300 text-blue-800'}
                   `}>
-                    <span className="text-sm font-medium">{city.cityName || `City ${cityIndex + 1}`}</span>
+                    <div className="text-center">
+                      <div className="text-sm font-medium">
+                        {city.cityName || `City ${cityIndex + 1}`}
+                      </div>
+                      {city.countryCode && (
+                        <div className="text-xs opacity-75 flex items-center justify-center gap-1 mt-1">
+                          {city.flagEmoji && <span>{city.flagEmoji}</span>}
+                          <span>{city.countryCode}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <Badge variant="secondary" className="mt-2 text-xs">
                     {city.stations.length} stations
@@ -501,8 +514,8 @@ export default function RouteEditor() {
       basePrice: 0,
       status: 'draft',
       cities: [
-        { cityName: "", stations: [] },
-        { cityName: "", stations: [] }
+        { cityName: "", countryCode: "", countryName: "", flagEmoji: "", stations: [] },
+        { cityName: "", countryCode: "", countryName: "", flagEmoji: "", stations: [] }
       ],
       intercityFares: []
     }
@@ -564,7 +577,13 @@ export default function RouteEditor() {
   };
 
   const addCity = () => {
-    appendCity({ cityName: "", stations: [] });
+    appendCity({ 
+      cityName: "", 
+      countryCode: "",
+      countryName: "",
+      flagEmoji: "",
+      stations: [] 
+    });
   };
 
   const reorderCities = (fromIndex: number, toIndex: number) => {

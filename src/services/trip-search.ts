@@ -12,6 +12,11 @@ export interface TripSearchQuery {
   maxPrice?: number;
 }
 
+export interface TripSearchQueryWithCountry extends TripSearchQuery {
+  fromCountry?: string;
+  toCountry?: string;
+}
+
 export interface TripSearchResult {
   tripId: string;
   routeTemplateId: string;
@@ -36,11 +41,13 @@ export interface TripSearchResult {
   routeCities: Array<{
     id: string;
     cityName: string;
+    countryCode?: string;
     sequenceOrder: number;
   }>;
   tripStations: Array<{
     id: string;
     cityName: string;
+    countryCode?: string;
     sequenceOrder: number;
     stationInfo: {
       id: string;
@@ -128,6 +135,7 @@ export interface TripBookingDetails {
   tripStations: Array<{
     id: string;
     cityName: string;
+    countryCode?: string;
     sequenceOrder: number;
     stationInfo: {
       id: string;
@@ -202,6 +210,80 @@ export const searchTripsBySegment = async (
     tripStations: trip.trip_stations || [],
     segmentPrice: trip.segment_price,
     fullRoutePrice: trip.full_route_price,
+    pickupStations: trip.pickup_stations || [],
+    dropoffStations: trip.dropoff_stations || [],
+    luggagePolicy: trip.luggage_policy ? {
+      id: trip.luggage_policy.id,
+      name: trip.luggage_policy.name,
+      freeWeightKg: trip.luggage_policy.free_weight_kg,
+      excessFeePerKg: trip.luggage_policy.excess_fee_per_kg,
+      maxBags: trip.luggage_policy.max_bags,
+      maxBagWeightKg: trip.luggage_policy.max_bag_weight_kg,
+    } : undefined,
+  })) || [];
+};
+
+/**
+ * Search for trips with optional country filtering
+ * Enhanced version that supports both country-level and city-level search
+ */
+export const searchTripsBySegmentWithCountry = async (
+  query: TripSearchQueryWithCountry
+): Promise<TripSearchResult[]> => {
+  const { data, error } = await supabase.rpc('search_trips_by_segment_with_country', {
+    p_from_country: query.fromCountry || null,
+    p_to_country: query.toCountry || null,
+    p_from_city: query.fromCity || null,
+    p_to_city: query.toCity || null,
+    p_departure_date: query.departureDate || null,
+    p_min_seats: query.minSeats || 1,
+    p_max_price: query.maxPrice || null,
+  });
+
+  if (error) {
+    console.error('Error searching trips with country:', error);
+    throw new Error(error.message);
+  }
+
+  // Transform the data to match our TypeScript interface
+  return data?.map((trip: any) => ({
+    tripId: trip.trip_id,
+    routeTemplateId: trip.route_template_id,
+    routeTemplateName: trip.route_template_name,
+    driverId: trip.driver_id,
+    driverName: trip.driver_name,
+    driverRating: trip.driver_rating || 0,
+    vehicleId: trip.vehicle_id,
+    vehicleInfo: trip.vehicle_info ? {
+      id: trip.vehicle_info.id,
+      make: trip.vehicle_info.make,
+      model: trip.vehicle_info.model,
+      year: trip.vehicle_info.year,
+      type: trip.vehicle_info.type,
+      capacity: trip.vehicle_info.capacity,
+      features: trip.vehicle_info.features || [],
+    } : undefined,
+    departureTime: trip.departure_time,
+    arrivalTime: trip.arrival_time,
+    availableSeats: trip.available_seats,
+    totalSeats: trip.total_seats,
+    routeCities: trip.route_cities?.map((city: any) => ({
+      id: city.id,
+      cityName: city.cityName,
+      countryCode: city.countryCode,
+      sequenceOrder: city.sequenceOrder,
+    })) || [],
+    tripStations: trip.trip_stations?.map((station: any) => ({
+      id: station.id,
+      cityName: station.cityName,
+      countryCode: station.countryCode,
+      sequenceOrder: station.sequenceOrder,
+      stationInfo: station.stationInfo,
+      isPickupPoint: station.isPickupPoint,
+      isDropoffPoint: station.isDropoffPoint,
+    })) || [],
+    segmentPrice: trip.estimated_price || 0,
+    fullRoutePrice: trip.estimated_price || 0,
     pickupStations: trip.pickup_stations || [],
     dropoffStations: trip.dropoff_stations || [],
     luggagePolicy: trip.luggage_policy ? {
