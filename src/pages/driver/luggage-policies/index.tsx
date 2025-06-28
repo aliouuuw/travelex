@@ -137,40 +137,7 @@ const LuggagePolicyRow = ({
   );
 };
 
-const StatCard = ({ 
-  title, 
-  value, 
-  icon: Icon, 
-  color = "blue" 
-}: { 
-  title: string; 
-  value: string; 
-  icon: React.ElementType; 
-  color?: string;
-}) => {
-  const colorClasses = {
-    blue: "bg-blue-100 text-blue-600",
-    green: "bg-green-100 text-green-600",
-    orange: "bg-orange-100 text-brand-orange",
-    purple: "bg-purple-100 text-purple-600"
-  };
 
-  return (
-    <Card className="premium-card">
-      <CardContent className="p-4">
-        <div className="flex items-center gap-3">
-          <div className={`flex items-center justify-center w-10 h-10 rounded-lg ${colorClasses[color as keyof typeof colorClasses]}`}>
-            <Icon className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold text-foreground">{value}</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
 
 export default function LuggagePoliciesPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -283,31 +250,25 @@ export default function LuggagePoliciesPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Policies"
-          value={stats.total.toString()}
-          icon={Package}
-          color="blue"
-        />
-        <StatCard
-          title="Default Policies"
-          value={stats.default.toString()}
-          icon={Star}
-          color="orange"
-        />
-        <StatCard
-          title="Avg Free Weight"
-          value={`${stats.avgFreeWeight}kg`}
-          icon={Weight}
-          color="green"
-        />
-        <StatCard
-          title="Avg Fee Rate"
-          value={`$${stats.avgFee}/kg`}
-          icon={DollarSign}
-          color="purple"
-        />
+      <div className="bg-white rounded-lg border border-border/40 p-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-foreground">{stats.total}</div>
+            <div className="text-sm text-muted-foreground mt-1">Total Policies</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-foreground">{stats.default}</div>
+            <div className="text-sm text-muted-foreground mt-1">Default Policies</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-foreground">{stats.avgFreeWeight}kg</div>
+            <div className="text-sm text-muted-foreground mt-1">Avg Free Weight</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-foreground">${stats.avgFee}/kg</div>
+            <div className="text-sm text-muted-foreground mt-1">Avg Fee Rate</div>
+          </div>
+        </div>
       </div>
 
       {/* Create Form */}

@@ -290,48 +290,21 @@ export default function VehiclesPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="premium-card">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-blue-100">
-                <Car className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Vehicles</p>
-                <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="premium-card">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-green-100">
-                <Settings className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Active</p>
-                <p className="text-2xl font-bold text-foreground">{stats.active}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="premium-card">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-amber-100">
-                <AlertTriangle className="w-6 h-6 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Need Attention</p>
-                <p className="text-2xl font-bold text-foreground">{stats.needsAttention}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="bg-white rounded-lg border border-border/40 p-6">
+        <div className="grid grid-cols-3 gap-8">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-foreground">{stats.total}</div>
+            <div className="text-sm text-muted-foreground mt-1">Total Vehicles</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-foreground">{stats.active}</div>
+            <div className="text-sm text-muted-foreground mt-1">Active</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-foreground">{stats.needsAttention}</div>
+            <div className="text-sm text-muted-foreground mt-1">Need Attention</div>
+          </div>
+        </div>
       </div>
 
       {/* Search */}

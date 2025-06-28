@@ -16,6 +16,7 @@ import AdminLayout from "./pages/admin/layout";
 import AdminDashboard from "./pages/admin/dashboard";
 import DriversPage from "./pages/admin/drivers";
 import { DriverRoute } from "./components/driver-route";
+import DriverLayout from "./pages/driver/layout";
 import DriverDashboard from "./pages/driver/dashboard";
 import NewDriverPage from "./pages/admin/drivers/new";
 import SignupRequestsPage from "./pages/admin/signup-requests";
@@ -29,8 +30,16 @@ import EditVehiclePage from "./pages/driver/vehicles/edit";
 import DriverTripsPage from "./pages/driver/trips";
 import ScheduleTripPage from "./pages/driver/trips/schedule";
 import EditTripPage from "./pages/driver/trips/edit";
-import TripCalendarPage from "./pages/driver/trips/calendar";
-import { User, LogOut } from "lucide-react";
+import AccountSettings from "./pages/settings";
+import { LogOut, LayoutDashboard, ChevronDown, Settings } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "./components/ui/avatar";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./components/ui/dropdown-menu";
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -72,49 +81,78 @@ const Header = () => {
     }
   };
 
+  const getUserInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const isInDashboard = user && (user.profile?.role === 'admin' || user.profile?.role === 'driver');
+
   return (
-    <header className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-md supports-[backdrop-filter]:bg-white/80 z-50 border-b border-border/40 shadow-sm">
+    <header className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-md supports-[backdrop-filter]:bg-white/80 z-50">
       <nav className="h-16 flex items-center justify-between px-6 mx-auto max-w-7xl">
         <Link to="/" className="flex items-center gap-2 group">
           <img src="/logo.png" alt="TravelEx" className="w-12 lg:w-18 xl:w-20 h-auto" />
         </Link>
         
         <div className="flex items-center gap-6">
-          <Link 
-            to="/about" 
-            className="text-sm font-medium text-muted-foreground hover:text-brand-orange transition-colors"
-          >
-            About
-          </Link>
+          {!isInDashboard && (
+            <Link 
+              to="/about" 
+              className="text-sm font-medium text-muted-foreground hover:text-brand-orange transition-colors"
+            >
+              About
+            </Link>
+          )}
           
           {user ? (
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-full">
-                  <User className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm font-medium text-foreground">
-                    {user.profile?.full_name || 'User'}
-                  </span>
-                </div>
-                
-                <Link 
-                  to={getDashboardPath()} 
-                  className="text-sm font-medium text-muted-foreground hover:text-brand-orange transition-colors"
-                >
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-10 w-auto rounded-full px-3 py-1">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      {user.profile?.avatar_url && (
+                        <AvatarImage src={user.profile.avatar_url} alt={user.profile?.full_name || 'User'} />
+                      )}
+                      <AvatarFallback className="bg-brand-orange/10 text-brand-orange font-medium">
+                        {getUserInitials(user.profile?.full_name || 'User')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-medium text-foreground">
+                        {user.profile?.full_name || 'User'}
+                      </span>
+                      <span className="text-xs text-muted-foreground capitalize">
+                        {user.profile?.role || 'user'}
+                      </span>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end">
+                <DropdownMenuItem className="cursor-pointer" onClick={() => navigate(getDashboardPath())}>
+                  <LayoutDashboard className="h-4 w-4 mr-2" />
                   {getDashboardLabel()}
-                </Link>
-              </div>
-              
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleSignOut}
-                className="flex items-center gap-2 border-border/60 hover:border-brand-orange hover:text-brand-orange transition-all"
-              >
-                <LogOut className="w-4 h-4" />
-                Logout
-              </Button>
-            </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/settings')}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Account Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={handleSignOut}
+                  className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <div className="flex items-center gap-4">
               <Link 
@@ -229,6 +267,10 @@ const router = createBrowserRouter([
             path: "/dashboard",
             element: <Dashboard />,
           },
+          {
+            path: "/settings",
+            element: <AccountSettings />,
+          },
         ],
       },
       {
@@ -263,53 +305,55 @@ const router = createBrowserRouter([
         element: <DriverRoute />,
         children: [
           {
-            path: "/driver/dashboard",
-            element: <DriverDashboard />,
-          },
-          {
-            path: "/driver/routes",
-            element: <DriverRoutesPage />,
-          },
-          {
-            path: "/driver/routes/edit",
-            element: <RouteEditor />,
-          },
-          {
-            path: "/driver/routes/:id/edit", 
-            element: <RouteEditor />,
-          },
-          {
-            path: "/driver/trips",
-            element: <DriverTripsPage />,
-          },
-          {
-            path: "/driver/trips/schedule",
-            element: <ScheduleTripPage />,
-          },
-          {
-            path: "/driver/trips/:id/edit",
-            element: <EditTripPage />,
-          },
-          {
-            path: "/driver/trips/calendar",
-            element: <TripCalendarPage />,
-          },
-          {
-            path: "/driver/luggage-policies",
-            element: <LuggagePoliciesPage />,
-          },
-          {
-            path: "/driver/vehicles",
-            element: <VehiclesPage />,
-          },
-          {
-            path: "/driver/vehicles/new",
-            element: <NewVehiclePage />,
-          },
-          {
-            path: "/driver/vehicles/edit/:id",
-            element: <EditVehiclePage />,
-          },
+            element: <DriverLayout />,
+            path: "/driver",
+            children: [
+              {
+                path: "dashboard",
+                element: <DriverDashboard />,
+              },
+              {
+                path: "routes",
+                element: <DriverRoutesPage />,
+              },
+              {
+                path: "routes/edit",
+                element: <RouteEditor />,
+              },
+              {
+                path: "routes/:id/edit", 
+                element: <RouteEditor />,
+              },
+              {
+                path: "trips",
+                element: <DriverTripsPage />,
+              },
+              {
+                path: "trips/schedule",
+                element: <ScheduleTripPage />,
+              },
+              {
+                path: "trips/:id/edit",
+                element: <EditTripPage />,
+              },
+              {
+                path: "luggage-policies",
+                element: <LuggagePoliciesPage />,
+              },
+              {
+                path: "vehicles",
+                element: <VehiclesPage />,
+              },
+              {
+                path: "vehicles/new",
+                element: <NewVehiclePage />,
+              },
+              {
+                path: "vehicles/edit/:id",
+                element: <EditVehiclePage />,
+              },
+            ]
+          }
         ],
       }
     ]

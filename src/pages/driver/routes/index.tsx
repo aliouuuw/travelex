@@ -408,62 +408,25 @@ export default function DriverRoutesPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="premium-card">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100">
-                <Route className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Routes</p>
-                <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="premium-card">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-green-100">
-                <Users className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Scheduled Trips</p>
-                <p className="text-2xl font-bold text-foreground">{stats.scheduledTrips}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="premium-card">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-orange-100">
-                <DollarSign className="w-5 h-5 text-brand-orange" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Earnings</p>
-                <p className="text-2xl font-bold text-foreground">₵{stats.totalEarnings}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="premium-card">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-purple-100">
-                <Route className="w-5 h-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Active Routes</p>
-                <p className="text-2xl font-bold text-foreground">{stats.active}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="bg-white rounded-lg border border-border/40 p-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-foreground">{stats.total}</div>
+            <div className="text-sm text-muted-foreground mt-1">Total Routes</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-foreground">{stats.scheduledTrips}</div>
+            <div className="text-sm text-muted-foreground mt-1">Scheduled Trips</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-foreground">₵{stats.totalEarnings}</div>
+            <div className="text-sm text-muted-foreground mt-1">Total Earnings</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-foreground">{stats.active}</div>
+            <div className="text-sm text-muted-foreground mt-1">Active Routes</div>
+          </div>
+        </div>
       </div>
 
       {/* Filter Tabs */}
