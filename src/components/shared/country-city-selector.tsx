@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, MapPin, Globe, Users, Clock } from "lucide-react";
+import { Search, MapPin, Clock, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getAvailableCountries, getAvailableCitiesByCountry, type Country, type CityWithCountry } from "@/services/countries";
+import { CountryRequestModal } from "./country-request-modal";
 
 interface CountryCitySelectorProps {
   selectedCountry?: string;
@@ -22,9 +22,9 @@ export const CountryCitySelector = ({
   selectedCity,
   onSelection,
   label = "Select Location",
-  placeholder = "Choose country and city"
 }: CountryCitySelectorProps) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [showCountryRequest, setShowCountryRequest] = useState(false);
 
   // Fetch countries and cities
   const { data: countries = [], isLoading: countriesLoading } = useQuery<Country[]>({
@@ -48,6 +48,10 @@ export const CountryCitySelector = ({
   );
 
   const handleCountryChange = (countryCode: string) => {
+    if (countryCode === "REQUEST_NEW") {
+      setShowCountryRequest(true);
+      return;
+    }
     onSelection(countryCode, ""); // Clear city when country changes
     setSearchTerm(""); // Clear search when country changes
   };
@@ -81,26 +85,36 @@ export const CountryCitySelector = ({
                 Loading countries...
               </div>
             ) : (
-              countries.map((country) => (
-                <SelectItem key={country.code} value={country.code}>
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{country.flagEmoji}</span>
-                      <div>
-                        <span className="font-medium">{country.name}</span>
+              <>
+                {countries.map((country) => (
+                  <SelectItem key={country.code} value={country.code}>
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{country.flagEmoji}</span>
+                        <div>
+                          <span className="font-medium">{country.name}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-1 ml-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {country.cityCount} cities
+                        </Badge>
+                        <Badge variant="secondary" className="text-xs bg-brand-orange/10 text-brand-orange border-brand-orange/20">
+                          {country.tripCount} trips
+                        </Badge>
                       </div>
                     </div>
-                    <div className="flex gap-1 ml-2">
-                      <Badge variant="secondary" className="text-xs">
-                        {country.cityCount} cities
-                      </Badge>
-                      <Badge variant="secondary" className="text-xs bg-brand-orange/10 text-brand-orange border-brand-orange/20">
-                        {country.tripCount} trips
-                      </Badge>
+                  </SelectItem>
+                ))}
+                {countries.length > 0 && (
+                  <SelectItem value="REQUEST_NEW" className="border-t border-gray-200">
+                    <div className="flex items-center gap-2 text-orange-600">
+                      <Plus className="w-4 h-4" />
+                      <span className="font-medium">Request New Country</span>
                     </div>
-                  </div>
-                </SelectItem>
-              ))
+                  </SelectItem>
+                )}
+              </>
             )}
           </SelectContent>
         </Select>
@@ -194,6 +208,16 @@ export const CountryCitySelector = ({
           </CardContent>
         </Card>
       )}
+      
+      {/* Country Request Modal */}
+      <CountryRequestModal 
+        isOpen={showCountryRequest}
+        onOpenChange={setShowCountryRequest}
+        onRequestSubmitted={() => {
+          setShowCountryRequest(false);
+          // Optionally refresh countries list after request
+        }}
+      />
     </div>
   );
 }; 
