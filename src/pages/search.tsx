@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -23,35 +23,51 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
 import { 
-  searchTripsBySegment,
-  getAvailableCities,
+  searchTripsBySegmentWithCountry,
   applyTripFilters,
   sortTripResults,
   formatTripDuration,
   getRoutePathString,
-  type TripSearchQuery,
+  type TripSearchQueryWithCountry,
   type TripSearchResult,
 } from "@/services/trip-search";
+import { getAvailableCountries, getCitiesForCountry, type Country } from "@/services/countries";
 import { toast } from "sonner";
 
-// Trip Search Form Component
+// 2-Step Trip Search Form Component
 export const TripSearchForm = ({ 
   onSearch, 
   isLoading 
 }: { 
-  onSearch: (query: TripSearchQuery) => void;
+  onSearch: (query: TripSearchQueryWithCountry) => void;
   isLoading: boolean;
 }) => {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [selectedCountry, setSelectedCountry] = useState("");
   const [fromCity, setFromCity] = useState("");
   const [toCity, setToCity] = useState("");
   const [departureDate, setDepartureDate] = useState<Date>();
   const [passengers, setPassengers] = useState("1");
 
-  // Fetch available cities for suggestions
-  const { data: cities = [] } = useQuery({
-    queryKey: ['available-cities'],
-    queryFn: getAvailableCities,
+  // Fetch available countries
+  const { data: countries = [] } = useQuery<Country[]>({
+    queryKey: ['countries'],
+    queryFn: getAvailableCountries,
   });
+
+  // Fetch cities for selected country
+  const { data: cities = [] } = useQuery({
+    queryKey: ['cities', selectedCountry],
+    queryFn: () => getCitiesForCountry(selectedCountry),
+    enabled: !!selectedCountry,
+  });
+
+  const handleCountrySelect = (countryCode: string) => {
+    setSelectedCountry(countryCode);
+    setFromCity("");
+    setToCity("");
+    setStep(2);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +83,8 @@ export const TripSearchForm = ({
     }
 
     onSearch({
+      fromCountry: selectedCountry,
+      toCountry: selectedCountry,
       fromCity,
       toCity,
       departureDate: departureDate ? format(departureDate, 'yyyy-MM-dd') : undefined,
@@ -80,141 +98,195 @@ export const TripSearchForm = ({
     setToCity(temp);
   };
 
+  const handleBack = () => {
+    setStep(1);
+    setFromCity("");
+    setToCity("");
+  };
+
+
+
+  const selectedCountryInfo = countries.find(c => c.code === selectedCountry);
+
   return (
     <div className="bg-transparent">
-      <form onSubmit={handleSubmit}>
-        {/* Compact Search Row */}
-        <div className="flex flex-col lg:flex-row gap-3 lg:items-end">
-          {/* Cities Row */}
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
-            {/* From City */}
-            <div className="md:col-span-2">
-              <Label htmlFor="from-city" className="text-xs font-medium text-gray-600 mb-1 block">From</Label>
-              <Select value={fromCity} onValueChange={setFromCity} disabled={isLoading}>
-                <SelectTrigger className="h-9 text-sm border-gray-300 focus:border-brand-dark-blue focus:ring-1 focus:ring-brand-dark-blue">
-                  <SelectValue placeholder="Departure" />
-                </SelectTrigger>
-                <SelectContent className="z-[9999] max-h-[240px]">
-                  {cities.map((city) => (
-                    <SelectItem key={city.cityName} value={city.cityName}>
-                      <div className="flex items-center justify-between w-full">
-                        <span className="truncate pr-2 text-sm">{city.cityName}</span>
-                        <Badge variant="secondary" className="text-xs bg-brand-orange/10 text-brand-orange border-brand-orange/20">
-                          {city.tripCount}
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Swap Button */}
-            <div className="md:col-span-1 flex justify-center">
+      {step === 1 ? (
+        // Step 1: Country Selection
+        <div className="space-y-4">
+          <div className="text-center mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Select your travel country</h3>
+            <p className="text-sm text-gray-600">Choose the country you'll be traveling within</p>
+          </div>
+          
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+             {countries.map((country) => (
+               <Button
+                 key={country.code}
+                 variant="outline"
+                 onClick={() => handleCountrySelect(country.code)}
+                 className="h-16 p-4 justify-start border-2 hover:border-brand-orange hover:bg-brand-orange/5 transition-all duration-200"
+                 disabled={isLoading}
+               >
+                 <div className="flex items-center gap-3 w-full">
+                   <div className="text-2xl">{country.flagEmoji}</div>
+                   <div className="text-left">
+                     <div className="font-medium">{country.name}</div>
+                     <div className="text-xs text-gray-500">{country.cityCount} cities available</div>
+                   </div>
+                 </div>
+               </Button>
+             ))}
+           </div>
+        </div>
+      ) : (
+        // Step 2: City and Travel Details
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            {/* Country Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="text-2xl">{selectedCountryInfo?.flagEmoji}</div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">{selectedCountryInfo?.name}</h3>
+                  <p className="text-sm text-gray-500">Select your departure and destination cities</p>
+                </div>
+              </div>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={handleSwapCities}
-                className="w-9 h-9 rounded-full border-2 border-brand-orange/40 hover:border-brand-orange hover:bg-brand-orange/10 transition-all duration-200"
-                disabled={isLoading || (!fromCity && !toCity)}
+                onClick={handleBack}
+                disabled={isLoading}
               >
-                <ArrowLeftRight className="w-3 h-3 text-brand-orange" />
+                Change Country
               </Button>
             </div>
 
-            {/* To City */}
-            <div className="md:col-span-2">
-              <Label htmlFor="to-city" className="text-xs font-medium text-gray-600 mb-1 block">To</Label>
-              <Select value={toCity} onValueChange={setToCity} disabled={isLoading}>
-                <SelectTrigger className="h-9 text-sm border-gray-300 focus:border-brand-dark-blue focus:ring-1 focus:ring-brand-dark-blue">
-                  <SelectValue placeholder="Destination" />
-                </SelectTrigger>
-                <SelectContent className="z-[9999] max-h-[240px]">
-                  {cities.map((city) => (
-                    <SelectItem key={city.cityName} value={city.cityName}>
-                      <div className="flex items-center justify-between w-full">
-                        <span className="truncate pr-2 text-sm">{city.cityName}</span>
-                        <Badge variant="secondary" className="text-xs bg-brand-orange/10 text-brand-orange border-brand-orange/20">
-                          {city.tripCount}
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Cities and Travel Details */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Cities Selection */}
+              <div className="space-y-3">
+                <div className="grid grid-cols-5 gap-2 items-end">
+                  {/* From City */}
+                  <div className="col-span-2">
+                    <Label className="text-xs font-medium text-gray-600 mb-1 block">From</Label>
+                                         <Select value={fromCity} onValueChange={setFromCity} disabled={isLoading}>
+                       <SelectTrigger className="h-9 text-sm">
+                         <SelectValue placeholder="Departure" />
+                       </SelectTrigger>
+                       <SelectContent>
+                         {cities.map((city) => (
+                           <SelectItem key={city.cityName} value={city.cityName}>
+                             {city.cityName}
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
+                     </Select>
+                  </div>
+
+                  {/* Swap Button */}
+                  <div className="col-span-1 flex justify-center">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSwapCities}
+                      className="w-9 h-9 rounded-full border-2 border-brand-orange/40 hover:border-brand-orange hover:bg-brand-orange/10"
+                      disabled={isLoading || (!fromCity && !toCity)}
+                    >
+                      <ArrowLeftRight className="w-3 h-3 text-brand-orange" />
+                    </Button>
+                  </div>
+
+                  {/* To City */}
+                  <div className="col-span-2">
+                    <Label className="text-xs font-medium text-gray-600 mb-1 block">To</Label>
+                                         <Select value={toCity} onValueChange={setToCity} disabled={isLoading}>
+                       <SelectTrigger className="h-9 text-sm">
+                         <SelectValue placeholder="Destination" />
+                       </SelectTrigger>
+                       <SelectContent>
+                         {cities.map((city) => (
+                           <SelectItem key={city.cityName} value={city.cityName}>
+                             {city.cityName}
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
+                     </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Travel Details */}
+              <div className="grid grid-cols-2 gap-2">
+                {/* Departure Date */}
+                <div>
+                  <Label className="text-xs font-medium text-gray-600 mb-1 block">Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="h-9 w-full justify-start text-left font-normal text-sm"
+                        disabled={isLoading}
+                      >
+                        <CalendarIcon className="mr-2 h-3 w-3 opacity-50" />
+                        <span className="truncate">
+                          {departureDate ? format(departureDate, "MMM dd") : "Select"}
+                        </span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-white border shadow-lg z-50" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={departureDate}
+                        onSelect={setDepartureDate}
+                        disabled={(date) => date < new Date()}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Passengers */}
+                <div>
+                  <Label className="text-xs font-medium text-gray-600 mb-1 block">Passengers</Label>
+                  <Select value={passengers} onValueChange={setPassengers} disabled={isLoading}>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5, 6].map((num) => (
+                        <SelectItem key={num} value={num.toString()}>
+                          <span className="text-sm">{num}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
+
+            {/* Search Button */}
+            <Button 
+              type="submit" 
+              className="w-full bg-gradient-to-r from-brand-orange to-brand-orange/90 hover:from-brand-orange/90 hover:to-brand-orange text-white h-10 font-medium shadow-md hover:shadow-lg transition-all duration-200"
+              disabled={isLoading || !fromCity || !toCity}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Searching...
+                </>
+              ) : (
+                <>
+                  <Search className="mr-2 h-4 w-4" />
+                  Search Trips
+                </>
+              )}
+            </Button>
           </div>
-
-          {/* Travel Details */}
-          <div className="flex gap-2">
-            {/* Departure Date */}
-            <div className="min-w-[140px]">
-              <Label className="text-xs font-medium text-gray-600 mb-1 block">Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="h-9 w-full justify-start text-left font-normal text-sm border-gray-300 focus:border-brand-dark-blue focus:ring-1 focus:ring-brand-dark-blue"
-                    disabled={isLoading}
-                  >
-                    <CalendarIcon className="mr-2 h-3 w-3 opacity-50" />
-                    <span className="truncate">
-                      {departureDate ? format(departureDate, "MMM dd") : "Select"}
-                    </span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 z-[9999]" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={departureDate}
-                    onSelect={setDepartureDate}
-                    disabled={(date) => date < new Date()}
-                    initialFocus
-                    className="[&_.rdp-day_selected]:bg-brand-dark-blue [&_.rdp-day_selected]:text-white"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            {/* Passengers */}
-            <div className="min-w-[100px]">
-              <Label className="text-xs font-medium text-gray-600 mb-1 block">Passengers</Label>
-              <Select value={passengers} onValueChange={setPassengers} disabled={isLoading}>
-                <SelectTrigger className="h-9 text-sm border-gray-300 focus:border-brand-dark-blue focus:ring-1 focus:ring-brand-dark-blue">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="z-[9999]">
-                  {[1, 2, 3, 4, 5, 6].map((num) => (
-                    <SelectItem key={num} value={num.toString()}>
-                      <span className="text-sm">{num}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Search Button */}
-          <Button 
-            type="submit" 
-            className="bg-gradient-to-r from-brand-orange to-brand-orange/90 hover:from-brand-orange/90 hover:to-brand-orange text-white h-9 px-6 font-medium whitespace-nowrap shadow-md hover:shadow-lg transition-all duration-200"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                Searching...
-              </>
-            ) : (
-              <>
-                <Search className="mr-2 h-3 w-3" />
-                Search
-              </>
-            )}
-          </Button>
-        </div>
-      </form>
+                 </form>
+       )}
     </div>
   );
 };
@@ -319,16 +391,16 @@ export const TripResultCard = ({ trip }: { trip: TripSearchResult }) => {
 
 // Main Search Page Component
 export default function SearchPage() {
-  const [searchQuery, setSearchQuery] = useState<TripSearchQuery | null>(null);
+  const [searchQuery, setSearchQuery] = useState<TripSearchQueryWithCountry | null>(null);
   const [searchResults, setSearchResults] = useState<TripSearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sortBy, setSortBy] = useState<'price' | 'departure' | 'duration' | 'rating'>('departure');
 
-  const handleSearch = (query: TripSearchQuery) => {
+  const handleSearch = (query: TripSearchQueryWithCountry) => {
     setSearchQuery(query);
     setIsLoading(true);
     
-    searchTripsBySegment(query)
+    searchTripsBySegmentWithCountry(query)
       .then((results) => {
         setSearchResults(results);
         setIsLoading(false);

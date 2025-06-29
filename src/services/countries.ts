@@ -27,7 +27,7 @@ export const getAvailableCountries = async (): Promise<Country[]> => {
     throw new Error(error.message);
   }
 
-  return data?.map((country: any) => ({
+  return data?.map((country: { country_code: string; country_name: string; flag_emoji: string; city_count: number; trip_count: number }) => ({
     code: country.country_code,
     name: country.country_name,
     flagEmoji: country.flag_emoji,
@@ -47,7 +47,7 @@ export const getAvailableCitiesByCountry = async (): Promise<CityWithCountry[]> 
     throw new Error(error.message);
   }
 
-  return data?.map((city: any) => ({
+  return data?.map((city: { country_code: string; country_name: string; flag_emoji: string; city_name: string; trip_count: number }) => ({
     countryCode: city.country_code,
     countryName: city.country_name,
     flagEmoji: city.flag_emoji,
@@ -139,7 +139,7 @@ export const getCountryRequests = async (status?: 'pending' | 'approved' | 'reje
     throw new Error(error.message);
   }
 
-  return data?.map((request: any) => ({
+  return data?.map((request: { id: string; country_name: string; country_code: string; requested_by: string; requester_name: string; requester_email: string; reason: string; status: string; admin_notes: string; reviewed_by: string; reviewer_name: string; reviewed_at: string; created_at: string; updated_at: string }) => ({
     id: request.id,
     countryName: request.country_name,
     countryCode: request.country_code,
@@ -168,7 +168,7 @@ export const getMyCountryRequests = async (): Promise<MyCountryRequest[]> => {
     throw new Error(error.message);
   }
 
-  return data?.map((request: any) => ({
+  return data?.map((request: { id: string; country_name: string; country_code: string; requested_by: string; requester_name: string; requester_email: string; reason: string; status: string; admin_notes: string; reviewed_by: string; reviewer_name: string; reviewed_at: string; created_at: string; updated_at: string }) => ({
     id: request.id,
     countryName: request.country_name,
     countryCode: request.country_code,

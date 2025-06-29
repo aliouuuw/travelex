@@ -289,7 +289,7 @@ BEGIN
     FROM trips t
     JOIN route_templates rt ON rt.id = t.route_template_id
     JOIN profiles p ON p.id = t.driver_id
-    LEFT JOIN vehicles v ON v.driver_id = t.driver_id AND v.is_primary = true
+    LEFT JOIN vehicles v ON v.driver_id = t.driver_id AND v.is_default = true
     WHERE t.status = 'scheduled'
         AND t.available_seats >= p_min_seats
         AND (p_departure_date IS NULL OR DATE(t.departure_time) = p_departure_date)
