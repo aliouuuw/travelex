@@ -409,22 +409,6 @@ export const getTripForBooking = async (tripId: string): Promise<TripBookingDeta
 
   const tripData = data[0];
 
-  // Fetch vehicle details separately to get the seat map
-  let vehicleSeatMap: SeatMap | undefined = undefined;
-  if (tripData.vehicle_id) {
-    const { data: vehicleData, error: vehicleError } = await supabase
-      .from('vehicles')
-      .select('seat_map')
-      .eq('id', tripData.vehicle_id)
-      .single();
-
-    if (vehicleError) {
-      console.error('Error fetching vehicle seat map:', vehicleError);
-    } else if (vehicleData) {
-      vehicleSeatMap = vehicleData.seat_map as SeatMap;
-    }
-  }
-
   return {
     tripId: tripData.trip_id,
     routeTemplateId: tripData.route_template_id,
@@ -435,7 +419,7 @@ export const getTripForBooking = async (tripId: string): Promise<TripBookingDeta
     vehicleInfo: tripData.vehicle_info ? {
       ...tripData.vehicle_info,
       features: tripData.vehicle_info.features || [],
-      seatMap: vehicleSeatMap
+      seatMap: tripData.vehicle_info.seatMap
     } : undefined,
     departureTime: tripData.departure_time,
     arrivalTime: tripData.arrival_time,
