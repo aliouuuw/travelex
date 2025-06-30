@@ -8,6 +8,8 @@ interface UserProfile {
   full_name?: string;
   avatar_url?: string;
   role?: "admin" | "driver" | "passenger";
+  email?: string;
+  phone?: string;
 }
 
 type AuthContextType = {

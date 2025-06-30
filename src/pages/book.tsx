@@ -1,50 +1,28 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { 
   ArrowLeft, 
   ArrowRight, 
   MapPin, 
-  Clock, 
   Users, 
   Star, 
   Car,
   Package,
-  DollarSign,
   CheckCircle,
   Loader2,
   AlertCircle
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { getTripForBooking, type TripBookingDetails } from "@/services/trip-search";
-import { createReservation } from "@/services/reservations";
-import { useAuth } from "@/hooks/use-auth";
-
-// Types
-interface StationInfo {
-  id: string;
-  cityName: string;
-  stationName: string;
-  stationAddress: string;
-  sequenceOrder: number;
-  isPickupPoint: boolean;
-  isDropoffPoint: boolean;
-}
-
-interface SeatInfo {
-  id: string;
-  row: number;
-  column: number;
-  type: 'regular' | 'premium';
-  available: boolean;
-}
+import { getTripForBooking } from "@/services/trip-search";
+import { createPaymentIntent } from "@/services/payments";
+import type { SeatMap } from "@/services/vehicles";
 
 interface BookingFormData {
   pickupStationId: string;
@@ -65,7 +43,7 @@ const SeatSelectionGrid = ({
   onSeatSelect,
   occupiedSeats = []
 }: {
-  seatMap: any;
+  seatMap: SeatMap;
   selectedSeats: string[];
   onSeatSelect: (seatId: string) => void;
   occupiedSeats?: string[];
@@ -111,9 +89,9 @@ const SeatSelectionGrid = ({
 
       {/* Seat Grid */}
       <div className="space-y-2 max-w-md mx-auto">
-        {seatMap.layout.map((row: any) => (
+        {seatMap.layout.map((row: SeatMap['layout'][number]) => (
           <div key={row.row} className="flex justify-center gap-2">
-            {row.seats.map((seat: any, index: number) => {
+            {row.seats.map((seat: SeatMap['layout'][number]['seats'][number]) => {
               const status = getSeatStatus(seat.id);
               const isClickable = status !== 'occupied';
               
@@ -160,8 +138,6 @@ const SeatSelectionGrid = ({
 export default function BookingPage() {
   const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
 
   // Form state
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
@@ -171,9 +147,9 @@ export default function BookingPage() {
     selectedSeats: [],
     numberOfBags: 1, // Start with 1 free bag
     passengerInfo: {
-      fullName: user?.profile?.full_name || '',
-      email: user?.profile?.email || '',
-      phone: user?.profile?.phone || '',
+      fullName: '',
+      email: '',
+      phone: '',
     },
   });
 
@@ -247,41 +223,40 @@ export default function BookingPage() {
     }
   };
 
-  // Create reservation mutation
-  const createReservationMutation = useMutation({
+  // Create payment intent mutation
+  const createPaymentMutation = useMutation({
     mutationFn: async (data: BookingFormData) => {
       if (!trip) throw new Error('Trip data not available');
       
-      const reservationData = {
+      const paymentData = {
         tripId: trip.tripId,
+        passengerInfo: {
+          fullName: data.passengerInfo.fullName,
+          email: data.passengerInfo.email,
+          phone: data.passengerInfo.phone || '',
+        },
         pickupStationId: data.pickupStationId,
         dropoffStationId: data.dropoffStationId,
         selectedSeats: data.selectedSeats,
         numberOfBags: data.numberOfBags,
         totalPrice: totalPrice,
-        passengerInfo: data.passengerInfo,
       };
       
-      return await createReservation(reservationData);
+      return await createPaymentIntent(paymentData);
     },
-    onSuccess: (reservation) => {
-      toast.success(`Booking confirmed! Reference: ${reservation.bookingReference}`);
-      // TODO: Navigate to booking confirmation page
-      navigate('/search');
+    onSuccess: (response) => {
+      toast.success('Redirecting to payment...');
+      // Navigate to payment page with client secret
+      navigate(`/payment/${response.tempBookingId}?client_secret=${response.clientSecret}`);
     },
     onError: (error) => {
-      toast.error('Failed to create booking: ' + error.message);
+      toast.error('Failed to create payment session: ' + error.message);
     },
   });
 
   const handleSubmit = () => {
-    if (!user) {
-      toast.error('Please sign in to complete your booking');
-      navigate('/auth');
-      return;
-    }
-    
-    createReservationMutation.mutate(formData);
+    // No authentication required for anonymous booking
+    createPaymentMutation.mutate(formData);
   };
 
   // Loading and error states
@@ -666,18 +641,18 @@ export default function BookingPage() {
                   ) : (
                     <Button
                       onClick={handleSubmit}
-                      disabled={!canSubmit || createReservationMutation.isPending}
+                      disabled={!canSubmit || createPaymentMutation.isPending}
                       className="bg-brand-orange hover:bg-brand-orange/90"
                     >
-                      {createReservationMutation.isPending ? (
+                      {createPaymentMutation.isPending ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                           Processing...
                         </>
                       ) : (
                         <>
-                          Confirm Booking
-                          <CheckCircle className="w-4 h-4 ml-2" />
+                          Continue to Payment
+                          <ArrowRight className="w-4 h-4 ml-2" />
                         </>
                       )}
                     </Button>
