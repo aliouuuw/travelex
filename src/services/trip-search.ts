@@ -356,8 +356,8 @@ export const searchTripsBySegmentWithCountry = async (
       isPickupPoint: station.isPickupPoint,
       isDropoffPoint: station.isDropoffPoint,
     })) || [],
-    segmentPrice: trip.segment_price || 0,
-    fullRoutePrice: trip.segment_price || 0,
+    segmentPrice: trip.estimated_price || 0,
+    fullRoutePrice: trip.estimated_price || 0,
     pickupStations: trip.pickup_stations || [],
     dropoffStations: trip.dropoff_stations || [],
     luggagePolicy: trip.luggage_policy ? {
@@ -395,7 +395,7 @@ export const getTripForBooking = async (tripId: string): Promise<TripBookingDeta
   if (!tripId) return null;
 
   const { data, error } = await supabase
-    .rpc('get_trip_for_booking_2', { p_trip_id: tripId });
+    .rpc('get_trip_for_booking', { p_trip_id: tripId });
 
   if (error) {
     console.error('Error fetching trip for booking:', error);
