@@ -421,7 +421,20 @@ export default function BookingPage() {
                     </div>
 
                     <SeatSelectionGrid
-                      seatMap={trip.vehicleInfo?.seatMap}
+                      seatMap={trip.vehicleInfo?.seatMap || {
+                        rows: 0,
+                        columns: 0,
+                        layout: [] as Array<{
+                          row: number;
+                          seats: Array<{
+                            id: string;
+                            row: number;
+                            column: number;
+                            type: 'regular' | 'premium' | 'disabled' | 'empty';
+                            available: boolean;
+                          }>;
+                        }>,
+                      }}
                       selectedSeats={formData.selectedSeats}
                       onSeatSelect={handleSeatSelect}
                     />

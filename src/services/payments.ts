@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { loadStripe, type StripeElements, type StripePaymentElement } from '@stripe/stripe-js';
+import { loadStripe, type StripeElements } from '@stripe/stripe-js';
 
 // Initialize Stripe
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
@@ -79,9 +79,7 @@ export const getStripe = async () => {
  * Confirm payment with Stripe Elements
  */
 export const confirmPayment = async (
-  clientSecret: string,
   elements: StripeElements,
-  paymentElement: StripePaymentElement,
   returnUrl: string
 ) => {
   const stripe = await getStripe();
@@ -209,8 +207,8 @@ export const checkPaymentStatus = async (tempBookingId: string): Promise<Payment
           console.log('Payment completed with reservation:', payment.reservations);
           return { 
             status: 'succeeded',
-            bookingReference: payment.reservations?.booking_reference,
-            reservationId: payment.reservations?.id
+            bookingReference: payment.reservations[0]?.booking_reference as string,
+            reservationId: payment.reservations[0]?.id
           };
         } else if (payment.status === 'failed') {
           return { status: 'failed', error: 'Payment failed' };

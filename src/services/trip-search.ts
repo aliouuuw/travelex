@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { SeatMap } from './vehicles';
 
 // =============================================
 // TYPE DEFINITIONS
@@ -99,17 +100,6 @@ export interface TripSearchFilters {
 export interface CityOption {
   cityName: string;
   tripCount: number;
-}
-
-interface SeatMap {
-  rows: number;
-  columns: number;
-  seats: Array<{
-    id: string;
-    row: number;
-    column: number;
-    status: 'available' | 'booked' | 'blocked';
-  }>;
 }
 
 export interface TripBookingDetails {
@@ -402,9 +392,10 @@ export const getAvailableCities = async (): Promise<CityOption[]> => {
  * Get detailed trip information for booking
  */
 export const getTripForBooking = async (tripId: string): Promise<TripBookingDetails | null> => {
-  const { data, error } = await supabase.rpc('get_trip_for_booking', {
-    p_trip_id: tripId,
-  });
+  if (!tripId) return null;
+
+  const { data, error } = await supabase
+    .rpc('get_trip_for_booking_2', { p_trip_id: tripId });
 
   if (error) {
     console.error('Error fetching trip for booking:', error);
@@ -415,39 +406,44 @@ export const getTripForBooking = async (tripId: string): Promise<TripBookingDeta
     return null;
   }
 
-  const trip = data[0];
+  const tripData = data[0];
+
+  // Fetch vehicle details separately to get the seat map
+  let vehicleSeatMap: SeatMap | undefined = undefined;
+  if (tripData.vehicle_id) {
+    const { data: vehicleData, error: vehicleError } = await supabase
+      .from('vehicles')
+      .select('seat_map')
+      .eq('id', tripData.vehicle_id)
+      .single();
+
+    if (vehicleError) {
+      console.error('Error fetching vehicle seat map:', vehicleError);
+    } else if (vehicleData) {
+      vehicleSeatMap = vehicleData.seat_map as SeatMap;
+    }
+  }
+
   return {
-    tripId: trip.trip_id,
-    routeTemplateId: trip.route_template_id,
-    routeTemplateName: trip.route_template_name,
-    driverId: trip.driver_id,
-    driverName: trip.driver_name,
-    driverRating: trip.driver_rating || 0,
-    vehicleInfo: trip.vehicle_info ? {
-      id: trip.vehicle_info.id,
-      make: trip.vehicle_info.make,
-      model: trip.vehicle_info.model,
-      year: trip.vehicle_info.year,
-      type: trip.vehicle_info.type,
-      capacity: trip.vehicle_info.capacity,
-      features: trip.vehicle_info.features || [],
-      seatMap: trip.vehicle_info.seatMap,
+    tripId: tripData.trip_id,
+    routeTemplateId: tripData.route_template_id,
+    routeTemplateName: tripData.route_template_name,
+    driverId: tripData.driver_id,
+    driverName: tripData.driver_name,
+    driverRating: tripData.driver_rating || 0,
+    vehicleInfo: tripData.vehicle_info ? {
+      ...tripData.vehicle_info,
+      features: tripData.vehicle_info.features || [],
+      seatMap: vehicleSeatMap
     } : undefined,
-    departureTime: trip.departure_time,
-    arrivalTime: trip.arrival_time,
-    availableSeats: trip.available_seats,
-    totalSeats: trip.total_seats,
-    routeCities: trip.route_cities || [],
-    tripStations: trip.trip_stations || [],
-    pricing: trip.pricing || [],
-    luggagePolicy: trip.luggage_policy ? {
-      id: trip.luggage_policy.id,
-      name: trip.luggage_policy.name,
-      freeWeightKg: trip.luggage_policy.freeWeightKg,
-      excessFeePerKg: trip.luggage_policy.excessFeePerKg,
-      maxBags: trip.luggage_policy.maxBags,
-      maxBagWeightKg: trip.luggage_policy.maxBagWeightKg,
-    } : undefined,
+    departureTime: tripData.departure_time,
+    arrivalTime: tripData.arrival_time,
+    availableSeats: tripData.available_seats,
+    totalSeats: tripData.total_seats,
+    routeCities: tripData.route_cities || [],
+    tripStations: tripData.trip_stations || [],
+    pricing: tripData.pricing || [],
+    luggagePolicy: tripData.luggage_policy || undefined,
   };
 };
 
