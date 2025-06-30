@@ -36,6 +36,7 @@ import ReservationDetailPage from "./pages/driver/reservations/[id]";
 import DriverCountryRequestsPage from "./pages/driver/country-requests";
 import AccountSettings from "./pages/settings";
 import SearchPage from "./pages/search";
+import BookingPage from "./pages/book";
 import { LogOut, LayoutDashboard, ChevronDown, Settings } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./components/ui/avatar";
 import { 
@@ -272,6 +273,10 @@ const router = createBrowserRouter([
       {
         path: "/search",
         element: <SearchPage />,
+      },
+      {
+        path: "/book/:tripId",
+        element: <BookingPage />,
       },
       {
         path: "/auth",

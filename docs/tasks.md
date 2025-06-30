@@ -99,6 +99,9 @@
     - [x] **NEW:** Create default policy management system
     - [x] **NEW:** Add search and filtering capabilities for policy management
     - [x] **NEW:** Integrate luggage policies into driver dashboard navigation
+    - [x] **NEW:** Transition to intuitive bag-based pricing model (1 free bag + flat fee per additional bag)
+    - [x] **NEW:** Update booking interface with clear bag selection and pricing display
+    - [x] **NEW:** Implement backward compatibility for existing weight-based policies
 - [x] **Vehicle Management:**
     - [x] **NEW:** Build comprehensive vehicle fleet management UI with professional interface
     - [x] **NEW:** Implement multi-step vehicle creation/editing form with tabbed interface
@@ -168,7 +171,7 @@
 - [ ] **Segment-Based Booking Flow:**
     - [ ] Build multi-step booking form with pickup/dropoff station selection
     - [ ] Implement seat selection for segment passengers
-    - [ ] Add luggage options and pricing calculation
+    - [ ] Add bag selection interface (1 free + additional bags with flat pricing)
     - [ ] Create booking summary with full route visibility
     - [ ] Handle payment processing for segment bookings
 
@@ -1029,4 +1032,163 @@
 
 **Next Phase:** Ready to begin **Enhanced Segment-Based Booking Flow** with country-aware booking capabilities, or continue with additional passenger experience features like advanced filtering and sorting within the country-city system.
 
---- 
+---
+
+## Session Recap 14 (Bag-Based Luggage Policy Redesign - Current Session)
+
+**Objective:** Redesign confusing weight-based luggage policies with intuitive bag-based pricing model for improved passenger and driver experience
+
+**Strategic Problem Identified:**
+**Previous Model:** Confusing weight-based pricing like "23kg free • $5/kg excess • Max 30kg"
+- Passengers struggled to understand pricing
+- Complex calculations required for excess weight
+- Unclear what happens with multiple bags
+- Driver policy creation was complex and error-prone
+
+**New Model:** Simple bag-based pricing like "1 free bag up to 23kg • $5 per additional bag • Max 3 additional bags"
+- Crystal clear pricing structure
+- Easy mental math for passengers
+- Consistent per-bag pricing regardless of weight (up to limit)
+- Intuitive for both drivers and passengers
+
+**Major Achievements:**
+- **Complete Model Transformation:** Transitioned from weight-based to bag-based pricing across entire system
+- **Enhanced Driver Interface:** Rebuilt luggage policy creation with bag-focused forms
+- **Improved Booking Experience:** Redesigned passenger booking flow with clear bag selection
+- **Backward Compatibility:** Maintained compatibility with existing policies through smart field mapping
+- **Clear Communication:** Implemented consistent messaging throughout user interfaces
+
+**Technical Implementation:**
+
+**Service Layer Updates:**
+- **Enhanced Luggage Service:** `src/services/luggage-policies.ts` - Complete rewrite with bag-based interfaces
+  - New `CreateLuggagePolicyInput` interface with bag-focused fields
+  - `transformLegacyPolicy()` function for converting old data
+  - `calculateBagFee()` for direct bag-based calculations
+  - Dual interface support for new and legacy formats
+  - Updated validation rules for bag-based constraints
+
+**Driver Management Interface:**
+- **Redesigned Policy Form:** `src/pages/driver/luggage-policies/form.tsx` - Complete UI overhaul
+  - Bag-based form fields: Weight per bag + Fee per additional bag + Max additional bags
+  - Visual policy preview: "1 free bag up to 23kg • $5 per additional bag • Max 3 additional bags"
+  - Real-time fee calculator showing bag count examples
+  - Green color scheme emphasizing positive, clear pricing
+  - Enhanced validation with bag-specific constraints
+
+**Passenger Booking Experience:**
+- **Improved Booking Flow:** `src/pages/book.tsx` - Complete luggage section redesign
+  - Starts with 1 free bag (instead of 0 bags)
+  - Clear counter showing "1 bag (free)" vs "3 bags (1 free + 2)"
+  - Separate fee display only for additional bags
+  - Green confirmation when using just the free bag
+  - Updated pricing calculations for additional bags only
+
+**Key Features Completed:**
+
+- ✅ **Intuitive Driver Policy Creation:** 
+  - Simple 3-field configuration: Weight per bag + Fee per additional bag + Max additional bags
+  - Visual preview showing exactly what passengers will see
+  - Real-time calculator for testing different bag scenarios
+  - Clear explanatory text for each field
+  - Professional green-themed interface emphasizing clarity
+
+- ✅ **Clear Passenger Communication:**
+  - Policy display: "1 free bag up to 23kg included in your ticket"
+  - Additional pricing: "₵5 per additional bag (up to 23kg each)"
+  - Friendly feedback: "Perfect! Your free bag is included in the ticket price"
+  - Clear breakdown: "Additional luggage fee (2 additional bags)"
+
+- ✅ **Smart Booking Interface:**
+  - Counter starts at 1 bag (the free bag)
+  - Visual feedback: "1 bag (free)" → "3 bags (1 free + 2)"
+  - Fee calculation only applies to additional bags
+  - Green confirmation for free bag usage
+  - Clear maximum limits with helpful messaging
+
+- ✅ **Enhanced Policy Management:**
+  - Updated form validation for bag-based constraints
+  - Real-time policy preview with formatted display
+  - Fee calculator with example scenarios
+  - Default values optimized for TravelEx standard policy
+  - Professional interface with improved user experience
+
+**Pricing Model Transformation:**
+
+**Before (Weight-Based):**
+```
+Policy: "Free: 23kg • $5/kg excess • Max: 30kg • Max 3 bags"
+Passenger Calculation: Complex weight math, unclear bag rules
+Example: 25kg bag = 23kg free + 2kg × $5 = $10
+```
+
+**After (Bag-Based):**
+```
+Policy: "1 free bag up to 23kg • $5 per additional bag • Max 3 additional bags"
+Passenger Calculation: Simple bag count
+Example: 3 bags = 1 free + 2 additional × $5 = $10
+```
+
+**User Experience Improvements:**
+
+**Driver Experience:**
+- **Simplified Configuration:** 3 clear fields instead of complex weight calculations
+- **Visual Preview:** See exactly what passengers will see
+- **Real-time Calculator:** Test scenarios during policy creation
+- **Clear Labeling:** Each field explains its purpose and impact
+
+**Passenger Experience:**
+- **Immediate Understanding:** "1 free bag" is instantly clear
+- **Easy Mental Math:** Additional bags × flat fee = total cost
+- **Visual Feedback:** Counter shows breakdown "1 free + X additional"
+- **Positive Messaging:** Emphasizes the free bag benefit
+
+**Data Model Updates:**
+- **Backward Compatibility:** Existing policies automatically work with new interface
+- **Field Mapping:** Legacy fields mapped to new concepts (excess_fee_per_kg → fee per bag)
+- **Smart Defaults:** New policies default to TravelEx standard (23kg, $5, 3 additional)
+- **Enhanced Schema Documentation:** Clear explanation of field usage in bag-based model
+
+**Database Schema Evolution:**
+```sql
+-- Field Purpose in New Model:
+free_weight_kg      → Weight limit per bag (applies to all bags)
+excess_fee_per_kg   → Fee per additional bag (flat fee, not per kg)
+max_bags           → Maximum additional bags allowed
+```
+
+**Interface Color Scheme Updates:**
+- **Driver Forms:** Green theme emphasizing positive, clear policy creation
+- **Booking Flow:** Green accents for free bag confirmations
+- **Policy Display:** Green gradient cards showing policy benefits
+- **Status Indicators:** Green dots and messages for positive user feedback
+
+**Current State:** **Bag-Based Luggage Policy System is now 100% COMPLETE**. The system includes:
+- ✅ Complete transition from weight-based to bag-based pricing model
+- ✅ Enhanced driver policy creation interface with real-time preview
+- ✅ Improved passenger booking experience with clear bag selection
+- ✅ Backward compatibility preserving all existing policy data
+- ✅ Consistent messaging and visual design throughout the system
+- ✅ Professional interface with positive user experience emphasis
+
+**Strategic Benefits Achieved:**
+- ✅ **Simplified User Experience:** Both drivers and passengers understand pricing immediately
+- ✅ **Reduced Support Burden:** Clear pricing eliminates confusion and questions
+- ✅ **Professional Appearance:** Simple, clear policies improve brand perception
+- ✅ **Operational Efficiency:** Drivers can set policies quickly without complex calculations
+- ✅ **Passenger Confidence:** Transparent pricing increases booking conversion
+
+**Standard TravelEx Policy Implementation:**
+```
+Policy Name: "Standard"
+Configuration: 1 free bag up to 23kg • $5 per additional bag • Max 3 additional bags
+Passenger Examples:
+- 1 bag = ₵0 (free)
+- 2 bags = ₵5 (1 free + 1 additional)
+- 3 bags = ₵10 (1 free + 2 additional)
+- 4 bags = ₵15 (1 free + 3 additional, maximum reached)
+```
+
+**Next Phase:** Ready to continue with **Enhanced Segment-Based Booking Flow** implementing the improved bag selection interface, or focus on other passenger experience enhancements.
+
+---

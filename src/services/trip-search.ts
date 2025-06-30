@@ -215,10 +215,10 @@ export const searchTripsBySegment = async (
     luggagePolicy: trip.luggage_policy ? {
       id: trip.luggage_policy.id,
       name: trip.luggage_policy.name,
-      freeWeightKg: trip.luggage_policy.free_weight_kg,
-      excessFeePerKg: trip.luggage_policy.excess_fee_per_kg,
-      maxBags: trip.luggage_policy.max_bags,
-      maxBagWeightKg: trip.luggage_policy.max_bag_weight_kg,
+      freeWeightKg: trip.luggage_policy.freeWeightKg || trip.luggage_policy.free_weight_kg,
+      excessFeePerKg: trip.luggage_policy.excessFeePerKg || trip.luggage_policy.excess_fee_per_kg,
+      maxBags: trip.luggage_policy.maxBags || trip.luggage_policy.max_bags,
+      maxBagWeightKg: trip.luggage_policy.maxBagWeightKg || trip.luggage_policy.max_bag_weight_kg,
     } : undefined,
   })) || [];
 };
@@ -289,10 +289,10 @@ export const searchTripsBySegmentWithCountry = async (
     luggagePolicy: trip.luggage_policy ? {
       id: trip.luggage_policy.id,
       name: trip.luggage_policy.name,
-      freeWeightKg: trip.luggage_policy.free_weight_kg,
-      excessFeePerKg: trip.luggage_policy.excess_fee_per_kg,
-      maxBags: trip.luggage_policy.max_bags,
-      maxBagWeightKg: trip.luggage_policy.max_bag_weight_kg,
+      freeWeightKg: trip.luggage_policy.freeWeightKg || trip.luggage_policy.free_weight_kg,
+      excessFeePerKg: trip.luggage_policy.excessFeePerKg || trip.luggage_policy.excess_fee_per_kg,
+      maxBags: trip.luggage_policy.maxBags || trip.luggage_policy.max_bags,
+      maxBagWeightKg: trip.luggage_policy.maxBagWeightKg || trip.luggage_policy.max_bag_weight_kg,
     } : undefined,
   })) || [];
 };
@@ -359,10 +359,10 @@ export const getTripForBooking = async (tripId: string): Promise<TripBookingDeta
     luggagePolicy: trip.luggage_policy ? {
       id: trip.luggage_policy.id,
       name: trip.luggage_policy.name,
-      freeWeightKg: trip.luggage_policy.free_weight_kg,
-      excessFeePerKg: trip.luggage_policy.excess_fee_per_kg,
-      maxBags: trip.luggage_policy.max_bags,
-      maxBagWeightKg: trip.luggage_policy.max_bag_weight_kg,
+      freeWeightKg: trip.luggage_policy.freeWeightKg,
+      excessFeePerKg: trip.luggage_policy.excessFeePerKg,
+      maxBags: trip.luggage_policy.maxBags,
+      maxBagWeightKg: trip.luggage_policy.maxBagWeightKg,
     } : undefined,
   };
 };

@@ -391,4 +391,101 @@ export const getTripReservations = async (tripId: string): Promise<Reservation[]
       ? `${reservation.trips.vehicles.make} ${reservation.trips.vehicles.model} (${reservation.trips.vehicles.year})`
       : undefined,
   })) || [];
+};
+
+// Create a new reservation (for passenger bookings)
+export interface CreateReservationData {
+  tripId: string;
+  pickupStationId: string;
+  dropoffStationId: string;
+  selectedSeats: string[];
+  numberOfBags: number; // Changed from luggageWeight to numberOfBags
+  totalPrice: number;
+  passengerInfo: {
+    fullName: string;
+    email: string;
+    phone: string;
+  };
+}
+
+export const createReservation = async (data: CreateReservationData): Promise<{ id: string; bookingReference: string }> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  // Generate a unique booking reference
+  const bookingReference = 'TRX-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+
+  // Update user profile if needed
+  if (user.id) {
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .upsert({
+        id: user.id,
+        full_name: data.passengerInfo.fullName,
+        email: data.passengerInfo.email,
+        phone: data.passengerInfo.phone,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'id'
+      });
+
+    if (profileError) {
+      console.warn('Failed to update profile:', profileError);
+    }
+  }
+
+  // Create the reservation
+  const { data: reservation, error } = await supabase
+    .from('reservations')
+    .insert({
+      trip_id: data.tripId,
+      passenger_id: user.id,
+      pickup_station_id: data.pickupStationId,
+      dropoff_station_id: data.dropoffStationId,
+      seats_reserved: data.selectedSeats.length,
+      total_price: data.totalPrice,
+      booking_reference: bookingReference,
+      status: 'pending'
+    })
+    .select('id, booking_reference')
+    .single();
+
+  if (error) {
+    console.error('Error creating reservation:', error);
+    throw new Error(error.message);
+  }
+
+  // Create booked seats entries
+  if (data.selectedSeats.length > 0) {
+    const seatEntries = data.selectedSeats.map(seatNumber => ({
+      reservation_id: reservation.id,
+      seat_number: seatNumber
+    }));
+
+    const { error: seatError } = await supabase
+      .from('booked_seats')
+      .insert(seatEntries);
+
+    if (seatError) {
+      console.warn('Failed to save seat selections:', seatError);
+    }
+  }
+
+  // Update trip available seats
+  const { error: tripUpdateError } = await supabase.rpc('update_trip_available_seats', {
+    trip_id: data.tripId,
+    seats_to_reserve: data.selectedSeats.length
+  });
+
+  if (tripUpdateError) {
+    console.warn('Failed to update trip available seats:', tripUpdateError);
+  }
+
+  return {
+    id: reservation.id,
+    bookingReference: reservation.booking_reference
+  };
 }; 

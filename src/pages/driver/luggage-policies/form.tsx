@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Loader2, Save, X, Info } from "lucide-react";
+import { Loader2, Save, X, Info, Package } from "lucide-react";
 import {
   createLuggagePolicy,
   updateLuggagePolicy,
@@ -17,40 +17,25 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-// Validation schema
+// Updated validation schema for bag-based model
 const luggagePolicySchema = z.object({
   name: z.string()
     .min(1, "Policy name is required")
     .max(100, "Policy name must be less than 100 characters"),
   description: z.string().optional(),
-  maxWeight: z.number()
-    .positive("Maximum weight must be greater than 0")
-    .max(1000, "Maximum weight cannot exceed 1000kg")
-    .optional(),
-  freeWeight: z.number()
-    .min(0, "Free weight allowance cannot be negative")
-    .max(1000, "Free weight cannot exceed 1000kg")
-    .optional(),
-  feePerExcessKg: z.number()
-    .min(0, "Fee per excess kg cannot be negative")
-    .max(100, "Fee per kg cannot exceed $100")
-    .optional(),
-  maxBags: z.number()
-    .positive("Maximum bags must be greater than 0")
-    .max(20, "Maximum bags cannot exceed 20")
-    .optional(),
+  weightPerBag: z.number()
+    .positive("Weight per bag must be greater than 0")
+    .max(50, "Weight per bag cannot exceed 50kg"),
+  feePerAdditionalBag: z.number()
+    .min(0, "Fee per additional bag cannot be negative")
+    .max(100, "Fee per bag cannot exceed $100"),
+  maxAdditionalBags: z.number()
+    .positive("Maximum additional bags must be greater than 0")
+    .max(10, "Maximum additional bags cannot exceed 10"),
   maxBagSize: z.string()
     .max(200, "Bag size description must be less than 200 characters")
     .optional(),
   isDefault: z.boolean().optional()
-}).refine((data) => {
-  if (data.maxWeight && data.freeWeight && data.freeWeight > data.maxWeight) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Free weight allowance cannot exceed maximum weight",
-  path: ["freeWeight"]
 });
 
 type FormData = z.infer<typeof luggagePolicySchema>;
@@ -61,8 +46,8 @@ interface LuggagePolicyFormProps {
 }
 
 export default function LuggagePolicyForm({ policy, onClose }: LuggagePolicyFormProps) {
+  const [previewBags, setPreviewBags] = useState<string>('');
   const [previewFee, setPreviewFee] = useState<number | null>(null);
-  const [previewWeight, setPreviewWeight] = useState<string>('');
   const queryClient = useQueryClient();
   const isEditing = !!policy;
 
@@ -76,10 +61,10 @@ export default function LuggagePolicyForm({ policy, onClose }: LuggagePolicyForm
     defaultValues: {
       name: policy?.name || '',
       description: policy?.description || '',
-      maxWeight: policy?.maxWeight || undefined,
-      freeWeight: policy?.freeWeight || 0,
-      feePerExcessKg: policy?.feePerExcessKg || 0,
-      maxBags: policy?.maxBags || undefined,
+      // Convert from old weight-based model to new bag-based model
+      weightPerBag: policy?.freeWeight || 23, // Default to 23kg per bag
+      feePerAdditionalBag: 5, // Default $5 per additional bag
+      maxAdditionalBags: policy?.maxBags || 3, // Default max 3 additional bags
       maxBagSize: policy?.maxBagSize || '',
       isDefault: policy?.isDefault || false
     }
@@ -88,13 +73,25 @@ export default function LuggagePolicyForm({ policy, onClose }: LuggagePolicyForm
   // Watch form values for live preview
   const watchedValues = watch();
 
-  // Mutation for creating/updating policy
+  // Mutation for creating/updating policy (needs to be updated for new schema)
   const savePolicyMutation = useMutation({
     mutationFn: async (data: FormData) => {
+      // Convert bag-based data to current backend format until we update the backend
+      const convertedData = {
+        name: data.name,
+        description: data.description,
+        freeWeight: data.weightPerBag, // Weight per bag becomes free weight
+        feePerExcessKg: data.feePerAdditionalBag, // Store bag fee in excess kg field temporarily
+        maxBags: data.maxAdditionalBags,
+        maxBagSize: data.maxBagSize,
+        isDefault: data.isDefault,
+        maxWeight: undefined // Remove max weight concept
+      };
+      
       if (isEditing && policy) {
-        return updateLuggagePolicy({ ...data, id: policy.id });
+        return updateLuggagePolicy({ ...convertedData, id: policy.id });
       } else {
-        return createLuggagePolicy(data);
+        return createLuggagePolicy(convertedData);
       }
     },
     onSuccess: () => {
@@ -111,18 +108,17 @@ export default function LuggagePolicyForm({ policy, onClose }: LuggagePolicyForm
     savePolicyMutation.mutate(data);
   };
 
-  // Calculate preview fee
+  // Calculate preview fee for additional bags
   const calculatePreviewFee = () => {
-    const weight = parseFloat(previewWeight);
-    if (!weight || weight <= 0) {
-      setPreviewFee(null);
+    const bags = parseInt(previewBags);
+    if (!bags || bags <= 1) {
+      setPreviewFee(0);
       return;
     }
 
-    const freeWeight = watchedValues.freeWeight ?? 0;
-    const feePerKg = watchedValues.feePerExcessKg ?? 0;
-    const excessWeight = Math.max(0, weight - freeWeight);
-    const fee = excessWeight * feePerKg;
+    const additionalBags = bags - 1; // First bag is free
+    const feePerBag = watchedValues.feePerAdditionalBag ?? 0;
+    const fee = additionalBags * feePerBag;
     setPreviewFee(fee);
   };
 
@@ -135,7 +131,7 @@ export default function LuggagePolicyForm({ policy, onClose }: LuggagePolicyForm
             {isEditing ? 'Edit Luggage Policy' : 'Create New Luggage Policy'}
           </h3>
           <p className="text-sm text-muted-foreground">
-            Define your luggage allowances and pricing structure
+            Define your bag allowances and pricing structure
           </p>
         </div>
         <Button
@@ -198,81 +194,79 @@ export default function LuggagePolicyForm({ policy, onClose }: LuggagePolicyForm
             </div>
           </div>
 
-          {/* Weight and Pricing */}
+          {/* Bag-Based Pricing Configuration */}
           <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="freeWeight" className="text-sm font-medium">
-                  Free Weight (kg)
-                </Label>
-                <Input
-                  {...register('freeWeight', { valueAsNumber: true })}
-                  id="freeWeight"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  placeholder="0"
-                  className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
-                />
-                {errors.freeWeight && (
-                  <p className="text-xs text-destructive">{errors.freeWeight.message}</p>
-                )}
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center gap-2 mb-2">
+                <Package className="w-4 h-4 text-blue-600" />
+                <h4 className="font-medium text-blue-900">Bag-Based Policy</h4>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="maxWeight" className="text-sm font-medium">
-                  Max Weight (kg)
-                </Label>
-                <Input
-                  {...register('maxWeight', { valueAsNumber: true })}
-                  id="maxWeight"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  placeholder="Optional"
-                  className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
-                />
-                {errors.maxWeight && (
-                  <p className="text-xs text-destructive">{errors.maxWeight.message}</p>
-                )}
-              </div>
+              <p className="text-xs text-blue-700">
+                Simple and clear: 1 free bag with weight limit, flat fee for additional bags
+              </p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="feePerExcessKg" className="text-sm font-medium">
-                  Fee per Excess kg ($)
-                </Label>
-                <Input
-                  {...register('feePerExcessKg', { valueAsNumber: true })}
-                  id="feePerExcessKg"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
-                />
-                {errors.feePerExcessKg && (
-                  <p className="text-xs text-destructive">{errors.feePerExcessKg.message}</p>
-                )}
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="weightPerBag" className="text-sm font-medium">
+                Weight Limit per Bag (kg) *
+              </Label>
+              <Input
+                {...register('weightPerBag', { valueAsNumber: true })}
+                id="weightPerBag"
+                type="number"
+                step="0.1"
+                min="0.1"
+                placeholder="23"
+                className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+              />
+              <p className="text-xs text-muted-foreground">
+                Each bag (including the free one) cannot exceed this weight
+              </p>
+              {errors.weightPerBag && (
+                <p className="text-xs text-destructive">{errors.weightPerBag.message}</p>
+              )}
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="maxBags" className="text-sm font-medium">
-                  Max Bags
-                </Label>
-                <Input
-                  {...register('maxBags', { valueAsNumber: true })}
-                  id="maxBags"
-                  type="number"
-                  min="1"
-                  placeholder="Optional"
-                  className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
-                />
-                {errors.maxBags && (
-                  <p className="text-xs text-destructive">{errors.maxBags.message}</p>
-                )}
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="feePerAdditionalBag" className="text-sm font-medium">
+                Fee per Additional Bag ($) *
+              </Label>
+              <Input
+                {...register('feePerAdditionalBag', { valueAsNumber: true })}
+                id="feePerAdditionalBag"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="5.00"
+                className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+              />
+              <p className="text-xs text-muted-foreground">
+                Flat fee charged for each bag beyond the first free bag
+              </p>
+              {errors.feePerAdditionalBag && (
+                <p className="text-xs text-destructive">{errors.feePerAdditionalBag.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="maxAdditionalBags" className="text-sm font-medium">
+                Maximum Additional Bags *
+              </Label>
+              <Input
+                {...register('maxAdditionalBags', { valueAsNumber: true })}
+                id="maxAdditionalBags"
+                type="number"
+                min="1"
+                max="10"
+                placeholder="3"
+                className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+              />
+              <p className="text-xs text-muted-foreground">
+                Maximum number of additional bags allowed (beyond the free bag)
+              </p>
+              {errors.maxAdditionalBags && (
+                <p className="text-xs text-destructive">{errors.maxAdditionalBags.message}</p>
+              )}
             </div>
           </div>
         </div>
@@ -296,21 +290,17 @@ export default function LuggagePolicyForm({ policy, onClose }: LuggagePolicyForm
         </div>
 
         {/* Live Preview */}
-        <Card className="bg-blue-50 border-blue-200">
+        <Card className="bg-green-50 border-green-200">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100">
-                <Info className="w-4 h-4 text-blue-600" />
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100">
+                <Package className="w-4 h-4 text-green-600" />
               </div>
               <div className="flex-1 space-y-3">
                 <div>
-                  <h4 className="font-medium text-blue-900">Policy Preview</h4>
-                  <p className="text-sm text-blue-700">
-                    {(watchedValues.freeWeight ?? 0) > 0 && `Free allowance: ${watchedValues.freeWeight}kg`}
-                    {(watchedValues.freeWeight ?? 0) > 0 && (watchedValues.feePerExcessKg ?? 0) > 0 && ' • '}
-                    {(watchedValues.feePerExcessKg ?? 0) > 0 && `$${watchedValues.feePerExcessKg}/kg excess`}
-                    {watchedValues.maxWeight && ` • Max: ${watchedValues.maxWeight}kg`}
-                    {watchedValues.maxBags && ` • Max ${watchedValues.maxBags} bags`}
+                  <h4 className="font-medium text-green-900">Policy Preview</h4>
+                  <p className="text-sm text-green-700">
+                    1 free bag up to {watchedValues.weightPerBag || 0}kg • ${watchedValues.feePerAdditionalBag || 0} per additional bag • Max {watchedValues.maxAdditionalBags || 0} additional bags
                   </p>
                 </div>
 
@@ -318,10 +308,10 @@ export default function LuggagePolicyForm({ policy, onClose }: LuggagePolicyForm
                 <div className="flex items-center gap-2">
                   <Input
                     type="number"
-                    step="0.1"
-                    placeholder="Test weight (kg)"
-                    value={previewWeight}
-                    onChange={(e) => setPreviewWeight(e.target.value)}
+                    min="1"
+                    placeholder="Total bags"
+                    value={previewBags}
+                    onChange={(e) => setPreviewBags(e.target.value)}
                     onBlur={calculatePreviewFee}
                     className="w-32 h-8 text-sm bg-white"
                   />
@@ -335,11 +325,19 @@ export default function LuggagePolicyForm({ policy, onClose }: LuggagePolicyForm
                     Calculate
                   </Button>
                   {previewFee !== null && (
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">
                       Fee: ${previewFee.toFixed(2)}
                     </Badge>
                   )}
                 </div>
+                
+                {previewBags && parseInt(previewBags) > 0 && (
+                  <div className="text-xs text-green-600">
+                    Example: {previewBags} bag{parseInt(previewBags) > 1 ? 's' : ''} = 
+                    1 free + {Math.max(0, parseInt(previewBags) - 1)} additional × $
+                    {watchedValues.feePerAdditionalBag || 0}
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
@@ -358,7 +356,7 @@ export default function LuggagePolicyForm({ policy, onClose }: LuggagePolicyForm
           <Button
             type="submit"
             disabled={!isValid || savePolicyMutation.isPending}
-            className="bg-brand-orange hover:bg-brand-orange-600 text-white"
+            className="bg-brand-orange hover:bg-brand-orange/90"
           >
             {savePolicyMutation.isPending ? (
               <>

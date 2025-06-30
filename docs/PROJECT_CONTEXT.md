@@ -37,7 +37,7 @@ This project is to build a premium ride-sharing platform, **TravelEx**, connecti
 - **Maintenance Tracking:** ✅ Insurance, registration, and maintenance date tracking with automatic warning system.
 - **Feature Management:** ✅ Vehicle amenity selection and display for passenger-facing features.
 - **Default Vehicle System:** ✅ Smart default vehicle management with automatic enforcement.
-- **Luggage Policy Configuration:** ✅ Create and manage distinct luggage policies (size limits, extra fees) and assign to trips.
+- **Luggage Policy Configuration:** ✅ Create and manage distinct bag-based luggage policies (1 free bag + flat fee for additional bags) with intuitive pricing.
 
 #### Trip Calendar/Timeline View (✅ FULLY IMPLEMENTED)
 - **Interactive Calendar Interface:** ✅ Microsoft Teams-like calendar with date-based trip scheduling and management.
@@ -83,7 +83,7 @@ This project is to build a premium ride-sharing platform, **TravelEx**, connecti
 1. **Trip & Segment Selection:** Choose specific intercity segment from available scheduled trips.
 2. **Station Selection:** Select pickup and dropoff stations within chosen cities.
 3. **Seat Selection:** Visual, interactive vehicle layout for seat selection.
-4. **Luggage Options:** Add extra luggage based on driver's predefined policies.
+4. **Luggage Options:** Select total number of bags (1 free + additional bags with flat fees) based on driver's policies.
 5. **Booking Summary:** Review segment details, stations, seats, luggage, and total price.
 6. **Payment:** Secure payment processing via Stripe integration.
 7. **Confirmation:** Automated e-receipt and trip details sent via email.
@@ -153,7 +153,7 @@ This project is to build a premium ride-sharing platform, **TravelEx**, connecti
 1. **Search:** Enter departure and destination cities with preferred travel date.
 2. **Discovery:** Browse available trips including segment options from longer routes.
 3. **Selection:** Choose specific trip segment and pickup/dropoff stations.
-4. **Booking:** Complete seat selection, luggage options, and payment.
+4. **Booking:** Complete seat selection, bag selection (1 free + additional), and payment.
 5. **Travel:** Board at selected station with clear trip and seat information.
 
 This approach creates a flexible, efficient intercity transport system that maximizes both operational efficiency for drivers and booking convenience for passengers.
@@ -203,12 +203,13 @@ This approach creates a flexible, efficient intercity transport system that maxi
   - Complete database schema with RLS and API functions
 
 - ✅ **Complete Luggage Policy Management** with:
-  - Comprehensive policy creation and editing forms
-  - Real-time fee calculation and policy preview
+  - Comprehensive policy creation and editing forms with bag-based model
+  - Real-time fee calculation and policy preview for additional bags
   - Default policy management system
   - Search and filtering capabilities
-  - Weight-based pricing with excess fee calculation
+  - Intuitive bag-based pricing: 1 free bag + flat fee per additional bag
   - Policy analytics and statistics dashboard
+  - Clear passenger communication: "1 free bag up to 23kg • $5 per additional bag"
 
 - ✅ **Complete Trip Scheduling & Management System** with:
   - Multi-step trip scheduling from route templates
@@ -286,7 +287,7 @@ The TravelEx driver platform is now **fully complete** with comprehensive reserv
 - 🔄 **Segment-Based Booking Flow (Next Priority):**
   - Multi-step booking form with country-aware pickup/dropoff station selection
   - Seat selection interface with vehicle layout visualization
-  - Luggage options and pricing calculation
+  - Bag selection interface with 1 free bag + additional bag pricing
   - Booking summary with comprehensive trip details
   - Payment processing integration with Stripe
   - Booking confirmation and email notifications

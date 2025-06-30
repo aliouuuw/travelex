@@ -137,26 +137,55 @@ Table vehicles {
 }
 
 Table luggage_policies {
-  id          uuid        [pk, default: `gen_random_uuid()`]
-  driver_id   uuid        [ref: > profiles.id]
-  name        varchar     [not null]
-  max_weight  decimal(6,2)  // kg
-  fee_per_kg  decimal(8,2)
-  created_at  timestamptz [default: `now()`]
+  id                    uuid        [pk, default: `gen_random_uuid()`]
+  driver_id            uuid        [ref: > profiles.id]
+  name                 varchar     [not null]
+  description          text        // Optional policy description
+  free_weight_kg       decimal(6,2) [default: 23] // Weight per bag (includes free bag)
+  excess_fee_per_kg    decimal(8,2) [default: 5]  // Now represents fee per additional bag
+  max_bags             int         [default: 3]   // Max additional bags allowed
+  max_bag_size         varchar     // Optional bag size description (e.g., "50cm x 40cm x 20cm")
+  is_default           boolean     [default: false]
+  created_at           timestamptz [default: `now()`]
+  updated_at           timestamptz [default: `now()`]
 }
+
+// NOTE: Luggage Policy Model Update (2025)
+// ==========================================
+// Transitioned from confusing weight-based pricing to clear bag-based model:
+// 
+// NEW MODEL: Simple and intuitive
+// - 1 free bag up to {free_weight_kg}kg (typically 23kg)
+// - Additional bags cost {excess_fee_per_kg} each (flat fee, not per kg)
+// - Maximum {max_bags} additional bags allowed
+// 
+// LEGACY FIELD MAPPING (for backward compatibility):
+// - free_weight_kg: Weight limit per bag (applies to all bags including free one)
+// - excess_fee_per_kg: Fee per additional bag (despite the name, it's now a flat bag fee)
+// - max_bags: Maximum additional bags beyond the free bag
+//
+// EXAMPLE: Standard TravelEx Policy
+// - "1 free bag up to 23kg • $5 per additional bag • Max 3 additional bags"
+// - Passenger with 3 total bags pays: $0 (free) + $5 + $5 = $10 total
 
 // Reservations support segment booking (passengers can book any valid segment)
 Table reservations {
-  id               uuid       [pk, default: `gen_random_uuid()`]
-  trip_id          uuid       [ref: > trips.id]
-  passenger_id     uuid       [ref: > profiles.id]
-  pickup_station_id   uuid    [ref: > stations.id]
-  dropoff_station_id  uuid    [ref: > stations.id]
-  luggage_weight   decimal(6,2) [default: 0]
-  total_price      decimal(10,2)
-  status           varchar [default: 'pending']
-  created_at       timestamptz  [default: `now()`]
-  updated_at       timestamptz  [default: `now()`]
+  id                   uuid       [pk, default: `gen_random_uuid()`]
+  trip_id              uuid       [ref: > trips.id]
+  passenger_id         uuid       [ref: > profiles.id]
+  pickup_station_id    uuid       [ref: > stations.id]
+  dropoff_station_id   uuid       [ref: > stations.id]
+  number_of_bags       int        [default: 1] // Total bags (1 free + additional)
+  total_price          decimal(10,2)
+  segment_price        decimal(10,2) // Base ticket price for the route segment
+  luggage_fee          decimal(10,2) [default: 0] // Fee for additional bags only
+  passenger_name       varchar    [not null]
+  passenger_email      varchar    [not null]
+  passenger_phone      varchar    [not null]
+  booking_reference    varchar    [unique, not null] // Generated booking ID
+  status               varchar    [default: 'pending'] // pending, confirmed, completed, cancelled
+  created_at           timestamptz  [default: `now()`]
+  updated_at           timestamptz  [default: `now()`]
 }
 
 Table booked_seats {
@@ -217,7 +246,7 @@ Table country_requests {
 // - Real-time route visualization with flowchart display
 // - Integration with TanStack Query for caching and state management
 // - Complete vehicle management system with seat maps and maintenance tracking
-// - Comprehensive luggage policy management with real-time fee calculation
+// - Comprehensive luggage policy management with intuitive bag-based pricing model
 // - Full trip scheduling and management system using route templates
 // - Multi-step trip creation with station pre-selection workflow
 // - Trip CRUD operations with editing, status management, and statistics
@@ -240,7 +269,7 @@ Table country_requests {
 // ✅ Phase 3: Route Template & Trip Management - COMPLETE
 //   - Route Template Management - COMPLETE
 //   - Vehicle Management - COMPLETE  
-//   - Luggage Policy Management - COMPLETE
+//   - Luggage Policy Management (Bag-Based Model) - COMPLETE
 //   - Trip Scheduling from Templates - COMPLETE
 //   - Trip Calendar/Timeline View - COMPLETE
 //   - Reservation Management (Driver View) - COMPLETE ✅

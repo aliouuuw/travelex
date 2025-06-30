@@ -1,14 +1,17 @@
 import { supabase } from './supabase';
 
-// TypeScript types for luggage policies
+// TypeScript types for bag-based luggage policies
 export interface LuggagePolicy {
   id: string;
   name: string;
   description?: string;
-  maxWeight?: number; // kg
-  freeWeight: number; // kg of free allowance
-  feePerExcessKg: number; // fee per kg over free allowance
-  maxBags?: number; // optional bag count limit
+  // New bag-based fields
+  weightPerBag: number; // kg limit per bag
+  freeWeightKg?: number; // Legacy: maps to weightPerBag
+  feePerAdditionalBag: number; // flat fee per additional bag
+  feePerExcessKg?: number; // Legacy: maps to feePerAdditionalBag
+  maxAdditionalBags: number; // max additional bags allowed
+  maxBags?: number; // Legacy: maps to maxAdditionalBags
   maxBagSize?: string; // optional size description
   isDefault: boolean;
   createdAt: string;
@@ -18,16 +21,27 @@ export interface LuggagePolicy {
 export interface CreateLuggagePolicyInput {
   name: string;
   description?: string;
-  maxWeight?: number;
-  freeWeight?: number;
-  feePerExcessKg?: number;
-  maxBags?: number;
+  weightPerBag: number;
+  feePerAdditionalBag: number;
+  maxAdditionalBags: number;
   maxBagSize?: string;
   isDefault?: boolean;
 }
 
 export interface UpdateLuggagePolicyInput extends CreateLuggagePolicyInput {
   id: string;
+}
+
+// Legacy interface for backward compatibility
+export interface LegacyCreateLuggagePolicyInput {
+  name: string;
+  description?: string;
+  maxWeight?: number;
+  freeWeight?: number;
+  feePerExcessKg?: number;
+  maxBags?: number;
+  maxBagSize?: string;
+  isDefault?: boolean;
 }
 
 /**
@@ -49,30 +63,51 @@ export async function getDriverLuggagePolicies(): Promise<LuggagePolicy[]> {
     throw new Error(`Failed to fetch luggage policies: ${error.message}`);
   }
 
-  return data || [];
+  // Transform legacy data to new format
+  return (data || []).map(transformLegacyPolicy);
+}
+
+/**
+ * Transform legacy policy data to new bag-based format
+ */
+function transformLegacyPolicy(policy: any): LuggagePolicy {
+  return {
+    ...policy,
+    // Map legacy fields to new fields
+    weightPerBag: policy.freeWeightKg || policy.free_weight_kg || 23,
+    feePerAdditionalBag: policy.excessFeePerKg || policy.excess_fee_per_kg || 5,
+    maxAdditionalBags: policy.maxBags || policy.max_bags || 3,
+    // Keep legacy fields for backward compatibility
+    freeWeightKg: policy.freeWeightKg || policy.free_weight_kg,
+    feePerExcessKg: policy.excessFeePerKg || policy.excess_fee_per_kg,
+    maxBags: policy.maxBags || policy.max_bags
+  };
 }
 
 /**
  * Create a new luggage policy
  */
-export async function createLuggagePolicy(input: CreateLuggagePolicyInput): Promise<LuggagePolicy> {
+export async function createLuggagePolicy(input: CreateLuggagePolicyInput | LegacyCreateLuggagePolicyInput): Promise<LuggagePolicy> {
   const { data: { user } } = await supabase.auth.getUser();
   
   if (!user) {
     throw new Error('User not authenticated');
   }
 
+  // Handle both new and legacy input formats
+  const normalizedInput = normalizeInput(input);
+
   const { data, error } = await supabase.rpc('save_luggage_policy', {
     p_driver_id: user.id,
-    p_name: input.name,
+    p_name: normalizedInput.name,
     p_id: null, // null for new policy
-    p_description: input.description || null,
-    p_max_weight: input.maxWeight || null,
-    p_free_weight: input.freeWeight || 0,
-    p_fee_per_excess_kg: input.feePerExcessKg || 0,
-    p_max_bags: input.maxBags || null,
-    p_max_bag_size: input.maxBagSize || null,
-    p_is_default: input.isDefault || false
+    p_description: normalizedInput.description || null,
+    p_max_weight: null, // No longer used in bag-based model
+    p_free_weight: normalizedInput.weightPerBag,
+    p_fee_per_excess_kg: normalizedInput.feePerAdditionalBag,
+    p_max_bags: normalizedInput.maxAdditionalBags,
+    p_max_bag_size: normalizedInput.maxBagSize || null,
+    p_is_default: normalizedInput.isDefault || false
   });
 
   if (error) {
@@ -84,7 +119,7 @@ export async function createLuggagePolicy(input: CreateLuggagePolicyInput): Prom
     throw new Error('No data returned from luggage policy creation');
   }
 
-  return data;
+  return transformLegacyPolicy(data);
 }
 
 /**
@@ -97,17 +132,19 @@ export async function updateLuggagePolicy(input: UpdateLuggagePolicyInput): Prom
     throw new Error('User not authenticated');
   }
 
+  const normalizedInput = normalizeInput(input);
+
   const { data, error } = await supabase.rpc('save_luggage_policy', {
     p_driver_id: user.id,
-    p_name: input.name,
+    p_name: normalizedInput.name,
     p_id: input.id,
-    p_description: input.description || null,
-    p_max_weight: input.maxWeight || null,
-    p_free_weight: input.freeWeight || 0,
-    p_fee_per_excess_kg: input.feePerExcessKg || 0,
-    p_max_bags: input.maxBags || null,
-    p_max_bag_size: input.maxBagSize || null,
-    p_is_default: input.isDefault || false
+    p_description: normalizedInput.description || null,
+    p_max_weight: null, // No longer used
+    p_free_weight: normalizedInput.weightPerBag,
+    p_fee_per_excess_kg: normalizedInput.feePerAdditionalBag,
+    p_max_bags: normalizedInput.maxAdditionalBags,
+    p_max_bag_size: normalizedInput.maxBagSize || null,
+    p_is_default: normalizedInput.isDefault || false
   });
 
   if (error) {
@@ -119,7 +156,29 @@ export async function updateLuggagePolicy(input: UpdateLuggagePolicyInput): Prom
     throw new Error('No data returned from luggage policy update');
   }
 
-  return data;
+  return transformLegacyPolicy(data);
+}
+
+/**
+ * Normalize input to handle both new and legacy formats
+ */
+function normalizeInput(input: CreateLuggagePolicyInput | LegacyCreateLuggagePolicyInput): CreateLuggagePolicyInput {
+  // If it's already in the new format
+  if ('weightPerBag' in input && 'feePerAdditionalBag' in input && 'maxAdditionalBags' in input) {
+    return input as CreateLuggagePolicyInput;
+  }
+
+  // Convert from legacy format
+  const legacyInput = input as LegacyCreateLuggagePolicyInput;
+  return {
+    name: legacyInput.name,
+    description: legacyInput.description,
+    weightPerBag: legacyInput.freeWeight || 23,
+    feePerAdditionalBag: legacyInput.feePerExcessKg || 5,
+    maxAdditionalBags: legacyInput.maxBags || 3,
+    maxBagSize: legacyInput.maxBagSize,
+    isDefault: legacyInput.isDefault
+  };
 }
 
 /**
@@ -169,7 +228,30 @@ export async function setDefaultLuggagePolicy(policyId: string): Promise<boolean
 }
 
 /**
- * Calculate luggage fee based on policy and weight
+ * Calculate luggage fee based on policy and number of bags
+ */
+export async function calculateLuggageFeeByBags(policyId: string, numberOfBags: number): Promise<number> {
+  if (numberOfBags <= 1) {
+    return 0; // First bag is always free
+  }
+
+  // For now, call the legacy function but interpret it differently
+  // TODO: Create a new database function for bag-based calculation
+  const { data, error } = await supabase.rpc('calculate_luggage_fee', {
+    p_policy_id: policyId,
+    p_luggage_weight: numberOfBags // Temporarily using weight parameter for bag count
+  });
+
+  if (error) {
+    console.error('Error calculating luggage fee:', error);
+    throw new Error(`Failed to calculate luggage fee: ${error.message}`);
+  }
+
+  return data || 0;
+}
+
+/**
+ * Calculate luggage fee based on policy and weight (legacy)
  */
 export async function calculateLuggageFee(policyId: string, luggageWeight: number): Promise<number> {
   const { data, error } = await supabase.rpc('calculate_luggage_fee', {
@@ -186,28 +268,60 @@ export async function calculateLuggageFee(policyId: string, luggageWeight: numbe
 }
 
 /**
+ * Calculate fee for additional bags using policy data directly
+ */
+export function calculateBagFee(policy: LuggagePolicy, numberOfBags: number): number {
+  if (numberOfBags <= 1) {
+    return 0; // First bag is free
+  }
+
+  const additionalBags = numberOfBags - 1;
+  const maxAllowed = policy.maxAdditionalBags;
+  
+  if (additionalBags > maxAllowed) {
+    throw new Error(`Maximum ${maxAllowed} additional bags allowed`);
+  }
+
+  return additionalBags * policy.feePerAdditionalBag;
+}
+
+/**
  * Utility function to format luggage policy for display
  */
 export function formatLuggagePolicy(policy: LuggagePolicy): string {
   const parts: string[] = [];
   
-  if (policy.freeWeight > 0) {
-    parts.push(`Free: ${policy.freeWeight}kg`);
+  // Free bag with weight limit
+  parts.push(`1 free bag up to ${policy.weightPerBag}kg`);
+  
+  // Additional bag fee
+  if (policy.feePerAdditionalBag > 0) {
+    parts.push(`$${policy.feePerAdditionalBag} per additional bag`);
   }
   
-  if (policy.feePerExcessKg > 0) {
-    parts.push(`$${policy.feePerExcessKg}/kg excess`);
+  // Maximum additional bags
+  if (policy.maxAdditionalBags > 0) {
+    parts.push(`Max ${policy.maxAdditionalBags} additional bags`);
   }
   
-  if (policy.maxWeight) {
-    parts.push(`Max: ${policy.maxWeight}kg`);
-  }
-  
-  if (policy.maxBags) {
-    parts.push(`Max ${policy.maxBags} bags`);
-  }
-  
-  return parts.length > 0 ? parts.join(' • ') : 'No restrictions';
+  return parts.join(' • ');
+}
+
+/**
+ * Utility function to get policy display summary
+ */
+export function getPolicyDisplaySummary(policy: LuggagePolicy): {
+  freeBagWeight: number;
+  additionalBagFee: number;
+  maxAdditionalBags: number;
+  formattedSummary: string;
+} {
+  return {
+    freeBagWeight: policy.weightPerBag,
+    additionalBagFee: policy.feePerAdditionalBag,
+    maxAdditionalBags: policy.maxAdditionalBags,
+    formattedSummary: formatLuggagePolicy(policy)
+  };
 }
 
 /**
@@ -224,24 +338,24 @@ export function validateLuggagePolicyInput(input: CreateLuggagePolicyInput): str
     errors.push('Policy name must be less than 100 characters');
   }
   
-  if (input.freeWeight !== undefined && input.freeWeight < 0) {
-    errors.push('Free weight allowance cannot be negative');
+  if (input.weightPerBag <= 0) {
+    errors.push('Weight per bag must be greater than 0');
   }
   
-  if (input.feePerExcessKg !== undefined && input.feePerExcessKg < 0) {
-    errors.push('Fee per excess kg cannot be negative');
+  if (input.weightPerBag > 50) {
+    errors.push('Weight per bag cannot exceed 50kg');
   }
   
-  if (input.maxWeight !== undefined && input.maxWeight <= 0) {
-    errors.push('Maximum weight must be greater than 0');
+  if (input.feePerAdditionalBag < 0) {
+    errors.push('Fee per additional bag cannot be negative');
   }
   
-  if (input.maxBags !== undefined && input.maxBags <= 0) {
-    errors.push('Maximum bags must be greater than 0');
+  if (input.maxAdditionalBags <= 0) {
+    errors.push('Maximum additional bags must be greater than 0');
   }
   
-  if (input.freeWeight !== undefined && input.maxWeight !== undefined && input.freeWeight > input.maxWeight) {
-    errors.push('Free weight allowance cannot exceed maximum weight');
+  if (input.maxAdditionalBags > 10) {
+    errors.push('Maximum additional bags cannot exceed 10');
   }
   
   return errors;

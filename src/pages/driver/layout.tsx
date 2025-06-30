@@ -19,16 +19,16 @@ const navigation = [
         href: "/driver/routes",
     },
     {
-        name: "Countries",
-        href: "/driver/country-requests",
-    },
-    {
         name: "Vehicles",
         href: "/driver/vehicles",
     },
     {
         name: "Luggage",
         href: "/driver/luggage-policies",
+    },
+    {
+        name: "Countries",
+        href: "/driver/country-requests",
     },
     {
         name: "Analytics",
@@ -68,7 +68,7 @@ const DriverTabNavigation = () => {
                                 key={item.name}
                                 to={item.href}
                                 className={cn(
-                                    "relative px-6 py-3 text-sm font-medium transition-all duration-200 whitespace-nowrap rounded-lg",
+                                    "relative px-6 py-3 text-sm font-medium transition-all duration-200 whitespace-nowrap rounded-t-lg",
                                     isActive
                                         ? "bg-brand-dark-blue/5 text-brand-dark-blue font-semibold"
                                         : "text-muted-foreground hover:text-foreground hover:bg-brand-dark-blue/5"
