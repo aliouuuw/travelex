@@ -19,6 +19,10 @@ const navigation = [
         href: "/driver/routes",
     },
     {
+        name: "Countries",
+        href: "/driver/country-requests",
+    },
+    {
         name: "Vehicles",
         href: "/driver/vehicles",
     },

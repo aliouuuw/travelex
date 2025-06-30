@@ -20,6 +20,7 @@ import DriverLayout from "./pages/driver/layout";
 import DriverDashboard from "./pages/driver/dashboard";
 import NewDriverPage from "./pages/admin/drivers/new";
 import SignupRequestsPage from "./pages/admin/signup-requests";
+import CountryRequestsPage from "./pages/admin/country-requests";
 
 import DriverRoutesPage from "./pages/driver/routes";
 import RouteEditor from "./pages/driver/routes/edit";
@@ -32,6 +33,7 @@ import ScheduleTripPage from "./pages/driver/trips/schedule";
 import EditTripPage from "./pages/driver/trips/edit";
 import ReservationsPage from "./pages/driver/reservations";
 import ReservationDetailPage from "./pages/driver/reservations/[id]";
+import DriverCountryRequestsPage from "./pages/driver/country-requests";
 import AccountSettings from "./pages/settings";
 import SearchPage from "./pages/search";
 import { LogOut, LayoutDashboard, ChevronDown, Settings } from "lucide-react";
@@ -304,6 +306,10 @@ const router = createBrowserRouter([
                 element: <SignupRequestsPage />,
               },
               {
+                path: "country-requests",
+                element: <CountryRequestsPage />,
+              },
+              {
                 path: "drivers",
                 element: <DriversPage />,
               },
@@ -338,6 +344,10 @@ const router = createBrowserRouter([
               {
                 path: "routes/:id/edit", 
                 element: <RouteEditor />,
+              },
+              {
+                path: "country-requests",
+                element: <DriverCountryRequestsPage />,
               },
               {
                 path: "trips",

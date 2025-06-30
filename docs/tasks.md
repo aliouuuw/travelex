@@ -131,6 +131,9 @@
     - [x] **NEW:** Create admin interface for country management and expansion requests
     - [x] **NEW:** Implement database triggers for automatic country assignment to existing data
     - [x] **NEW:** Build country request system for controlled expansion (drivers can request new countries)
+    - [x] **NEW:** Complete admin country request management dashboard with approval workflow
+    - [x] **NEW:** Implement driver country request interface with status tracking and business justification
+    - [x] **NEW:** Add real-time country request statistics and professional table interfaces
 - [x] **Enhanced Passenger Search Interface:**
     - [x] **NEW:** Implement intuitive 2-step search flow (country selection → city selection)
     - [x] **NEW:** Create country selection interface with flags, city counts, and professional cards
@@ -151,6 +154,17 @@
     - [x] Add filtering logic (seats, car type, driver score, price range)
     - [x] Show full route context to encourage extended trip planning
     - [x] **FIXED:** Resolve dialog and popover transparency issues with proper background colors
+    - [x] **FIXED:** Resolve segment pricing calculation issues - passengers now see correct prices for their journey segments
+    - [x] **NEW:** Create comprehensive database migrations for city/country function fixes
+- [x] **Enhanced City Creation & Route Management:**
+    - [x] **NEW:** Build intelligent EnhancedCitySelector component with dual functionality (select existing + create new)
+    - [x] **NEW:** Implement "create new city" option when typing non-existent city names
+    - [x] **NEW:** Create proper database service function for city creation with country association
+    - [x] **NEW:** Add real-time query cache invalidation for immediate city availability after creation
+    - [x] **NEW:** Implement professional confirmation dialogs with loading states for city creation
+    - [x] **NEW:** Ensure created cities are available for selection without automatic route addition
+    - [x] **NEW:** Fix form submission issues preventing unwanted route saves during city creation
+    - [x] **NEW:** Enhance route editing experience with seamless city management capabilities
 - [ ] **Segment-Based Booking Flow:**
     - [ ] Build multi-step booking form with pickup/dropoff station selection
     - [ ] Implement seat selection for segment passengers
@@ -159,11 +173,11 @@
     - [ ] Handle payment processing for segment bookings
 
 ## Pending Deliverables (Future Tasks)
-- [ ] **Country Request System Enhancement:**
-    - [ ] Decide on passenger vs driver-only country requests (currently driver-only in database)
-    - [ ] Update database function to allow passenger country requests OR keep driver-only system
-    - [ ] Create passenger-friendly country request modal (different from driver context)
-    - [ ] Add approval workflow notification system
+- [x] **Country Request System Enhancement (COMPLETED):**
+    - [x] ~~Decide on passenger vs driver-only country requests~~ - Implemented driver-only system for better control
+    - [x] ~~Update database function~~ - Driver-only system works perfectly for controlled expansion
+    - [x] ~~Create passenger-friendly country request modal~~ - Driver-focused approach provides better oversight
+    - [x] ~~Add approval workflow notification system~~ - Complete admin approval system implemented
 
 ## Phase 5: Payment & Booking Completion (Future)
 

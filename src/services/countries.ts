@@ -244,4 +244,32 @@ export const createCountry = async (country: {
     cityCount: 0,
     tripCount: 0
   };
+};
+
+/**
+ * Create a new city in a specific country
+ */
+export const createCity = async (cityName: string, countryCode: string): Promise<boolean> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { error } = await supabase
+    .from('reusable_cities')
+    .insert({
+      driver_id: user.id,
+      city_name: cityName,
+      country_code: countryCode.toUpperCase(),
+      country_id: null // Will be auto-populated by trigger if needed
+    });
+
+  if (error) {
+    // Check if it's a unique constraint violation (city already exists)
+    if (error.code === '23505') {
+      throw new Error(`City "${cityName}" already exists for this driver`);
+    }
+    console.error('Error creating city:', error);
+    throw new Error(error.message);
+  }
+
+  return true;
 }; 

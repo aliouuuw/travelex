@@ -28,7 +28,8 @@ import {
   type CityWithStations,
   type InterCityFare
 } from "@/services/route-templates";
-import { CountryCitySelector } from "@/components/shared/country-city-selector";
+import { getAvailableCountries, type Country } from "@/services/countries";
+import { EnhancedCitySelector } from "@/components/shared/enhanced-city-selector";
 import { toast } from "sonner";
 
 // Reusable Station Manager Component
@@ -48,9 +49,15 @@ const StationManager = ({
   const [newStation, setNewStation] = useState({ name: "", address: "" });
   
   const handleAddStation = () => {
-    if (newStation.name && newStation.address) {
-      onAdd(newStation);
+    if (newStation.name.trim() && newStation.address.trim()) {
+      onAdd({ 
+        name: newStation.name.trim(), 
+        address: newStation.address.trim() 
+      });
       setNewStation({ name: "", address: "" });
+      toast.success(`Added station "${newStation.name.trim()}" to ${cityName}`);
+    } else {
+      toast.error("Please fill in both station name and address");
     }
   };
 
@@ -63,7 +70,9 @@ const StationManager = ({
     <div className="space-y-3">
       <div className="flex items-center gap-2 mb-3">
         <MapPin className="w-4 h-4 text-blue-600" />
-        <span className="font-medium text-sm">Stations in {cityName}</span>
+        <span className="font-medium text-sm">
+          {cityName ? `Stations in ${cityName}` : "Add stations (select city first)"}
+        </span>
         <Badge variant="secondary">{stations.length}</Badge>
       </div>
       
@@ -103,21 +112,34 @@ const StationManager = ({
         <Input
           value={newStation.name}
           onChange={(e) => setNewStation(prev => ({ ...prev, name: e.target.value }))}
-          placeholder="New station name"
+          placeholder={cityName ? "New station name" : "Select city first"}
           className="h-8 text-sm"
+          disabled={!cityName}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && newStation.name.trim() && newStation.address.trim()) {
+              handleAddStation();
+            }
+          }}
         />
         <Input
           value={newStation.address}
           onChange={(e) => setNewStation(prev => ({ ...prev, address: e.target.value }))}
-          placeholder="Station address/location"
+          placeholder={cityName ? "Station address/location" : "Select city first"}
           className="h-8 text-sm"
+          disabled={!cityName}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && newStation.name.trim() && newStation.address.trim()) {
+              handleAddStation();
+            }
+          }}
         />
         <Button
           type="button"
           onClick={handleAddStation}
           size="sm"
           variant="outline"
-          className="w-full bg-brand-dark-blue text-white hover:bg-brand-dark-blue-600"
+          className="w-full bg-brand-dark-blue text-white hover:bg-brand-dark-blue-600 transition-colors"
+          disabled={!cityName || !newStation.name.trim() || !newStation.address.trim()}
         >
           <Plus className="w-4 h-4 mr-1" />
           Add Station
@@ -187,7 +209,7 @@ const CityManager = ({
                 
                 {/* City Selection */}
                 <div className="flex-1">
-                  <CountryCitySelector
+                  <EnhancedCitySelector
                     selectedCountry={city.countryCode}
                     selectedCity={city.cityName}
                     onSelection={(countryCode: string, cityName: string) => {
@@ -507,6 +529,12 @@ export default function RouteEditor() {
     enabled: isEditing,
   });
 
+  // Fetch countries for proper country information handling
+  const { data: countries = [] } = useQuery<Country[]>({
+    queryKey: ['available-countries'],
+    queryFn: getAvailableCountries,
+  });
+
   const { control, handleSubmit, watch, setValue, trigger, reset, formState: { errors } } = useForm<RouteTemplateFormData>({
     defaultValues: {
       name: "",
@@ -591,8 +619,20 @@ export default function RouteEditor() {
   };
 
   const updateCity = async (index: number, city: CityWithStations) => {
-    setValue(`cities.${index}`, city, { shouldDirty: true });
-    await trigger(`cities.${index}`);
+    // Ensure we have all required country information
+    const selectedCountry = countries?.find(c => c.code === city.countryCode);
+    if (selectedCountry && city.countryCode && city.cityName) {
+      const updatedCity = {
+        ...city,
+        countryName: selectedCountry.name,
+        flagEmoji: selectedCountry.flagEmoji
+      };
+      setValue(`cities.${index}`, updatedCity, { shouldDirty: true });
+      await trigger(`cities.${index}`);
+    } else {
+      setValue(`cities.${index}`, city, { shouldDirty: true });
+      await trigger(`cities.${index}`);
+    }
   };
 
   return (

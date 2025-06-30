@@ -4,7 +4,8 @@ import {
     Users, 
     UserCheck, 
     Car, 
-    Settings
+    Settings,
+    Globe
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +19,11 @@ const navigation = [
         name: "Driver Applications",
         href: "/admin/signup-requests",
         icon: UserCheck,
+    },
+    {
+        name: "Country Requests",
+        href: "/admin/country-requests",
+        icon: Globe,
     },
     {
         name: "Drivers",
