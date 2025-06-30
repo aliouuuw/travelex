@@ -51,16 +51,22 @@ export default function EnhancedCalendarView({
   const [summaryTrips, setSummaryTrips] = useState<CalendarTrip[]>([]);
 
   // Get first day of current month
-  const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-  const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+  const firstDayOfMonth = useMemo(() => new Date(currentDate.getFullYear(), currentDate.getMonth(), 1), [currentDate]);
+  const lastDayOfMonth = useMemo(() => new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0), [currentDate]);
   
   // Get first day of calendar (might be from previous month)
-  const firstDayOfCalendar = new Date(firstDayOfMonth);
-  firstDayOfCalendar.setDate(firstDayOfCalendar.getDate() - firstDayOfMonth.getDay());
+  const firstDayOfCalendar = useMemo(() => {
+    const date = new Date(firstDayOfMonth);
+    date.setDate(date.getDate() - firstDayOfMonth.getDay());
+    return date;
+  }, [firstDayOfMonth]);
   
   // Get last day of calendar (might be from next month)
-  const lastDayOfCalendar = new Date(lastDayOfMonth);
-  lastDayOfCalendar.setDate(lastDayOfCalendar.getDate() + (6 - lastDayOfMonth.getDay()));
+  const lastDayOfCalendar = useMemo(() => {
+    const date = new Date(lastDayOfMonth);
+    date.setDate(date.getDate() + (6 - lastDayOfMonth.getDay()));
+    return date;
+  }, [lastDayOfMonth]);
 
   // Generate calendar days for month view
   const monthCalendarDays = useMemo(() => {

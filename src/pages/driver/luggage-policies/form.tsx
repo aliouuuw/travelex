@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Loader2, Save, X, Info, Package } from "lucide-react";
+import { Loader2, Save, X, Package } from "lucide-react";
 import {
   createLuggagePolicy,
   updateLuggagePolicy,
@@ -62,7 +62,7 @@ export default function LuggagePolicyForm({ policy, onClose }: LuggagePolicyForm
       name: policy?.name || '',
       description: policy?.description || '',
       // Convert from old weight-based model to new bag-based model
-      weightPerBag: policy?.freeWeight || 23, // Default to 23kg per bag
+      weightPerBag: policy?.freeWeightKg || 23, // Default to 23kg per bag
       feePerAdditionalBag: 5, // Default $5 per additional bag
       maxAdditionalBags: policy?.maxBags || 3, // Default max 3 additional bags
       maxBagSize: policy?.maxBagSize || '',
@@ -89,7 +89,7 @@ export default function LuggagePolicyForm({ policy, onClose }: LuggagePolicyForm
       };
       
       if (isEditing && policy) {
-        return updateLuggagePolicy({ ...convertedData, id: policy.id });
+        return updateLuggagePolicy({ ...convertedData, id: policy.id, weightPerBag: data.weightPerBag, feePerAdditionalBag: data.feePerAdditionalBag, maxAdditionalBags: data.maxAdditionalBags });
       } else {
         return createLuggagePolicy(convertedData);
       }

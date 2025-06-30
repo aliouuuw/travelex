@@ -70,17 +70,25 @@ export async function getDriverLuggagePolicies(): Promise<LuggagePolicy[]> {
 /**
  * Transform legacy policy data to new bag-based format
  */
-function transformLegacyPolicy(policy: any): LuggagePolicy {
+function transformLegacyPolicy(policy: Partial<LuggagePolicy> & {
+  free_weight_kg?: number;
+  excess_fee_per_kg?: number;
+  max_bags?: number;
+}): LuggagePolicy {
   return {
-    ...policy,
-    // Map legacy fields to new fields
+    id: policy.id || '',
+    name: policy.name || 'Legacy Policy',
+    description: policy.description,
     weightPerBag: policy.freeWeightKg || policy.free_weight_kg || 23,
-    feePerAdditionalBag: policy.excessFeePerKg || policy.excess_fee_per_kg || 5,
+    feePerAdditionalBag: policy.feePerExcessKg || policy.excess_fee_per_kg || 5,
     maxAdditionalBags: policy.maxBags || policy.max_bags || 3,
-    // Keep legacy fields for backward compatibility
+    isDefault: policy.isDefault || false,
+    createdAt: policy.createdAt || new Date().toISOString(),
+    updatedAt: policy.updatedAt || new Date().toISOString(),
     freeWeightKg: policy.freeWeightKg || policy.free_weight_kg,
-    feePerExcessKg: policy.excessFeePerKg || policy.excess_fee_per_kg,
-    maxBags: policy.maxBags || policy.max_bags
+    feePerExcessKg: policy.feePerExcessKg || policy.excess_fee_per_kg,
+    maxBags: policy.maxBags || policy.max_bags,
+    maxBagSize: policy.maxBagSize
   };
 }
 

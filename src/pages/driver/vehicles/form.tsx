@@ -19,9 +19,7 @@ import {
   Settings,
   AlertCircle,
   CheckCircle,
-  Fuel,
   Users,
-  Gauge
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -35,7 +33,6 @@ import {
   VEHICLE_FEATURES,
   type CreateVehicleData,
   type UpdateVehicleData,
-  type Vehicle
 } from "@/services/vehicles";
 import { toast } from "sonner";
 
@@ -170,7 +167,7 @@ export default function VehicleForm() {
       queryClient.invalidateQueries({ queryKey: ['driver-vehicles'] });
       navigate('/driver/vehicles');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || "Failed to create vehicle");
     },
   });
@@ -183,7 +180,7 @@ export default function VehicleForm() {
       queryClient.invalidateQueries({ queryKey: ['driver-vehicles'] });
       navigate('/driver/vehicles');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || "Failed to update vehicle");
     },
   });
@@ -345,7 +342,7 @@ export default function VehicleForm() {
                     <Label htmlFor="vehicle_type">Vehicle Type *</Label>
                     <Select
                       value={form.watch("vehicle_type")}
-                      onValueChange={(value) => form.setValue("vehicle_type", value as any)}
+                      onValueChange={(value) => form.setValue("vehicle_type", value as "car" | "van" | "bus" | "suv")}
                     >
                       <SelectTrigger className="w-full h-11 px-3 bg-background border-border/60 focus:border-brand-orange focus:ring-brand-orange/20">
                         <SelectValue placeholder="Select vehicle type" />
@@ -367,7 +364,7 @@ export default function VehicleForm() {
                     <Label htmlFor="fuel_type">Fuel Type *</Label>
                     <Select
                       value={form.watch("fuel_type")}
-                      onValueChange={(value) => form.setValue("fuel_type", value as any)}
+                      onValueChange={(value) => form.setValue("fuel_type", value as "gasoline" | "diesel" | "electric" | "hybrid")}
                     >
                       <SelectTrigger className="w-full h-11 px-3 bg-background border-border/60 focus:border-brand-orange focus:ring-brand-orange/20">
                         <SelectValue placeholder="Select fuel type" />
@@ -453,7 +450,7 @@ export default function VehicleForm() {
                           <Label htmlFor="status">Status</Label>
                           <Select
                             value={form.watch("status")}
-                            onValueChange={(value) => form.setValue("status", value as any)}
+                            onValueChange={(value) => form.setValue("status", value as "active" | "inactive")}
                           >
                             <SelectTrigger className="w-full h-11 px-3 bg-background border-border/60 focus:border-brand-orange focus:ring-brand-orange/20">
                               <SelectValue placeholder="Select status" />

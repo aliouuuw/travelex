@@ -50,6 +50,40 @@ export interface ReservationStats {
   totalPassengers: number;
 }
 
+interface RawReservation {
+  id: string;
+  trip_id: string;
+  passenger_id: string;
+  pickup_station_id: string;
+  dropoff_station_id: string;
+  seats_reserved: number;
+  total_price: number;
+  status: string;
+  booking_reference: string;
+  created_at: string;
+  updated_at: string;
+  trips: {
+    departure_time: string;
+    arrival_time: string;
+    status: string;
+    route_templates: { name: string }[];
+    vehicles: { make: string; model: string; year: number }[];
+  }[];
+  pickup_station: {
+    city_name: string;
+    route_template_stations: { station_name: string; station_address: string }[];
+  }[];
+  dropoff_station: {
+    city_name: string;
+    route_template_stations: { station_name: string; station_address: string }[];
+  }[];
+  passenger: {
+    full_name: string;
+    email: string;
+    phone?: string;
+  }[];
+}
+
 // API Functions
 
 // Get all reservations for a driver's trips
@@ -126,33 +160,33 @@ export const getDriverReservations = async (filters?: ReservationFilters): Promi
   }
 
   // Transform the data to our Reservation interface
-  return data?.map((reservation: any) => ({
+  return data?.map((reservation: RawReservation) => ({
     id: reservation.id,
     tripId: reservation.trip_id,
     passengerId: reservation.passenger_id,
-    passengerName: reservation.passenger?.full_name || 'Unknown Passenger',
-    passengerEmail: reservation.passenger?.email || '',
-    passengerPhone: reservation.passenger?.phone || undefined,
+    passengerName: reservation.passenger[0]?.full_name || 'Unknown Passenger',
+    passengerEmail: reservation.passenger[0]?.email || '',
+    passengerPhone: reservation.passenger[0]?.phone || undefined,
     pickupStationId: reservation.pickup_station_id,
-    pickupStationName: reservation.pickup_station?.route_template_stations?.station_name || 'Unknown Station',
-    pickupStationAddress: reservation.pickup_station?.route_template_stations?.station_address || '',
-    pickupCityName: reservation.pickup_station?.city_name || 'Unknown City',
+    pickupStationName: reservation.pickup_station[0]?.route_template_stations[0]?.station_name || 'Unknown Station',
+    pickupStationAddress: reservation.pickup_station[0]?.route_template_stations[0]?.station_address || '',
+    pickupCityName: reservation.pickup_station[0]?.city_name || 'Unknown City',
     dropoffStationId: reservation.dropoff_station_id,
-    dropoffStationName: reservation.dropoff_station?.route_template_stations?.station_name || 'Unknown Station',
-    dropoffStationAddress: reservation.dropoff_station?.route_template_stations?.station_address || '',
-    dropoffCityName: reservation.dropoff_station?.city_name || 'Unknown City',
+    dropoffStationName: reservation.dropoff_station[0]?.route_template_stations[0]?.station_name || 'Unknown Station',
+    dropoffStationAddress: reservation.dropoff_station[0]?.route_template_stations[0]?.station_address || '',
+    dropoffCityName: reservation.dropoff_station[0]?.city_name || 'Unknown City',
     seatsReserved: reservation.seats_reserved,
     totalPrice: reservation.total_price,
-    status: reservation.status,
+    status: reservation.status as 'pending' | 'confirmed' | 'cancelled' | 'completed',
     bookingReference: reservation.booking_reference,
     createdAt: reservation.created_at,
     updatedAt: reservation.updated_at,
-    tripDepartureTime: reservation.trips?.departure_time || '',
-    tripArrivalTime: reservation.trips?.arrival_time || '',
-    tripStatus: reservation.trips?.status || '',
-    routeTemplateName: reservation.trips?.route_templates?.name || 'Unknown Route',
-    vehicleName: reservation.trips?.vehicles 
-      ? `${reservation.trips.vehicles.make} ${reservation.trips.vehicles.model} (${reservation.trips.vehicles.year})`
+    tripDepartureTime: reservation.trips[0]?.departure_time || '',
+    tripArrivalTime: reservation.trips[0]?.arrival_time || '',
+    tripStatus: reservation.trips[0]?.status || '',
+    routeTemplateName: reservation.trips[0]?.route_templates[0]?.name || 'Unknown Route',
+    vehicleName: reservation.trips[0]?.vehicles[0] 
+      ? `${reservation.trips[0].vehicles[0].make} ${reservation.trips[0].vehicles[0].model} (${reservation.trips[0].vehicles[0].year})`
       : undefined,
   })) || [];
 };
@@ -278,29 +312,29 @@ export const getReservationById = async (reservationId: string): Promise<Reserva
     id: data.id,
     tripId: data.trip_id,
     passengerId: data.passenger_id,
-    passengerName: data.passenger?.full_name || 'Unknown Passenger',
-    passengerEmail: data.passenger?.email || '',
-    passengerPhone: data.passenger?.phone || undefined,
+    passengerName: data.passenger[0]?.full_name || 'Unknown Passenger',
+    passengerEmail: data.passenger[0]?.email || '',
+    passengerPhone: data.passenger[0]?.phone || undefined,
     pickupStationId: data.pickup_station_id,
-    pickupStationName: data.pickup_station?.route_template_stations?.station_name || 'Unknown Station',
-    pickupStationAddress: data.pickup_station?.route_template_stations?.station_address || '',
-    pickupCityName: data.pickup_station?.city_name || 'Unknown City',
+    pickupStationName: data.pickup_station[0]?.route_template_stations[0]?.station_name || 'Unknown Station',
+    pickupStationAddress: data.pickup_station[0]?.route_template_stations[0]?.station_address || '',
+    pickupCityName: data.pickup_station[0]?.city_name || 'Unknown City',
     dropoffStationId: data.dropoff_station_id,
-    dropoffStationName: data.dropoff_station?.route_template_stations?.station_name || 'Unknown Station',
-    dropoffStationAddress: data.dropoff_station?.route_template_stations?.station_address || '',
-    dropoffCityName: data.dropoff_station?.city_name || 'Unknown City',
+    dropoffStationName: data.dropoff_station[0]?.route_template_stations[0]?.station_name || 'Unknown Station',
+    dropoffStationAddress: data.dropoff_station[0]?.route_template_stations[0]?.station_address || '',
+    dropoffCityName: data.dropoff_station[0]?.city_name || 'Unknown City',
     seatsReserved: data.seats_reserved,
     totalPrice: data.total_price,
-    status: data.status,
+    status: data.status as 'pending' | 'confirmed' | 'cancelled' | 'completed',
     bookingReference: data.booking_reference,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
-    tripDepartureTime: data.trips?.departure_time || '',
-    tripArrivalTime: data.trips?.arrival_time || '',
-    tripStatus: data.trips?.status || '',
-    routeTemplateName: data.trips?.route_templates?.name || 'Unknown Route',
-    vehicleName: data.trips?.vehicles 
-      ? `${data.trips.vehicles.make} ${data.trips.vehicles.model} (${data.trips.vehicles.year})`
+    tripDepartureTime: data.trips[0]?.departure_time || '',
+    tripArrivalTime: data.trips[0]?.arrival_time || '',
+    tripStatus: data.trips[0]?.status || '',
+    routeTemplateName: data.trips[0]?.route_templates[0]?.name || 'Unknown Route',
+    vehicleName: data.trips[0]?.vehicles[0] 
+      ? `${data.trips[0].vehicles[0].make} ${data.trips[0].vehicles[0].model} (${data.trips[0].vehicles[0].year})`
       : undefined,
   };
 };
@@ -362,33 +396,33 @@ export const getTripReservations = async (tripId: string): Promise<Reservation[]
     throw new Error(error.message);
   }
 
-  return data?.map((reservation: any) => ({
+  return data?.map((reservation: RawReservation) => ({
     id: reservation.id,
     tripId: reservation.trip_id,
     passengerId: reservation.passenger_id,
-    passengerName: reservation.passenger?.full_name || 'Unknown Passenger',
-    passengerEmail: reservation.passenger?.email || '',
-    passengerPhone: reservation.passenger?.phone || undefined,
+    passengerName: reservation.passenger[0]?.full_name || 'Unknown Passenger',
+    passengerEmail: reservation.passenger[0]?.email || '',
+    passengerPhone: reservation.passenger[0]?.phone || undefined,
     pickupStationId: reservation.pickup_station_id,
-    pickupStationName: reservation.pickup_station?.route_template_stations?.station_name || 'Unknown Station',
-    pickupStationAddress: reservation.pickup_station?.route_template_stations?.station_address || '',
-    pickupCityName: reservation.pickup_station?.city_name || 'Unknown City',
+    pickupStationName: reservation.pickup_station[0]?.route_template_stations[0]?.station_name || 'Unknown Station',
+    pickupStationAddress: reservation.pickup_station[0]?.route_template_stations[0]?.station_address || '',
+    pickupCityName: reservation.pickup_station[0]?.city_name || 'Unknown City',
     dropoffStationId: reservation.dropoff_station_id,
-    dropoffStationName: reservation.dropoff_station?.route_template_stations?.station_name || 'Unknown Station',
-    dropoffStationAddress: reservation.dropoff_station?.route_template_stations?.station_address || '',
-    dropoffCityName: reservation.dropoff_station?.city_name || 'Unknown City',
+    dropoffStationName: reservation.dropoff_station[0]?.route_template_stations[0]?.station_name || 'Unknown Station',
+    dropoffStationAddress: reservation.dropoff_station[0]?.route_template_stations[0]?.station_address || '',
+    dropoffCityName: reservation.dropoff_station[0]?.city_name || 'Unknown City',
     seatsReserved: reservation.seats_reserved,
     totalPrice: reservation.total_price,
-    status: reservation.status,
+    status: reservation.status as 'pending' | 'confirmed' | 'cancelled' | 'completed',
     bookingReference: reservation.booking_reference,
     createdAt: reservation.created_at,
     updatedAt: reservation.updated_at,
-    tripDepartureTime: reservation.trips?.departure_time || '',
-    tripArrivalTime: reservation.trips?.arrival_time || '',
-    tripStatus: reservation.trips?.status || '',
-    routeTemplateName: reservation.trips?.route_templates?.name || 'Unknown Route',
-    vehicleName: reservation.trips?.vehicles 
-      ? `${reservation.trips.vehicles.make} ${reservation.trips.vehicles.model} (${reservation.trips.vehicles.year})`
+    tripDepartureTime: reservation.trips[0]?.departure_time || '',
+    tripArrivalTime: reservation.trips[0]?.arrival_time || '',
+    tripStatus: reservation.trips[0]?.status || '',
+    routeTemplateName: reservation.trips[0]?.route_templates[0]?.name || 'Unknown Route',
+    vehicleName: reservation.trips[0]?.vehicles[0] 
+      ? `${reservation.trips[0].vehicles[0].make} ${reservation.trips[0].vehicles[0].model} (${reservation.trips[0].vehicles[0].year})`
       : undefined,
   })) || [];
 };

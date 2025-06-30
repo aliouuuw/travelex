@@ -3,10 +3,7 @@ import {
   Users, 
   UserCheck, 
   Activity, 
-  TrendingUp,
-  Car,
   MapPin,
-  Clock,
   DollarSign
 } from "lucide-react";
 
@@ -20,7 +17,7 @@ const StatCard = ({
   title: string; 
   value: string; 
   change?: string; 
-  icon: any; 
+  icon: React.ElementType; 
   gradient?: boolean;
 }) => (
       <Card className={`premium-card hover:shadow-premium-hover transition-all ${gradient ? 'bg-brand-orange text-white' : ''}`}>
@@ -47,11 +44,10 @@ const QuickActionCard = ({
   title, 
   description, 
   icon: Icon, 
-  href 
 }: { 
   title: string; 
   description: string; 
-  icon: any; 
+  icon: React.ElementType; 
   href: string;
 }) => (
   <Card className="premium-card hover:shadow-premium-hover transition-all cursor-pointer group">

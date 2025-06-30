@@ -26,7 +26,6 @@ interface CalendarTileProps {
 export default function CalendarTile({
   date,
   trips,
-  onTripSelect,
   onScheduleClick,
   onDayClick,
   isCurrentMonth,

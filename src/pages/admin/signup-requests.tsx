@@ -46,6 +46,7 @@ const SignupRequestRow = ({ request }: { request: SignupRequest }) => {
           await inviteDriver(updatedRequest.email, updatedRequest.full_name);
           toast.success(`${updatedRequest.full_name} has been approved and invited!`);
         } catch (error) {
+          console.error(error);
           toast.error('Request approved but failed to send invitation. Please send invitation manually.');
         }
       } else {

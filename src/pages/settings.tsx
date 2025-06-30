@@ -38,7 +38,6 @@ export default function AccountSettings() {
     timezone: 'UTC',
   });
 
-  const [profileImage, setProfileImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const getUserInitials = (name: string) => {
@@ -57,8 +56,6 @@ export default function AccountSettings() {
         toast.error('Image size must be less than 5MB');
         return;
       }
-      
-      setProfileImage(file);
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
     }
@@ -73,6 +70,7 @@ export default function AccountSettings() {
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
       toast.success('Profile updated successfully!');
     } catch (error) {
+      console.error(error);
       toast.error('Failed to update profile');
     } finally {
       setIsLoading(false);
@@ -104,6 +102,7 @@ export default function AccountSettings() {
         confirmPassword: '',
       });
     } catch (error) {
+      console.error(error);
       toast.error('Failed to update password');
     } finally {
       setIsLoading(false);
@@ -119,6 +118,7 @@ export default function AccountSettings() {
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
       toast.success('Currency settings updated successfully!');
     } catch (error) {
+      console.error(error);
       toast.error('Failed to update currency settings');
     } finally {
       setIsLoading(false);

@@ -44,6 +44,30 @@ export interface RouteTemplate extends RouteTemplateFormData {
   totalEarnings: number;
 }
 
+interface RawRouteTemplate {
+  id: string;
+  driver_id: string;
+  name: string;
+  estimated_duration: string;
+  base_price: string;
+  status: RouteTemplateStatus;
+  cities: CityWithStations[];
+  intercity_fares: InterCityFare[];
+  scheduled_trips: string;
+  completed_trips: string;
+  total_earnings: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface RouteCountryValidationItem {
+  city_name: string;
+  country_code: string;
+  country_name: string;
+  is_valid: boolean;
+  validation_message: string;
+}
+
 // Transform data for database storage
 const transformCitiesForDB = (cities: CityWithStations[]) => {
   return cities.map((city, index) => ({
@@ -68,7 +92,7 @@ export const getDriverRouteTemplates = async (): Promise<RouteTemplate[]> => {
     throw new Error(error.message);
   }
 
-  return data?.map((template: any) => ({
+  return data?.map((template: RawRouteTemplate) => ({
     id: template.id,
     driverId: template.driver_id,
     name: template.name,
@@ -279,7 +303,7 @@ export const validateRouteCountries = async (routeId: string): Promise<RouteCoun
     throw new Error(error.message);
   }
 
-  return data?.map((item: any) => ({
+  return data?.map((item: RouteCountryValidationItem) => ({
     cityName: item.city_name,
     countryCode: item.country_code,
     countryName: item.country_name,

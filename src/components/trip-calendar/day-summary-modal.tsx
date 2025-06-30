@@ -1,4 +1,3 @@
-import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,14 +5,12 @@ import {
   X,
   Calendar as CalendarIcon,
   Clock,
-  MapPin,
   Plus,
   Users,
-  Car,
   DollarSign
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { getStatusColor, formatTripDuration, type Trip } from "@/services/trips";
+import { getStatusColor, type Trip } from "@/services/trips";
 import TripCard from "./trip-card";
 
 interface CalendarTrip extends Trip {
@@ -133,7 +130,7 @@ export default function DaySummaryModal({
                 {Object.entries(statusCounts).map(([status, count]) => (
                   <Badge 
                     key={status} 
-                    className={getStatusColor(status as any)}
+                    className={getStatusColor(status as "scheduled" | "in_progress" | "completed" | "cancelled")}
                     style={{ fontSize: '10px' }}
                   >
                     {count} {status.replace('_', ' ')}

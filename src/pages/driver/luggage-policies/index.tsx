@@ -28,8 +28,6 @@ import {
   Star, 
   StarIcon,
   Package,
-  Weight,
-  DollarSign
 } from "lucide-react";
 import { toast } from "sonner";
 import LuggagePolicyForm from "./form.tsx";
@@ -76,12 +74,12 @@ const LuggagePolicyRow = ({
         </TableCell>
         <TableCell>
           <div className="flex items-center gap-2">
-            {policy.freeWeight > 0 && (
+            {policy.freeWeightKg && policy.freeWeightKg > 0 && (
               <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                {policy.freeWeight}kg free
+                {policy.freeWeightKg}kg free
               </Badge>
             )}
-            {policy.feePerExcessKg > 0 && (
+            {policy.feePerExcessKg && policy.feePerExcessKg > 0 && (
               <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
                 ${policy.feePerExcessKg}/kg
               </Badge>
@@ -197,10 +195,10 @@ export default function LuggagePoliciesPage() {
     total: policies.length,
     default: policies.filter(p => p.isDefault).length,
     avgFreeWeight: policies.length > 0 
-      ? Math.round(policies.reduce((acc, p) => acc + p.freeWeight, 0) / policies.length * 10) / 10
+      ? Math.round(policies.reduce((acc, p) => acc + (p.freeWeightKg || 0), 0) / policies.length * 10) / 10
       : 0,
     avgFee: policies.length > 0 
-      ? Math.round(policies.reduce((acc, p) => acc + p.feePerExcessKg, 0) / policies.length * 100) / 100
+      ? Math.round(policies.reduce((acc, p) => acc + (p.feePerExcessKg || 0), 0) / policies.length * 100) / 100
       : 0
   };
 

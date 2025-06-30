@@ -11,7 +11,6 @@ import {
   Loader2,
   ArrowLeftRight
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { CountryCitySelector } from "@/components/shared/country-city-selector";
 import { 

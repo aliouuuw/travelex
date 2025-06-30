@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,6 @@ import {
   User,
   CheckCircle,
   XCircle,
-  RotateCcw,
   Target,
   Car,
   Package,
@@ -27,7 +25,6 @@ import { toast } from "sonner";
 import { 
   getReservationById, 
   updateReservationStatus,
-  type Reservation 
 } from "@/services/reservations";
 
 // Status badge colors

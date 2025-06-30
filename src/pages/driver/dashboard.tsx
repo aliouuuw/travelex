@@ -11,16 +11,11 @@ import {
   Loader2, 
   Car, 
   Calendar, 
-  DollarSign, 
-  Users, 
   Lock, 
-  Gauge, 
   TrendingUp,
   Clock,
   MapPin,
   Star,
-  ArrowUpRight,
-  ArrowDownRight
 } from "lucide-react";
 import { Link } from "react-router-dom";
 

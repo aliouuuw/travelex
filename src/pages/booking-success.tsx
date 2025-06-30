@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useSearchParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -47,7 +47,7 @@ export default function BookingSuccessPage() {
   });
 
   // Function to check payment status
-  const checkBookingStatus = async () => {
+  const checkBookingStatus = useCallback(async () => {
     if (!bookingId) return;
     
     try {
@@ -60,7 +60,6 @@ export default function BookingSuccessPage() {
       } else if (status.status === 'failed') {
         setPaymentStatus('failed');
       } else {
-        // Still pending
         if (bookingReference === 'PROCESSING') {
           setPaymentStatus('processing');
         } else {
@@ -72,30 +71,26 @@ export default function BookingSuccessPage() {
     } finally {
       setIsRefreshing(false);
     }
-  };
+  }, [bookingId, bookingReference]);
 
   // Poll for payment confirmation if we don't have a booking reference yet
   useEffect(() => {
     if (!bookingId) return;
     
-    // If we already have a final booking reference other than PROCESSING, we're done
     if (finalBookingRef && finalBookingRef !== 'PROCESSING') {
       setPaymentStatus('confirmed');
       return;
     }
     
-    // Initial check
     checkBookingStatus();
     
-    // Set up polling
     let pollCount = 0;
-    const maxPolls = 15; // 30 seconds max
+    const maxPolls = 15;
     
     const pollInterval = setInterval(() => {
       pollCount++;
       if (pollCount >= maxPolls) {
         clearInterval(pollInterval);
-        // If still processing after max polls, show the processing state
         if (paymentStatus === 'loading') {
           setPaymentStatus('processing');
         }
@@ -106,7 +101,7 @@ export default function BookingSuccessPage() {
     }, 2000);
     
     return () => clearInterval(pollInterval);
-  }, [bookingId, finalBookingRef]);
+  }, [bookingId, finalBookingRef, checkBookingStatus, paymentStatus]);
 
   const handleDownloadTicket = () => {
     // TODO: Implement ticket download functionality

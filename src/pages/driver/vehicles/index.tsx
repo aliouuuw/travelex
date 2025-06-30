@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -11,11 +11,9 @@ import {
   Trash2, 
   Star, 
   AlertTriangle,
-  Calendar,
   Gauge,
   Fuel,
-  Users,
-  Settings
+  Users
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -50,7 +48,7 @@ const VehicleCard = ({ vehicle }: { vehicle: Vehicle }) => {
       toast.success("Vehicle deleted successfully!");
       queryClient.invalidateQueries({ queryKey: ['driver-vehicles'] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || "Failed to delete vehicle");
     },
   });
@@ -61,7 +59,7 @@ const VehicleCard = ({ vehicle }: { vehicle: Vehicle }) => {
       toast.success("Default vehicle updated!");
       queryClient.invalidateQueries({ queryKey: ['driver-vehicles'] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || "Failed to set default vehicle");
     },
   });

@@ -59,6 +59,23 @@ export interface TripFormData {
   }>;
 }
 
+interface RawTrip {
+  id: string;
+  route_template_id: string;
+  route_templates: { name: string } | null;
+  vehicle_id: string | null;
+  vehicles: { make: string; model: string; year: number } | null;
+  luggage_policy_id: string | null;
+  luggage_policies: { name: string } | null;
+  departure_time: string;
+  arrival_time: string;
+  total_seats: number;
+  available_seats: number;
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  created_at: string;
+  updated_at: string;
+}
+
 // API Functions
 
 // Get all trips for a driver
@@ -87,7 +104,7 @@ export const getDriverTrips = async (): Promise<Trip[]> => {
   }
 
   // Convert the data to our Trip interface
-  return data?.map((trip: any) => ({
+  return data?.map((trip: RawTrip) => ({
     id: trip.id,
     routeTemplateId: trip.route_template_id,
     routeTemplateName: trip.route_templates?.name || 'Unknown Route',

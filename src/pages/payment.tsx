@@ -23,11 +23,9 @@ import { format } from "date-fns";
 // Payment Form Component (inside Elements provider)
 const PaymentForm = ({ 
   tempBooking, 
-  clientSecret, 
   onPaymentSuccess 
 }: { 
   tempBooking: TempBooking; 
-  clientSecret: string;
   onPaymentSuccess: (bookingReference: string) => void;
 }) => {
   const stripe = useStripe();
@@ -294,7 +292,6 @@ export default function PaymentPage() {
                 <Elements stripe={getStripe()} options={{ clientSecret }}>
                   <PaymentForm
                     tempBooking={tempBooking}
-                    clientSecret={clientSecret}
                     onPaymentSuccess={handlePaymentSuccess}
                   />
                 </Elements>

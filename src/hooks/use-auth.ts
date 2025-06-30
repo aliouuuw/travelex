@@ -1,5 +1,15 @@
 import { useContext } from "react";
-import { AuthContext } from "@/components/auth-provider";
+import { AuthContext } from "@/context/auth-context";
+
+export type AuthContextType = {
+	user: {
+		profile: {
+			full_name?: string;
+			// ... other profile properties
+		};
+	} | null;
+	// ... other auth context properties
+};
 
 export const useAuth = () => {
 	const context = useContext(AuthContext);

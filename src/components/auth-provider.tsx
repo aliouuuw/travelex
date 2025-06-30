@@ -1,5 +1,6 @@
-import { createContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/services/supabase";
+import { AuthContext } from "@/context/auth-context";
 import type { Session, User } from "@supabase/supabase-js";
 
 // Define the structure of the user profile
@@ -11,20 +12,6 @@ interface UserProfile {
   email?: string;
   phone?: string;
 }
-
-type AuthContextType = {
-  session: Session | null;
-  user: (User & { profile: UserProfile | null }) | null; // Combine user and profile
-  isLoading: boolean;
-  signOut: () => void;
-};
-
-export const AuthContext = createContext<AuthContextType>({
-  session: null,
-  user: null,
-  isLoading: true,
-  signOut: () => {},
-});
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);

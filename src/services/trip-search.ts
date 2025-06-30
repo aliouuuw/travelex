@@ -101,6 +101,17 @@ export interface CityOption {
   tripCount: number;
 }
 
+interface SeatMap {
+  rows: number;
+  columns: number;
+  seats: Array<{
+    id: string;
+    row: number;
+    column: number;
+    status: 'available' | 'booked' | 'blocked';
+  }>;
+}
+
 export interface TripBookingDetails {
   tripId: string;
   routeTemplateId: string;
@@ -116,7 +127,7 @@ export interface TripBookingDetails {
     type: string;
     capacity: number;
     features?: string[];
-    seatMap?: any; // JSON seat map structure
+    seatMap?: SeatMap;
   };
   departureTime: string;
   arrivalTime: string;
@@ -160,6 +171,79 @@ export interface TripBookingDetails {
   };
 }
 
+interface RawTrip {
+  trip_id: string;
+  route_template_id: string;
+  route_template_name: string;
+  driver_id: string;
+  driver_name: string;
+  driver_rating: number;
+  vehicle_id: string | null;
+  vehicle_info?: {
+    id: string;
+    make: string;
+    model: string;
+    year: number;
+    type: string;
+    capacity: number;
+    features?: string[];
+  };
+  departure_time: string;
+  arrival_time: string;
+  available_seats: number;
+  total_seats: number;
+  route_cities?: Array<{
+    id: string;
+    cityName: string;
+    countryCode?: string;
+    sequenceOrder: number;
+  }>;
+  trip_stations?: Array<{
+    id: string;
+    cityName: string;
+    countryCode?: string;
+    sequenceOrder: number;
+    stationInfo: {
+      id: string;
+      name: string;
+      address: string;
+    };
+    isPickupPoint: boolean;
+    isDropoffPoint: boolean;
+  }>;
+  segment_price: number;
+  full_route_price: number;
+  pickup_stations?: Array<{
+    id: string;
+    stationInfo: {
+      id: string;
+      name: string;
+      address: string;
+    };
+  }>;
+  dropoff_stations?: Array<{
+    id: string;
+    stationInfo: {
+      id: string;
+      name: string;
+      address: string;
+    };
+  }>;
+  luggage_policy?: {
+    id: string;
+    name: string;
+    freeWeightKg: number;
+    excessFeePerKg: number;
+    maxBags?: number;
+    maxBagWeightKg?: number;
+  };
+}
+
+interface RawCity {
+  city_name: string;
+  trip_count: number;
+}
+
 // =============================================
 // API FUNCTIONS
 // =============================================
@@ -185,7 +269,7 @@ export const searchTripsBySegment = async (
   }
 
   // Transform the data to match our TypeScript interface
-  return data?.map((trip: any) => ({
+  return data?.map((trip: RawTrip) => ({
     tripId: trip.trip_id,
     routeTemplateId: trip.route_template_id,
     routeTemplateName: trip.route_template_name,
@@ -215,10 +299,10 @@ export const searchTripsBySegment = async (
     luggagePolicy: trip.luggage_policy ? {
       id: trip.luggage_policy.id,
       name: trip.luggage_policy.name,
-      freeWeightKg: trip.luggage_policy.freeWeightKg || trip.luggage_policy.free_weight_kg,
-      excessFeePerKg: trip.luggage_policy.excessFeePerKg || trip.luggage_policy.excess_fee_per_kg,
-      maxBags: trip.luggage_policy.maxBags || trip.luggage_policy.max_bags,
-      maxBagWeightKg: trip.luggage_policy.maxBagWeightKg || trip.luggage_policy.max_bag_weight_kg,
+      freeWeightKg: trip.luggage_policy.freeWeightKg,
+      excessFeePerKg: trip.luggage_policy.excessFeePerKg,
+      maxBags: trip.luggage_policy.maxBags,
+      maxBagWeightKg: trip.luggage_policy.maxBagWeightKg,
     } : undefined,
   })) || [];
 };
@@ -246,7 +330,7 @@ export const searchTripsBySegmentWithCountry = async (
   }
 
   // Transform the data to match our TypeScript interface
-  return data?.map((trip: any) => ({
+  return data?.map((trip: RawTrip) => ({
     tripId: trip.trip_id,
     routeTemplateId: trip.route_template_id,
     routeTemplateName: trip.route_template_name,
@@ -267,13 +351,13 @@ export const searchTripsBySegmentWithCountry = async (
     arrivalTime: trip.arrival_time,
     availableSeats: trip.available_seats,
     totalSeats: trip.total_seats,
-    routeCities: trip.route_cities?.map((city: any) => ({
+    routeCities: trip.route_cities?.map((city) => ({
       id: city.id,
       cityName: city.cityName,
       countryCode: city.countryCode,
       sequenceOrder: city.sequenceOrder,
     })) || [],
-    tripStations: trip.trip_stations?.map((station: any) => ({
+    tripStations: trip.trip_stations?.map((station) => ({
       id: station.id,
       cityName: station.cityName,
       countryCode: station.countryCode,
@@ -282,17 +366,17 @@ export const searchTripsBySegmentWithCountry = async (
       isPickupPoint: station.isPickupPoint,
       isDropoffPoint: station.isDropoffPoint,
     })) || [],
-    segmentPrice: trip.estimated_price || 0,
-    fullRoutePrice: trip.estimated_price || 0,
+    segmentPrice: trip.segment_price || 0,
+    fullRoutePrice: trip.segment_price || 0,
     pickupStations: trip.pickup_stations || [],
     dropoffStations: trip.dropoff_stations || [],
     luggagePolicy: trip.luggage_policy ? {
       id: trip.luggage_policy.id,
       name: trip.luggage_policy.name,
-      freeWeightKg: trip.luggage_policy.freeWeightKg || trip.luggage_policy.free_weight_kg,
-      excessFeePerKg: trip.luggage_policy.excessFeePerKg || trip.luggage_policy.excess_fee_per_kg,
-      maxBags: trip.luggage_policy.maxBags || trip.luggage_policy.max_bags,
-      maxBagWeightKg: trip.luggage_policy.maxBagWeightKg || trip.luggage_policy.max_bag_weight_kg,
+      freeWeightKg: trip.luggage_policy.freeWeightKg,
+      excessFeePerKg: trip.luggage_policy.excessFeePerKg,
+      maxBags: trip.luggage_policy.maxBags,
+      maxBagWeightKg: trip.luggage_policy.maxBagWeightKg,
     } : undefined,
   })) || [];
 };
@@ -308,7 +392,7 @@ export const getAvailableCities = async (): Promise<CityOption[]> => {
     throw new Error(error.message);
   }
 
-  return data?.map((city: any) => ({
+  return data?.map((city: RawCity) => ({
     cityName: city.city_name,
     tripCount: city.trip_count,
   })) || [];
