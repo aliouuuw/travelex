@@ -227,6 +227,7 @@ interface RawTrip {
     maxBags?: number;
     maxBagWeightKg?: number;
   };
+  estimated_price: number;
 }
 
 interface RawCity {
