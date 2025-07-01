@@ -201,8 +201,6 @@ interface RawTrip {
     isPickupPoint: boolean;
     isDropoffPoint: boolean;
   }>;
-  segment_price: number;
-  full_route_price: number;
   pickup_stations?: Array<{
     id: string;
     stationInfo: {
@@ -283,8 +281,8 @@ export const searchTripsBySegment = async (
     totalSeats: trip.total_seats,
     routeCities: trip.route_cities || [],
     tripStations: trip.trip_stations || [],
-    segmentPrice: trip.segment_price,
-    fullRoutePrice: trip.full_route_price,
+    segmentPrice: trip.estimated_price || 0,
+    fullRoutePrice: trip.estimated_price || 0,
     pickupStations: trip.pickup_stations || [],
     dropoffStations: trip.dropoff_stations || [],
     luggagePolicy: trip.luggage_policy ? {
@@ -305,9 +303,40 @@ export const searchTripsBySegment = async (
 export const searchTripsBySegmentWithCountry = async (
   query: TripSearchQueryWithCountry
 ): Promise<TripSearchResult[]> => {
+  console.log('🔍 Searching trips with query:', query);
+  
+  // First, let's try a very broad search to see if there are any trips at all
+  const { data: debugData } = await supabase.rpc('search_trips_by_segment_with_country', {
+    p_from_country: null,
+    p_to_country: null,
+    p_from_city: null,
+    p_to_city: null,
+    p_departure_date: null,
+    p_min_seats: 1,
+    p_max_price: null,
+  });
+  console.log('🐛 Debug broad search result:', debugData?.length || 0, 'trips found');
+  
+  // Log details of available trips to see what cities/countries exist
+  if (debugData && debugData.length > 0) {
+    debugData.forEach((trip: RawTrip, index: number) => {
+      console.log(`🚗 Trip ${index + 1}:`, {
+        routeName: trip.route_template_name,
+        cities: trip.route_cities,
+        departureTime: trip.departure_time,
+        availableSeats: trip.available_seats
+      });
+      
+      // Check if cities have country codes
+      if (trip.route_cities) {
+        console.log(`🏙️ Cities for Trip ${index + 1}:`, trip.route_cities);
+      }
+    });
+  }
+
   const { data, error } = await supabase.rpc('search_trips_by_segment_with_country', {
-    p_from_country: query.fromCountry || null,
-    p_to_country: query.toCountry || null,
+    p_from_country: null, // Temporarily disable country filtering
+    p_to_country: null,   // Temporarily disable country filtering  
     p_from_city: query.fromCity || null,
     p_to_city: query.toCity || null,
     p_departure_date: query.departureDate || null,
@@ -315,9 +344,18 @@ export const searchTripsBySegmentWithCountry = async (
     p_max_price: query.maxPrice || null,
   });
 
+  console.log('🚀 Database response:', { data, error });
+
   if (error) {
     console.error('Error searching trips with country:', error);
     throw new Error(error.message);
+  }
+
+  console.log(`📊 Found ${data?.length || 0} trips`);
+
+  // Add debug log to see raw trip data
+  if (data && data.length > 0) {
+    console.log('🔍 First trip data:', data[0]);
   }
 
   // Transform the data to match our TypeScript interface

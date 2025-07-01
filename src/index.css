@@ -27,6 +27,10 @@
   --color-brand-dark-blue-800: #1e345c;
   --color-brand-dark-blue-900: #0a2137;
   --color-brand-dark-blue: #0a2137;
+
+  /* TravelEx specific colors for compatibility */
+  --color-travelex-blue: #0a2137;
+  --color-travelex-orange: #fb8346;
 }
 
 @layer base {
@@ -123,6 +127,15 @@
     letter-spacing: -0.025em;
   }
 
+  /* Responsive heading sizes from old-globals.css */
+  h1 {
+    @apply text-5xl md:text-6xl;
+  }
+
+  h2 {
+    @apply text-4xl md:text-5xl;
+  }
+
   .brand-heading {
     font-family: 'DM Sans', sans-serif;
     font-weight: 700;
@@ -196,7 +209,28 @@
   }
 
   .animate-fade-in {
-    animation: fadeIn 0.5s ease-in-out;
+    animation: fadeIn 1s ease-out forwards;
+  }
+
+  /* Additional animations from old-globals.css */
+  .animate-fade-in-delay {
+    animation: fadeIn 1s ease-out 0.3s forwards;
+    opacity: 0;
+  }
+  
+  .animate-fade-in-delay-2 {
+    animation: fadeIn 1s ease-out 0.6s forwards;
+    opacity: 0;
+  }
+  
+  .animate-slide-in-right {
+    animation: slideInRight 1s ease-out 0.4s forwards;
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  
+  .animate-bounce-subtle {
+    animation: bounceSubtle 2s infinite;
   }
 
   .scrollbar-hide {
@@ -216,9 +250,11 @@
 @keyframes fadeIn {
   from {
     opacity: 0;
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -230,5 +266,29 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Additional keyframes from old-globals.css */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes bounceSubtle {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-5px);
+  }
+  60% {
+    transform: translateY(-3px);
   }
 }

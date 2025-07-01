@@ -138,6 +138,11 @@ const SeatSelectionGrid = ({
 export default function BookingPage() {
   const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
+  
+  // Get search context from URL parameters
+  const searchParams = new URLSearchParams(window.location.search);
+  const searchFromCity = searchParams.get('fromCity');
+  const searchToCity = searchParams.get('toCity');
 
   // Form state
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
@@ -160,11 +165,19 @@ export default function BookingPage() {
     enabled: !!tripId,
   });
 
-  // Get available stations based on selected pickup/dropoff
+  // Get available stations based on selected pickup/dropoff and search context
   const availablePickupStations = useMemo(() => {
     if (!trip) return [];
-    return trip.tripStations.filter(station => station.isPickupPoint);
-  }, [trip]);
+    
+    let stations = trip.tripStations.filter(station => station.isPickupPoint);
+    
+    // If we have search context, filter to only show stations from the search origin city
+    if (searchFromCity) {
+      stations = stations.filter(station => station.cityName === searchFromCity);
+    }
+    
+    return stations;
+  }, [trip, searchFromCity]);
 
   const availableDropoffStations = useMemo(() => {
     if (!trip || !formData.pickupStationId) return [];
@@ -172,10 +185,17 @@ export default function BookingPage() {
     const pickupStation = trip.tripStations.find(s => s.id === formData.pickupStationId);
     if (!pickupStation) return [];
     
-    return trip.tripStations.filter(station => 
+    let stations = trip.tripStations.filter(station => 
       station.isDropoffPoint && station.sequenceOrder > pickupStation.sequenceOrder
     );
-  }, [trip, formData.pickupStationId]);
+    
+    // If we have search context, filter to only show stations from the search destination city
+    if (searchToCity) {
+      stations = stations.filter(station => station.cityName === searchToCity);
+    }
+    
+    return stations;
+  }, [trip, formData.pickupStationId, searchToCity]);
 
   // Calculate pricing
   const segmentPrice = useMemo(() => {
@@ -310,7 +330,12 @@ export default function BookingPage() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold font-heading">Book Your Trip</h1>
-            <p className="text-muted-foreground">Complete your booking in a few simple steps</p>
+            <p className="text-muted-foreground">
+              {searchFromCity && searchToCity 
+                ? `${searchFromCity} → ${searchToCity} • Complete your booking in a few simple steps`
+                : "Complete your booking in a few simple steps"
+              }
+            </p>
           </div>
         </div>
 

@@ -1,27 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
   Search, 
   MapPin, 
   Clock, 
   Users, 
   Star, 
-  CalendarIcon,
   Car,
   Route,
   Loader2,
   ArrowRight,
-  ArrowLeftRight
+  ChevronDown,
+  ChevronUp,
+  Edit,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { 
   searchTripsBySegmentWithCountry,
   applyTripFilters,
@@ -31,268 +28,20 @@ import {
   type TripSearchQueryWithCountry,
   type TripSearchResult,
 } from "@/services/trip-search";
-import { getAvailableCountries, getCitiesForCountry, type Country } from "@/services/countries";
-import { toast } from "sonner";
+import TravelExBookingFlow from "@/components/TravelExBookingFlow";
 
-// 2-Step Trip Search Form Component
-export const TripSearchForm = ({ 
-  onSearch, 
-  isLoading 
-}: { 
-  onSearch: (query: TripSearchQueryWithCountry) => void;
-  isLoading: boolean;
-}) => {
-  const [step, setStep] = useState<1 | 2>(1);
-  const [selectedCountry, setSelectedCountry] = useState("");
-  const [fromCity, setFromCity] = useState("");
-  const [toCity, setToCity] = useState("");
-  const [departureDate, setDepartureDate] = useState<Date>();
-  const [passengers, setPassengers] = useState("1");
-
-  // Fetch available countries
-  const { data: countries = [] } = useQuery<Country[]>({
-    queryKey: ['countries'],
-    queryFn: getAvailableCountries,
-  });
-
-  // Fetch cities for selected country
-  const { data: cities = [] } = useQuery({
-    queryKey: ['cities', selectedCountry],
-    queryFn: () => getCitiesForCountry(selectedCountry),
-    enabled: !!selectedCountry,
-  });
-
-  const handleCountrySelect = (countryCode: string) => {
-    setSelectedCountry(countryCode);
-    setFromCity("");
-    setToCity("");
-    setStep(2);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!fromCity || !toCity) {
-      toast.error("Please select both departure and destination cities");
-      return;
-    }
-
-    if (fromCity === toCity) {
-      toast.error("Departure and destination cities must be different");
-      return;
-    }
-
-    onSearch({
-      fromCountry: selectedCountry,
-      toCountry: selectedCountry,
-      fromCity,
-      toCity,
-      departureDate: departureDate ? format(departureDate, 'yyyy-MM-dd') : undefined,
-      minSeats: parseInt(passengers),
-    });
-  };
-
-  const handleSwapCities = () => {
-    const temp = fromCity;
-    setFromCity(toCity);
-    setToCity(temp);
-  };
-
-  const handleBack = () => {
-    setStep(1);
-    setFromCity("");
-    setToCity("");
-  };
-
-
-
-  const selectedCountryInfo = countries.find(c => c.code === selectedCountry);
-
-  return (
-    <div className="bg-transparent">
-      {step === 1 ? (
-        // Step 1: Country Selection
-        <div className="space-y-4">
-          <div className="text-center mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Select your travel country</h3>
-            <p className="text-sm text-gray-600">Choose the country you'll be traveling within</p>
-          </div>
-          
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-             {countries.map((country) => (
-               <Button
-                 key={country.code}
-                 variant="outline"
-                 onClick={() => handleCountrySelect(country.code)}
-                 className="h-16 p-4 justify-start border-2 hover:border-brand-orange hover:bg-brand-orange/5 transition-all duration-200"
-                 disabled={isLoading}
-               >
-                 <div className="flex items-center gap-3 w-full">
-                   <div className="text-2xl">{country.flagEmoji}</div>
-                   <div className="text-left">
-                     <div className="font-medium">{country.name}</div>
-                     <div className="text-xs text-gray-500">{country.cityCount} cities available</div>
-                   </div>
-                 </div>
-               </Button>
-             ))}
-           </div>
-        </div>
-      ) : (
-        // Step 2: City and Travel Details
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            {/* Country Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="text-2xl">{selectedCountryInfo?.flagEmoji}</div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">{selectedCountryInfo?.name}</h3>
-                  <p className="text-sm text-gray-500">Select your departure and destination cities</p>
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleBack}
-                disabled={isLoading}
-              >
-                Change Country
-              </Button>
-            </div>
-
-            {/* Cities and Travel Details */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Cities Selection */}
-              <div className="space-y-3">
-                <div className="grid grid-cols-5 gap-2 items-end">
-                  {/* From City */}
-                  <div className="col-span-2">
-                    <Label className="text-xs font-medium text-gray-600 mb-1 block">From</Label>
-                                         <Select value={fromCity} onValueChange={setFromCity} disabled={isLoading}>
-                       <SelectTrigger className="h-9 text-sm">
-                         <SelectValue placeholder="Departure" />
-                       </SelectTrigger>
-                       <SelectContent>
-                         {cities.map((city) => (
-                           <SelectItem key={city.cityName} value={city.cityName}>
-                             {city.cityName}
-                           </SelectItem>
-                         ))}
-                       </SelectContent>
-                     </Select>
-                  </div>
-
-                  {/* Swap Button */}
-                  <div className="col-span-1 flex justify-center">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleSwapCities}
-                      className="w-9 h-9 rounded-full border-2 border-brand-orange/40 hover:border-brand-orange hover:bg-brand-orange/10"
-                      disabled={isLoading || (!fromCity && !toCity)}
-                    >
-                      <ArrowLeftRight className="w-3 h-3 text-brand-orange" />
-                    </Button>
-                  </div>
-
-                  {/* To City */}
-                  <div className="col-span-2">
-                    <Label className="text-xs font-medium text-gray-600 mb-1 block">To</Label>
-                                         <Select value={toCity} onValueChange={setToCity} disabled={isLoading}>
-                       <SelectTrigger className="h-9 text-sm">
-                         <SelectValue placeholder="Destination" />
-                       </SelectTrigger>
-                       <SelectContent>
-                         {cities.map((city) => (
-                           <SelectItem key={city.cityName} value={city.cityName}>
-                             {city.cityName}
-                           </SelectItem>
-                         ))}
-                       </SelectContent>
-                     </Select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Travel Details */}
-              <div className="grid grid-cols-2 gap-2">
-                {/* Departure Date */}
-                <div>
-                  <Label className="text-xs font-medium text-gray-600 mb-1 block">Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="h-9 w-full justify-start text-left font-normal text-sm"
-                        disabled={isLoading}
-                      >
-                        <CalendarIcon className="mr-2 h-3 w-3 opacity-50" />
-                        <span className="truncate">
-                          {departureDate ? format(departureDate, "MMM dd") : "Select"}
-                        </span>
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 bg-white border shadow-lg z-50" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={departureDate}
-                        onSelect={setDepartureDate}
-                        disabled={(date) => date < new Date()}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {/* Passengers */}
-                <div>
-                  <Label className="text-xs font-medium text-gray-600 mb-1 block">Passengers</Label>
-                  <Select value={passengers} onValueChange={setPassengers} disabled={isLoading}>
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5, 6].map((num) => (
-                        <SelectItem key={num} value={num.toString()}>
-                          <span className="text-sm">{num}</span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-
-            {/* Search Button */}
-            <Button 
-              type="submit" 
-              className="w-full bg-gradient-to-r from-brand-orange to-brand-orange/90 hover:from-brand-orange/90 hover:to-brand-orange text-white h-10 font-medium shadow-md hover:shadow-lg transition-all duration-200"
-              disabled={isLoading || !fromCity || !toCity}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Searching...
-                </>
-              ) : (
-                <>
-                  <Search className="mr-2 h-4 w-4" />
-                  Search Trips
-                </>
-              )}
-            </Button>
-          </div>
-                 </form>
-       )}
-    </div>
-  );
-};
+// Trip Search functionality is now handled by TravelExBookingFlow component
 
 // Trip Results Card Component
-export const TripResultCard = ({ trip }: { trip: TripSearchResult }) => {
+export const TripResultCard = ({ 
+  trip, 
+  searchFromCity, 
+  searchToCity 
+}: { 
+  trip: TripSearchResult;
+  searchFromCity?: string;
+  searchToCity?: string;
+}) => {
   const departureTime = new Date(trip.departureTime);
   const arrivalTime = new Date(trip.arrivalTime);
   const duration = formatTripDuration(trip.departureTime, trip.arrivalTime);
@@ -377,7 +126,12 @@ export const TripResultCard = ({ trip }: { trip: TripSearchResult }) => {
               asChild
               className="bg-brand-orange hover:bg-brand-orange/90 text-white w-full lg:w-auto"
             >
-              <Link to={`/book/${trip.tripId}`}>
+              <Link 
+                to={searchFromCity && searchToCity 
+                  ? `/book/${trip.tripId}?fromCity=${encodeURIComponent(searchFromCity)}&toCity=${encodeURIComponent(searchToCity)}`
+                  : `/book/${trip.tripId}`
+                }
+              >
                 Book Now
                 <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
@@ -395,6 +149,37 @@ export default function SearchPage() {
   const [searchResults, setSearchResults] = useState<TripSearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sortBy, setSortBy] = useState<'price' | 'departure' | 'duration' | 'rating'>('departure');
+  const [isSearchFormExpanded, setIsSearchFormExpanded] = useState(true);
+  const [searchParams] = useSearchParams();
+
+  // Extract initial values from URL parameters
+  const fromCity = searchParams.get('fromCity');
+  const toCity = searchParams.get('toCity');
+  const departureDateStr = searchParams.get('departureDate');
+  const passengersStr = searchParams.get('passengers');
+
+  const initialValues = fromCity && toCity ? {
+    fromCity,
+    toCity,
+    departureDate: departureDateStr ? new Date(departureDateStr) : undefined,
+    passengers: passengersStr ? parseInt(passengersStr) : 1,
+  } : undefined;
+
+  // Handle search from URL parameters (when redirected from home page) - only run once
+  useEffect(() => {
+    if (fromCity && toCity) {
+      const query: TripSearchQueryWithCountry = {
+        fromCountry: 'CA',
+        toCountry: 'CA',
+        fromCity,
+        toCity,
+        departureDate: departureDateStr || undefined,
+        minSeats: passengersStr ? parseInt(passengersStr) : 1,
+      };
+      handleSearch(query);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array - only run on mount
 
   const handleSearch = (query: TripSearchQueryWithCountry) => {
     setSearchQuery(query);
@@ -404,10 +189,27 @@ export default function SearchPage() {
       .then((results) => {
         setSearchResults(results);
         setIsLoading(false);
+        // Auto-collapse search form when results are shown
+        if (results.length > 0) {
+          setIsSearchFormExpanded(false);
+        }
       })
       .catch(() => {
         setIsLoading(false);
       });
+  };
+
+  // Handle search from TravelExBookingFlow component
+  const handleSearchFromFlow = (searchData: { fromCity: string; toCity: string; departureDate: Date | undefined; passengers: number; fromCountry: string; toCountry: string }) => {
+    const query: TripSearchQueryWithCountry = {
+      fromCountry: searchData.fromCountry,
+      toCountry: searchData.toCountry,
+      fromCity: searchData.fromCity,
+      toCity: searchData.toCity,
+      departureDate: searchData.departureDate ? format(searchData.departureDate, 'yyyy-MM-dd') : undefined,
+      minSeats: searchData.passengers,
+    };
+    handleSearch(query);
   };
 
   const filteredResults = applyTripFilters(searchResults, {});
@@ -446,17 +248,70 @@ export default function SearchPage() {
       {/* Sticky Search Form */}
       <div className="sticky top-0 z-10 bg-gradient-to-r from-white via-gray-50 to-white shadow-lg border-b-2 border-brand-dark-blue/20">
         <div className="container mx-auto px-4 py-6">
-          <div className="bg-white rounded-xl shadow-xl border border-gray-200/50 p-6 backdrop-blur-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 bg-gradient-to-br from-brand-orange to-brand-orange/80 rounded-lg flex items-center justify-center">
-                <Search className="w-4 h-4 text-white" />
+          <div className="bg-white rounded-xl shadow-xl border border-gray-200/50 backdrop-blur-sm overflow-hidden">
+            
+            {/* Header - Always Visible */}
+            <div className="flex items-center justify-between p-6 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-brand-orange to-brand-orange/80 rounded-lg flex items-center justify-center">
+                  <Search className="w-4 h-4 text-white" />
+                </div>
+                <h2 className="font-semibold text-lg text-gray-900">
+                  {isSearchFormExpanded ? "Search Trips" : "Search Results"}
+                </h2>
               </div>
-              <h2 className="font-semibold text-lg text-gray-900">Search Trips</h2>
+              
+              {/* Toggle Button */}
+              {searchQuery && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsSearchFormExpanded(!isSearchFormExpanded)}
+                  className="flex items-center gap-2 border-brand-orange/30 hover:border-brand-orange hover:bg-brand-orange/5"
+                >
+                  <Edit className="w-4 h-4" />
+                  {isSearchFormExpanded ? "Hide Search" : "Edit Search"}
+                  {isSearchFormExpanded ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
+                </Button>
+              )}
             </div>
-            <TripSearchForm 
-              onSearch={handleSearch} 
-              isLoading={isLoading} 
-            />
+
+            {/* Collapsed Search Summary */}
+            {!isSearchFormExpanded && searchQuery && (
+              <div className="px-6 pb-4">
+                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-brand-orange" />
+                    <span className="font-medium">{searchQuery.fromCity} → {searchQuery.toCity}</span>
+                  </div>
+                  {searchQuery.departureDate && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-brand-orange" />
+                      <span>{format(new Date(searchQuery.departureDate), "MMM dd, yyyy")}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-brand-orange" />
+                    <span>{searchQuery.minSeats} passenger{(searchQuery.minSeats || 1) > 1 ? 's' : ''}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Expanded Search Form */}
+            {isSearchFormExpanded && (
+              <div className="px-6 pb-6">
+                <TravelExBookingFlow 
+                  onSearch={handleSearchFromFlow} 
+                  showTitle={false}
+                  initialValues={initialValues}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -514,7 +369,12 @@ export default function SearchPage() {
                     {/* Trip Results */}
                     <div className="space-y-4">
                       {sortedResults.map((trip) => (
-                        <TripResultCard key={trip.tripId} trip={trip} />
+                        <TripResultCard 
+                          key={trip.tripId} 
+                          trip={trip} 
+                          searchFromCity={searchQuery?.fromCity}
+                          searchToCity={searchQuery?.toCity}
+                        />
                       ))}
                     </div>
                   </div>

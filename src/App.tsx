@@ -48,6 +48,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./components/ui/dropdown-menu";
+import Home from "./pages/home";
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -203,40 +204,40 @@ const Layout = ({ hasHeader }: { hasHeader: boolean }) => {
   )
 }
 
-const Home = () => {
-  return (
-    <div className="flex flex-col justify-center items-center min-h-screen bg-background">
-      <div className="text-center space-y-6 max-w-4xl mx-auto px-6 animate-fade-in">
-        <div className="space-y-4">
-          <h1 className="font-heading text-5xl md:text-6xl font-bold text-brand-dark-blue">
-            Welcome to TravelEx
-          </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground font-medium max-w-2xl mx-auto leading-relaxed">
-            The premium platform connecting passengers with drivers for comfortable inter-city travel
-          </p>
-        </div>
+// const Home = () => {
+//   return (
+//     <div className="flex flex-col justify-center items-center min-h-screen bg-background">
+//       <div className="text-center space-y-6 max-w-4xl mx-auto px-6 animate-fade-in">
+//         <div className="space-y-4">
+//           <h1 className="font-heading text-5xl md:text-6xl font-bold text-brand-dark-blue">
+//             Welcome to TravelEx
+//           </h1>
+//           <p className="text-xl md:text-2xl text-muted-foreground font-medium max-w-2xl mx-auto leading-relaxed">
+//             The premium platform connecting passengers with drivers for comfortable inter-city travel
+//           </p>
+//         </div>
         
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
-          <Button 
-            asChild 
-            size="lg" 
-            className="bg-brand-orange hover:bg-brand-orange-600 text-white shadow-brand hover:shadow-brand-hover transition-all text-base px-8 py-3"
-          >
-            <Link to="/search">Search Trips</Link>
-          </Button>
-          <Button 
-            asChild 
-            variant="outline" 
-            size="lg"
-            className="border-border/60 hover:border-brand-orange hover:text-brand-orange hover:bg-brand-orange-50 transition-all text-base px-8 py-3"
-          >
-            <Link to="/auth">Join as Driver</Link>
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
+//         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
+//           <Button 
+//             asChild 
+//             size="lg" 
+//             className="bg-brand-orange hover:bg-brand-orange-600 text-white shadow-brand hover:shadow-brand-hover transition-all text-base px-8 py-3"
+//           >
+//             <Link to="/search">Search Trips</Link>
+//           </Button>
+//           <Button 
+//             asChild 
+//             variant="outline" 
+//             size="lg"
+//             className="border-border/60 hover:border-brand-orange hover:text-brand-orange hover:bg-brand-orange-50 transition-all text-base px-8 py-3"
+//           >
+//             <Link to="/auth">Join as Driver</Link>
+//           </Button>
+//         </div>
+//       </div>
+//     </div>
+//   )
+// }
 
 const About = () => {
   return (
