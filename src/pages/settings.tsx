@@ -15,6 +15,8 @@ import {
   ArrowLeft 
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { updateUserPassword } from '@/services/auth';
+import { useMutation } from '@tanstack/react-query';
 
 export default function AccountSettings() {
   const { user } = useAuth();
@@ -77,6 +79,21 @@ export default function AccountSettings() {
     }
   };
 
+  const { mutate: updatePassword } = useMutation({
+    mutationFn: updateUserPassword,
+    onSuccess: () => {
+      toast.success("Password updated successfully!");
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -90,23 +107,7 @@ export default function AccountSettings() {
       return;
     }
 
-    setIsLoading(true);
-    
-    try {
-      // TODO: Implement password update API call
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      toast.success('Password updated successfully!');
-      setPasswordForm({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      });
-    } catch (error) {
-      console.error(error);
-      toast.error('Failed to update password');
-    } finally {
-      setIsLoading(false);
-    }
+    updatePassword(passwordForm.newPassword);
   };
 
   const handleCurrencyUpdate = async (e: React.FormEvent) => {

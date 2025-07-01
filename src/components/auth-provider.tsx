@@ -17,6 +17,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<(User & { profile: UserProfile | null }) | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPasswordSetup, setIsPasswordSetup] = useState(false);
 
   useEffect(() => {
     const getSessionAndProfile = async () => {
@@ -25,6 +26,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
 
       if (session) {
+        const hasPassword = session.user.identities?.some(
+          (i) => i.provider === 'email'
+        );
+        setIsPasswordSetup(!!hasPassword);
+
         const { data: profile } = await supabase
           .from("profiles")
           .select("*")
@@ -33,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser({ ...session.user, profile });
       } else {
         setUser(null);
+        setIsPasswordSetup(false);
       }
       setIsLoading(false);
     };
@@ -43,6 +50,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       (_event, session) => {
         setSession(session);
         if (session) {
+          const hasPassword = session.user.identities?.some(
+            (i) => i.provider === 'email'
+          );
+          setIsPasswordSetup(!!hasPassword);
           // Use setTimeout to avoid deadlock as recommended by Supabase docs
           setTimeout(async () => {
             const { data: profile } = await supabase
@@ -55,6 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }, 0);
         } else {
           setUser(null);
+          setIsPasswordSetup(false);
           setIsLoading(false);
         }
       }
@@ -70,7 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, isLoading, signOut }}>
+    <AuthContext.Provider value={{ session, user, isLoading, isPasswordSetup, signOut }}>
       {children}
     </AuthContext.Provider>
   );

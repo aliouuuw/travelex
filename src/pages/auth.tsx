@@ -51,13 +51,16 @@ type SetPasswordFormData = z.infer<typeof setPasswordFormSchema>;
 
 export default function AuthPage() {
     const navigate = useNavigate();
-    const { user, isLoading } = useAuth();
+    const { user, isLoading, isPasswordSetup } = useAuth();
     const [searchParams] = useSearchParams();
-    const mode = searchParams.get('mode');
     const [activeTab, setActiveTab] = useState("login");
 
     useEffect(() => {
         if (user && !isLoading) {
+            if (!isPasswordSetup) {
+                setActiveTab('driver-setup');
+                return;
+            }
             const role = user.profile?.role;
             switch (role) {
                 case "admin":
@@ -71,7 +74,7 @@ export default function AuthPage() {
                     break;
             }
         }
-    }, [user, isLoading, navigate]);
+    }, [user, isLoading, isPasswordSetup, navigate]);
 
     const loginForm = useForm<LoginFormData>({
         resolver: zodResolver(loginFormSchema),
@@ -177,14 +180,18 @@ export default function AuthPage() {
         setPasswordMutation(data.password);
     };
 
-    // Set the active tab based on URL mode
+    // Set the active tab based on URL mode or password status
     useEffect(() => {
+        const mode = searchParams.get('mode');
         if (mode === 'reset-password') {
             setActiveTab('reset-password');
-        } else if (mode === 'driver-setup') {
+        } else if (user && !isPasswordSetup) {
             setActiveTab('driver-setup');
         }
-    }, [mode]);
+    }, [searchParams, user, isPasswordSetup]);
+
+    // Determine which view to show
+    const showPasswordSetup = user && !isPasswordSetup;
 
     return (
         <div className="min-h-screen grid lg:grid-cols-2">
@@ -252,243 +259,240 @@ export default function AuthPage() {
                         </div>
                     </div>
 
-                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList>
-                            <TabsTrigger value="login">
-                                Sign In
-                            </TabsTrigger>
-                            <TabsTrigger value="signup">
-                                Apply as Driver
-                            </TabsTrigger>
-                        </TabsList>
-
-                        <TabsContent value="login" className="space-y-4">
-                            <Card className="premium-card border-0 shadow-premium">
-                                <CardHeader className="text-center space-y-2 pb-6">
-                                    <CardTitle className="font-heading text-2xl text-foreground">Welcome Back</CardTitle>
-                                    <CardDescription className="text-muted-foreground">
-                                        Sign in to your TravelEx account
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="login-email" className="text-sm font-medium">Email</Label>
-                                            <Input 
-                                                {...loginForm.register("email")} 
-                                                id="login-email" 
-                                                type="email" 
-                                                placeholder="your@email.com"
-                                                className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
-                                            />
-                                            {loginForm.formState.errors.email && (
-                                                <p className="text-xs text-destructive">{loginForm.formState.errors.email.message}</p>
-                                            )}
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="login-password" className="text-sm font-medium">Password</Label>
-                                            <Input 
-                                                {...loginForm.register("password")} 
-                                                id="login-password" 
-                                                type="password"
-                                                className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
-                                            />
-                                            {loginForm.formState.errors.password && (
-                                                <p className="text-xs text-destructive">{loginForm.formState.errors.password.message}</p>
-                                            )}
-                                        </div>
-                                        <div className="pt-2">
-                                            <Button 
-                                                type="submit" 
-                                                disabled={isLoggingIn} 
-                                                className="w-full h-11 bg-brand-orange hover:bg-brand-orange-600 text-white shadow-brand hover:shadow-brand-hover transition-all font-medium"
-                                            >
-                                                {isLoggingIn && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                Sign In
-                                            </Button>
-                                        </div>
-                                    </form>
-                                    
-                                    <div className="text-center">
-                                        <button
-                                            type="button"
-                                            onClick={() => setActiveTab('reset-password')}
-                                            className="text-sm text-brand-orange hover:text-brand-orange/80 transition-colors font-medium"
-                                        >
-                                            Forgot your password?
-                                        </button>
+                    {showPasswordSetup ? (
+                        <Card className="premium-card border-0 shadow-premium">
+                            <CardHeader className="text-center space-y-2 pb-6">
+                                <CardTitle className="font-heading text-2xl text-foreground">Set Your Password</CardTitle>
+                                <CardDescription className="text-muted-foreground">
+                                    Welcome! To secure your account, please create a new password.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <form onSubmit={setPasswordForm.handleSubmit(onSetPasswordSubmit)} className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="password">New Password</Label>
+                                        <Input
+                                            {...setPasswordForm.register("password")}
+                                            id="password"
+                                            type="password"
+                                            placeholder="••••••••"
+                                            className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                        />
+                                        {setPasswordForm.formState.errors.password && (
+                                            <p className="text-xs text-destructive">
+                                                {setPasswordForm.formState.errors.password.message}
+                                            </p>
+                                        )}
                                     </div>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-
-                        <TabsContent value="signup" className="space-y-4">
-                            <Card className="premium-card border-0 shadow-premium">
-                                <CardHeader className="text-center space-y-2 pb-6">
-                                    <CardTitle className="font-heading text-2xl text-foreground">Apply to Become a Driver</CardTitle>
-                                    <CardDescription className="text-muted-foreground">
-                                        Submit your application to become a TravelEx driver. An admin will review and contact you.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="full_name" className="text-sm font-medium">Full Name</Label>
-                                            <Input 
-                                                {...signupForm.register("full_name")} 
-                                                id="full_name" 
-                                                type="text" 
-                                                placeholder="John Doe"
-                                                className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
-                                            />
-                                            {signupForm.formState.errors.full_name && (
-                                                <p className="text-xs text-destructive">{signupForm.formState.errors.full_name.message}</p>
-                                            )}
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-                                            <Input 
-                                                {...signupForm.register("email")} 
-                                                id="email" 
-                                                type="email" 
-                                                placeholder="m@example.com"
-                                                className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
-                                            />
-                                            {signupForm.formState.errors.email && (
-                                                <p className="text-xs text-destructive">{signupForm.formState.errors.email.message}</p>
-                                            )}
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="message" className="text-sm font-medium">Why do you want to be a driver? (Optional)</Label>
-                                            <Input 
-                                                {...signupForm.register("message")} 
-                                                id="message" 
-                                                type="text" 
-                                                placeholder="Tell us why you'd like to join as a driver..."
-                                                className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
-                                            />
-                                            {signupForm.formState.errors.message && (
-                                                <p className="text-xs text-destructive">{signupForm.formState.errors.message.message}</p>
-                                            )}
-                                        </div>
-                                        <div className="pt-2">
-                                                                                         <Button 
-                                                type="submit" 
-                                                disabled={isSigningUp} 
-                                                className="w-full h-11 bg-brand-orange hover:bg-brand-orange-600 text-white shadow-brand hover:shadow-brand-hover transition-all font-medium"
-                                             >
-                                                {isSigningUp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                Submit Application
-                                            </Button>
-                                        </div>
-                                    </form>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-
-                        <TabsContent value="reset-password" className="space-y-4">
-                            <Card className="premium-card border-0 shadow-premium">
-                                <CardHeader className="text-center space-y-2 pb-6">
-                                    <CardTitle className="font-heading text-2xl text-foreground">Reset Password</CardTitle>
-                                    <CardDescription className="text-muted-foreground">
-                                        Enter your email address and we'll send you a password reset link.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <form onSubmit={resetPasswordForm.handleSubmit(onResetPasswordSubmit)} className="space-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="reset-email" className="text-sm font-medium">Email</Label>
-                                            <Input 
-                                                {...resetPasswordForm.register("email")} 
-                                                id="reset-email" 
-                                                type="email" 
-                                                placeholder="m@example.com"
-                                                className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
-                                            />
-                                            {resetPasswordForm.formState.errors.email && (
-                                                <p className="text-xs text-destructive">{resetPasswordForm.formState.errors.email.message}</p>
-                                            )}
-                                        </div>
-                                        <div className="pt-2">
-                                                                                         <Button 
-                                                type="submit" 
-                                                disabled={isResettingPassword} 
-                                                className="w-full h-11 bg-brand-orange hover:bg-brand-orange-600 text-white shadow-brand hover:shadow-brand-hover transition-all font-medium"
-                                             >
-                                                {isResettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                Send Reset Link
-                                            </Button>
-                                        </div>
-                                    </form>
-                                    
-                                    <div className="text-center">
-                                        <button
-                                            type="button"
-                                            onClick={() => setActiveTab('login')}
-                                            className="text-sm text-brand-orange hover:text-brand-orange/80 transition-colors font-medium"
-                                        >
-                                            Back to Login
-                                        </button>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                                        <Input
+                                            {...setPasswordForm.register("confirmPassword")}
+                                            id="confirmPassword"
+                                            type="password"
+                                            placeholder="••••••••"
+                                            className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                        />
+                                        {setPasswordForm.formState.errors.confirmPassword && (
+                                            <p className="text-xs text-destructive">
+                                                {setPasswordForm.formState.errors.confirmPassword.message}
+                                            </p>
+                                        )}
                                     </div>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-
-                        <TabsContent value="driver-setup" className="space-y-4">
-                            <Card className="premium-card border-0 shadow-premium">
-                                <CardHeader className="text-center space-y-2 pb-6">
-                                    <CardTitle className="font-heading text-2xl text-foreground">Welcome to TravelEx!</CardTitle>
-                                    <CardDescription className="text-muted-foreground">
-                                        Please set your password to complete your driver account setup.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <form onSubmit={setPasswordForm.handleSubmit(onSetPasswordSubmit)} className="space-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="new-password" className="text-sm font-medium">New Password</Label>
-                                            <Input 
-                                                {...setPasswordForm.register("password")} 
-                                                id="new-password" 
-                                                type="password"
-                                                className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
-                                            />
-                                            {setPasswordForm.formState.errors.password && (
-                                                <p className="text-xs text-destructive">{setPasswordForm.formState.errors.password.message}</p>
-                                            )}
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="confirm-password" className="text-sm font-medium">Confirm Password</Label>
-                                            <Input 
-                                                {...setPasswordForm.register("confirmPassword")} 
-                                                id="confirm-password" 
-                                                type="password"
-                                                className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
-                                            />
-                                            {setPasswordForm.formState.errors.confirmPassword && (
-                                                <p className="text-xs text-destructive">{setPasswordForm.formState.errors.confirmPassword.message}</p>
-                                            )}
-                                        </div>
-                                        <div className="pt-2 space-y-2">
-                                            <Button 
-                                                type="submit" 
-                                                disabled={isSettingPassword} 
-                                                className="w-full h-11 bg-brand-orange hover:bg-brand-orange-600 text-white shadow-brand hover:shadow-brand-hover transition-all font-medium"
-                                            >
-                                                {isSettingPassword ? (
-                                                    <>
-                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                        Setting Password...
-                                                    </>
-                                                ) : (
-                                                    "Set Password & Continue"
+                                    <div className="pt-2">
+                                        <Button
+                                            type="submit"
+                                            disabled={isSettingPassword}
+                                            className="w-full h-11 bg-brand-orange hover:bg-brand-orange-600 text-white shadow-brand hover:shadow-brand-hover transition-all font-medium"
+                                        >
+                                            {isSettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                            Set Password & Continue
+                                        </Button>
+                                    </div>
+                                </form>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="login">Login</TabsTrigger>
+                                <TabsTrigger value="signup">Driver Application</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="login">
+                                <Card className="premium-card border-0 shadow-premium">
+                                    <CardHeader className="text-center space-y-2 pb-6">
+                                        <CardTitle className="font-heading text-2xl text-foreground">Driver Login</CardTitle>
+                                        <CardDescription className="text-muted-foreground">
+                                            Enter your credentials to access your driver dashboard.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="email">Email</Label>
+                                                <Input
+                                                    {...loginForm.register("email")}
+                                                    id="email"
+                                                    type="email"
+                                                    placeholder="m@example.com"
+                                                    className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                                />
+                                                {loginForm.formState.errors.email && (
+                                                    <p className="text-xs text-destructive">{loginForm.formState.errors.email.message}</p>
                                                 )}
-                                            </Button>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <Label htmlFor="password">Password</Label>
+                                                    <a
+                                                        href="#"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            setActiveTab('reset-password');
+                                                        }}
+                                                        className="text-sm font-medium text-brand-orange hover:underline"
+                                                    >
+                                                        Forgot password?
+                                                    </a>
+                                                </div>
+                                                <Input
+                                                    {...loginForm.register("password")}
+                                                    id="password"
+                                                    type="password"
+                                                    className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                                />
+                                                {loginForm.formState.errors.password && (
+                                                    <p className="text-xs text-destructive">{loginForm.formState.errors.password.message}</p>
+                                                )}
+                                            </div>
+                                            <div className="pt-2">
+                                                <Button
+                                                    type="submit"
+                                                    disabled={isLoggingIn}
+                                                    className="w-full h-11 bg-brand-dark-blue hover:bg-brand-dark-blue/90 text-white shadow-lg"
+                                                >
+                                                    {isLoggingIn && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                    Sign In
+                                                </Button>
+                                            </div>
+                                        </form>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+                            <TabsContent value="signup">
+                                <Card className="premium-card border-0 shadow-premium">
+                                    <CardHeader className="text-center space-y-2 pb-6">
+                                        <CardTitle className="font-heading text-2xl text-foreground">Apply to Become a Driver</CardTitle>
+                                        <CardDescription className="text-muted-foreground">
+                                            Submit your application to become a TravelEx driver. An admin will review and contact you.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="full_name" className="text-sm font-medium">Full Name</Label>
+                                                <Input
+                                                    {...signupForm.register("full_name")}
+                                                    id="full_name"
+                                                    type="text"
+                                                    placeholder="John Doe"
+                                                    className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                                />
+                                                {signupForm.formState.errors.full_name && (
+                                                    <p className="text-xs text-destructive">{signupForm.formState.errors.full_name.message}</p>
+                                                )}
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                                                <Input
+                                                    {...signupForm.register("email")}
+                                                    id="email"
+                                                    type="email"
+                                                    placeholder="m@example.com"
+                                                    className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                                />
+                                                {signupForm.formState.errors.email && (
+                                                    <p className="text-xs text-destructive">{signupForm.formState.errors.email.message}</p>
+                                                )}
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="message" className="text-sm font-medium">Why do you want to be a driver? (Optional)</Label>
+                                                <Input
+                                                    {...signupForm.register("message")}
+                                                    id="message"
+                                                    type="text"
+                                                    placeholder="Tell us why you'd like to join as a driver..."
+                                                    className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                                />
+                                                {signupForm.formState.errors.message && (
+                                                    <p className="text-xs text-destructive">{signupForm.formState.errors.message.message}</p>
+                                                )}
+                                            </div>
+                                            <div className="pt-2">
+                                                                                             <Button
+                                                    type="submit"
+                                                    disabled={isSigningUp}
+                                                    className="w-full h-11 bg-brand-orange hover:bg-brand-orange-600 text-white shadow-brand hover:shadow-brand-hover transition-all font-medium"
+                                                 >
+                                                    {isSigningUp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                    Submit Application
+                                                </Button>
+                                            </div>
+                                        </form>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+                            <TabsContent value="reset-password">
+                                <Card className="premium-card border-0 shadow-premium">
+                                    <CardHeader className="text-center space-y-2 pb-6">
+                                        <CardTitle className="font-heading text-2xl text-foreground">Reset Password</CardTitle>
+                                        <CardDescription className="text-muted-foreground">
+                                            Enter your email and we'll send you a link to reset your password.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <form onSubmit={resetPasswordForm.handleSubmit(onResetPasswordSubmit)} className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="email">Email</Label>
+                                                <Input
+                                                    {...resetPasswordForm.register("email")}
+                                                    id="email"
+                                                    type="email"
+                                                    placeholder="m@example.com"
+                                                    className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                                />
+                                                {resetPasswordForm.formState.errors.email && (
+                                                    <p className="text-xs text-destructive">{resetPasswordForm.formState.errors.email.message}</p>
+                                                )}
+                                            </div>
+                                            <div className="pt-2">
+                                                <Button
+                                                    type="submit"
+                                                    disabled={isResettingPassword}
+                                                    className="w-full h-11 bg-brand-dark-blue hover:bg-brand-dark-blue/90 text-white"
+                                                >
+                                                    {isResettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                    Send Reset Link
+                                                </Button>
+                                            </div>
+                                        </form>
+                                        <div className="mt-4 text-center text-sm">
+                                            <a
+                                                href="#"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    setActiveTab('login');
+                                                }}
+                                                className="font-medium text-brand-orange hover:underline"
+                                            >
+                                                Back to Login
+                                            </a>
                                         </div>
-                                    </form>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                    </Tabs>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+                        </Tabs>
+                    )}
                 </div>
             </div>
         </div>
