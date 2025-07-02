@@ -33,7 +33,7 @@ import {
   VEHICLE_FEATURES,
   type CreateVehicleData,
   type UpdateVehicleData,
-} from "@/services/vehicles";
+} from "@/services/supabase/vehicles";
 import { toast } from "sonner";
 
 // Validation Schema

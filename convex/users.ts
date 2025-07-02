@@ -24,7 +24,7 @@ export const getCurrentUser = query({
   },
 });
 
-// Create user profile after auth signup
+// Create user profile after auth signup (only for admin/first user)
 export const createUserProfile = mutation({
   args: {
     fullName: v.string(),
@@ -36,6 +36,12 @@ export const createUserProfile = mutation({
     const userId = await auth.getUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    // This mutation is only for creating admin profiles (first user)
+    // Other users go through signup requests
+    if (args.role !== "admin") {
+      throw new Error("This mutation is only for admin profile creation");
+    }
+
     // Check if profile already exists
     const existingProfile = await ctx.db
       .query("profiles")
@@ -46,12 +52,18 @@ export const createUserProfile = mutation({
       throw new Error("Profile already exists");
     }
 
+    // Verify this is actually the first user
+    const allProfiles = await ctx.db.query("profiles").collect();
+    if (allProfiles.length > 0) {
+      throw new Error("Admin profile already exists. Use signup requests for additional users.");
+    }
+
     const profileId = await ctx.db.insert("profiles", {
       userId,
       fullName: args.fullName,
       email: args.email,
       phone: args.phone,
-      role: args.role || "passenger",
+      role: "admin",
       rating: 0,
     });
 
@@ -184,5 +196,13 @@ export const getProfileById = query({
   handler: async (ctx, args) => {
     const profile = await ctx.db.get(args.profileId);
     return profile;
+  },
+}); 
+
+export const isFirstUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    return users.length === 0;
   },
 }); 

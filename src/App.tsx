@@ -132,16 +132,16 @@ const Header = () => {
                 <Button variant="ghost" className="relative h-10 w-auto rounded-full px-3 py-1">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
-                      {user.profile?.avatar_url && (
-                        <AvatarImage src={user.profile.avatar_url} alt={user.profile?.full_name || 'User'} />
+                      {user.profile?.avatarUrl && (
+                        <AvatarImage src={user.profile.avatarUrl} alt={user.profile?.fullName || 'User'} />
                       )}
                       <AvatarFallback className="bg-brand-orange/10 text-brand-orange font-medium">
-                        {getUserInitials(user.profile?.full_name || 'User')}
+                        {getUserInitials(user.profile?.fullName || 'User')}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col items-start">
                       <span className="text-sm font-medium text-foreground">
-                        {user.profile?.full_name || 'User'}
+                        {user.profile?.fullName || 'User'}
                       </span>
                       <span className="text-xs text-muted-foreground capitalize">
                         {user.profile?.role || 'user'}

@@ -9,7 +9,7 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/services/supabase";
+import { supabase } from "@/services/supabase/supabase";
 
 const newDriverFormSchema = z.object({
     full_name: z.string().min(2, "Full name must be at least 2 characters"),

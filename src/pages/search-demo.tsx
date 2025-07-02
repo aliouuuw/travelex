@@ -17,7 +17,7 @@ import {
   searchTripsBySegmentWithCountry,
   type TripSearchQueryWithCountry,
   type TripSearchResult,
-} from "@/services/trip-search";
+} from "@/services/supabase/trip-search";
 import { toast } from "sonner";
 
 // Enhanced Trip Search Form Component with Country Support

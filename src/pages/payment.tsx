@@ -16,8 +16,8 @@ import {
   Package,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getStripe, getTempBooking, checkPaymentStatus, type TempBooking } from "@/services/payments";
-import { getTripForBooking } from "@/services/trip-search";
+import { getStripe, getTempBooking, checkPaymentStatus, type TempBooking } from "@/services/supabase/payments";
+import { getTripForBooking } from "@/services/supabase/trip-search";
 import { format } from "date-fns";
 
 // Payment Form Component (inside Elements provider)

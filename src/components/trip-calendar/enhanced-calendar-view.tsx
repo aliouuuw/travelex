@@ -10,7 +10,7 @@ import {
   CalendarDays,
   Grid3X3
 } from "lucide-react";
-import { type Trip } from "@/services/trips";
+import { type Trip } from "@/services/supabase/trips";
 import CalendarTile from "./droppable-calendar-tile";
 import QuickScheduleModal from "./quick-schedule-modal";
 import DaySummaryModal from "./day-summary-modal";

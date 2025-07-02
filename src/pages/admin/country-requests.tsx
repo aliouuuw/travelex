@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getCountryRequests, approveCountryRequest, rejectCountryRequest, type CountryRequest } from "@/services/countries";
+import { getCountryRequests, approveCountryRequest, rejectCountryRequest, type CountryRequest } from "@/services/supabase/countries";
 import {
   Table,
   TableBody,

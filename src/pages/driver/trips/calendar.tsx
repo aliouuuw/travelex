@@ -28,7 +28,7 @@ import {
   formatTripDuration,
   getStatusColor,
   type Trip 
-} from "@/services/trips";
+} from "@/services/supabase/trips";
 import EnhancedCalendarView from "@/components/trip-calendar/enhanced-calendar-view";
 import TripCard from "@/components/trip-calendar/trip-card";
 

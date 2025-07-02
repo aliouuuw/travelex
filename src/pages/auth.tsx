@@ -12,8 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { signIn, resetPassword, updateUserPassword } from "@/services/auth";
-import { createSignupRequest } from "@/services/signup-requests";
+import { useConvexAuth } from "@/services/convex/auth";
+import { useCreateSignupRequest } from "@/services/convex/signup-requests";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, Car, Shield, CheckCircle } from "lucide-react";
@@ -24,6 +24,7 @@ import { useEffect, useState } from "react";
 const signupFormSchema = z.object({
     full_name: z.string().min(2, "Full name must be at least 2 characters"),
     email: z.string().email(),
+    password: z.string().optional(),
     message: z.string().optional(),
 });
 
@@ -52,6 +53,8 @@ type SetPasswordFormData = z.infer<typeof setPasswordFormSchema>;
 export default function AuthPage() {
     const navigate = useNavigate();
     const { user, isLoading, isPasswordSetup } = useAuth();
+    const { signIn: convexSignIn, signUp: convexSignUp, isFirstUser, adminSignUp } = useConvexAuth();
+    const createSignupRequestMutation = useCreateSignupRequest();
     const [searchParams] = useSearchParams();
     const [activeTab, setActiveTab] = useState("login");
 
@@ -89,6 +92,7 @@ export default function AuthPage() {
         defaultValues: {
             full_name: "",
             email: "",
+            password: "",
             message: "",
         },
     });
@@ -109,24 +113,55 @@ export default function AuthPage() {
     });
 
     const { mutate: loginMutation, isPending: isLoggingIn } = useMutation({
-        mutationFn: signIn,
+        mutationFn: async (data: LoginFormData) => {
+            return await convexSignIn(data);
+        },
         onSuccess: () => {
             toast.success("Welcome back to TravelEx!");
         },
         onError: (error) => {
-            toast.error(error.message);
+            if (error.message.includes("InvalidAccountId")) {
+                toast.error("Invalid account. Please try again.");
+            } else if (error.message.includes("InvalidSecret")) {
+                toast.error("Invalid password. Please try again."); 
+            } else {
+                console.error(error);
+                toast.error("An error occurred. Please enter valid credentials and try again.");
+            }
         },
     });
 
     const { mutate: signupMutation, isPending: isSigningUp } = useMutation({
-        mutationFn: createSignupRequest,
+        mutationFn: async (data: SignupFormData) => {
+            if (isFirstUser) {
+                // First user gets to create account directly and becomes admin
+                if (!data.password || data.password.length < 8) {
+                    throw new Error("Password must be at least 8 characters for admin signup");
+                }
+                return await adminSignUp({
+                    email: data.email,
+                    password: data.password,
+                    full_name: data.full_name,
+                });
+            } else {
+                // Subsequent users submit signup requests
+                return await createSignupRequestMutation({
+                    fullName: data.full_name,
+                    email: data.email,
+                });
+            }
+        },
         onSuccess: () => {
-            toast.success("Application submitted successfully! An admin will review your request and send you an invitation if approved.");
+            if (isFirstUser) {
+                toast.success("Admin account created successfully! Welcome to TravelEx!");
+            } else {
+                toast.success("Application submitted successfully! An admin will review your request and send you an invitation if approved.");
+            }
             signupForm.reset();
         },
         onError: (error) => {
             if (error instanceof Error) {
-                if (error.message.includes("duplicate key")) {
+                if (error.message.includes("already exists")) {
                     toast.error("An application with this email already exists.");
                 } else {
                     toast.error(error.message);
@@ -136,9 +171,15 @@ export default function AuthPage() {
     });
 
     const { mutate: resetPasswordMutation, isPending: isResettingPassword } = useMutation({
-        mutationFn: resetPassword,
+        mutationFn: async (data: ResetPasswordFormData) => {
+            // TODO: Implement password reset with Convex Auth - will use data.email when implemented
+            console.log('Reset password requested for:', data.email);
+            throw new Error("Password reset not yet implemented for Convex");
+        },
         onSuccess: () => {
             toast.success("Password reset email sent! Please check your inbox.");
+            resetPasswordForm.reset();
+            setActiveTab('login');
         },
         onError: (error) => {
             toast.error(error.message);
@@ -146,7 +187,17 @@ export default function AuthPage() {
     });
 
     const { mutate: setPasswordMutation, isPending: isSettingPassword } = useMutation({
-        mutationFn: updateUserPassword,
+        mutationFn: async (data: SetPasswordFormData) => {
+            if (!user) {
+                throw new Error("No user found");
+            }
+            
+            await convexSignUp({
+                email: user.email,
+                password: data.password,
+                full_name: user.profile?.fullName || '',
+            });
+        },
         onSuccess: () => {
             toast.success("Password set successfully! Welcome to TravelEx!");
             setPasswordForm.reset();
@@ -154,8 +205,12 @@ export default function AuthPage() {
             // Clear any URL parameters and navigate
             window.history.replaceState({}, document.title, window.location.pathname);
             
-            // Navigate immediately
-            navigate("/driver/dashboard", { replace: true });
+            // Navigate based on user role
+            if (user?.profile?.role === 'driver') {
+                navigate("/driver/dashboard", { replace: true });
+            } else {
+                navigate("/dashboard", { replace: true });
+            }
         },
         onError: (error) => {
             console.error('Password update failed:', error);
@@ -173,11 +228,11 @@ export default function AuthPage() {
     };
 
     const onResetPasswordSubmit = (data: ResetPasswordFormData) => {
-        resetPasswordMutation(data.email);
+        resetPasswordMutation(data);
     };
 
     const onSetPasswordSubmit = (data: SetPasswordFormData) => {
-        setPasswordMutation(data.password);
+        setPasswordMutation(data);
     };
 
     // Set the active tab based on URL mode or password status
@@ -316,7 +371,7 @@ export default function AuthPage() {
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                             <TabsList className="grid w-full grid-cols-2">
                                 <TabsTrigger value="login">Login</TabsTrigger>
-                                <TabsTrigger value="signup">Driver Application</TabsTrigger>
+                                <TabsTrigger value="signup">{isFirstUser ? "Create Admin Account" : "Driver Application"}</TabsTrigger>
                             </TabsList>
                             <TabsContent value="login">
                                 <Card className="premium-card border-0 shadow-premium">
@@ -382,9 +437,14 @@ export default function AuthPage() {
                             <TabsContent value="signup">
                                 <Card className="premium-card border-0 shadow-premium">
                                     <CardHeader className="text-center space-y-2 pb-6">
-                                        <CardTitle className="font-heading text-2xl text-foreground">Apply to Become a Driver</CardTitle>
+                                        <CardTitle className="font-heading text-2xl text-foreground">
+                                            {isFirstUser ? "Create Admin Account" : "Apply to Become a Driver"}
+                                        </CardTitle>
                                         <CardDescription className="text-muted-foreground">
-                                            Submit your application to become a TravelEx driver. An admin will review and contact you.
+                                            {isFirstUser 
+                                                ? "As the first user, you'll become the system administrator with full access."
+                                                : "Submit your application to become a TravelEx driver. An admin will review and contact you."
+                                            }
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent className="space-y-4">
@@ -415,6 +475,24 @@ export default function AuthPage() {
                                                     <p className="text-xs text-destructive">{signupForm.formState.errors.email.message}</p>
                                                 )}
                                             </div>
+                                            {isFirstUser && (
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="signup_password" className="text-sm font-medium">Password</Label>
+                                                    <Input
+                                                        {...signupForm.register("password")}
+                                                        id="signup_password"
+                                                        type="password"
+                                                        placeholder="••••••••"
+                                                        className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                                    />
+                                                    {signupForm.formState.errors.password && (
+                                                        <p className="text-xs text-destructive">{signupForm.formState.errors.password.message}</p>
+                                                    )}
+                                                    <p className="text-xs text-muted-foreground">
+                                                        As the first user, you'll become the admin. Choose a strong password (min 8 characters).
+                                                    </p>
+                                                </div>
+                                            )}
                                             <div className="space-y-2">
                                                 <Label htmlFor="message" className="text-sm font-medium">Why do you want to be a driver? (Optional)</Label>
                                                 <Input
@@ -435,7 +513,7 @@ export default function AuthPage() {
                                                     className="w-full h-11 bg-brand-orange hover:bg-brand-orange-600 text-white shadow-brand hover:shadow-brand-hover transition-all font-medium"
                                                  >
                                                     {isSigningUp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                    Submit Application
+                                                    {isFirstUser ? "Create Admin Account" : "Submit Application"}
                                                 </Button>
                                             </div>
                                         </form>

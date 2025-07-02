@@ -27,8 +27,8 @@ import {
   type Station,
   type CityWithStations,
   type InterCityFare
-} from "@/services/route-templates";
-import { getAvailableCountries, type Country } from "@/services/countries";
+} from "@/services/supabase/route-templates";
+import { getAvailableCountries, type Country } from "@/services/supabase/countries";
 import { EnhancedCitySelector } from "@/components/shared/enhanced-city-selector";
 import { toast } from "sonner";
 

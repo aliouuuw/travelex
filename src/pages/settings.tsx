@@ -15,7 +15,7 @@ import {
   ArrowLeft 
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { updateUserPassword } from '@/services/auth';
+import { updateUserPassword } from '@/services/supabase/auth';
 import { useMutation } from '@tanstack/react-query';
 
 export default function AccountSettings() {

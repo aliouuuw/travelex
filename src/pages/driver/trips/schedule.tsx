@@ -23,10 +23,10 @@ import {
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getDriverRouteTemplates, type RouteTemplate } from "@/services/route-templates";
-import { getDriverVehicles } from "@/services/vehicles";
-import { getDriverLuggagePolicies } from "@/services/luggage-policies";
-import { createTrip, type TripFormData } from "@/services/trips";
+import { getDriverRouteTemplates, type RouteTemplate } from "@/services/supabase/route-templates";
+import { getDriverVehicles } from "@/services/supabase/vehicles";
+import { getDriverLuggagePolicies } from "@/services/supabase/luggage-policies";
+import { createTrip, type TripFormData } from "@/services/supabase/trips";
 import { toast } from "sonner";
 
 // Form validation schema

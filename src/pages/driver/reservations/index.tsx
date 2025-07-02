@@ -28,7 +28,7 @@ import {
   getDriverReservationStats, 
   updateReservationStatus,
   type Reservation, 
-} from "@/services/reservations";
+} from "@/services/supabase/reservations";
 
 // Status badge colors
 const getStatusColor = (status: string) => {

@@ -11,7 +11,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { getCitiesForCountry } from "@/services/countries";
+import { getCitiesForCountry } from "@/services/supabase/countries";
 
 interface SearchFormData {
   fromCity: string;

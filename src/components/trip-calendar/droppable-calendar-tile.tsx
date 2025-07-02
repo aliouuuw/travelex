@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { type Trip } from "@/services/trips";
+import { type Trip } from "@/services/supabase/trips";
 
 // Trip with enhanced date properties for calendar display
 interface CalendarTrip extends Trip {

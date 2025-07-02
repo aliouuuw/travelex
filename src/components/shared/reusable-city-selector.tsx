@@ -15,7 +15,7 @@ import {
   Building2 
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { getDriverCitiesAndStations, type ReusableCity, type ReusableStation } from "@/services/reusable-cities-stations";
+import { getDriverCitiesAndStations, type ReusableCity, type ReusableStation } from "@/services/supabase/reusable-cities-stations";
 
 interface ReusableCitySelectorProps {
   selectedCityName?: string;

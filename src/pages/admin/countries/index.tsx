@@ -25,7 +25,7 @@ import {
   rejectCountryRequest,
   createCountry,
   type CountryRequest
-} from "@/services/countries";
+} from "@/services/supabase/countries";
 import { toast } from "sonner";
 
 // Services are now imported from @/services/countries

@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { submitCountryRequest } from "@/services/countries";
+import { submitCountryRequest } from "@/services/supabase/countries";
 
 interface CountryRequestModalProps {
   trigger?: React.ReactNode;

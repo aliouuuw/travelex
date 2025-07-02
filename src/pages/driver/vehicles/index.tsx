@@ -29,7 +29,7 @@ import {
   isInsuranceExpiring,
   isRegistrationExpiring,
   type Vehicle
-} from "@/services/vehicles";
+} from "@/services/supabase/vehicles";
 import { toast } from "sonner";
 
 const VehicleCard = ({ vehicle }: { vehicle: Vehicle }) => {

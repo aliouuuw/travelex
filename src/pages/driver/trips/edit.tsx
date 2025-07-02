@@ -27,10 +27,10 @@ import {
   getTripById,
   updateTrip,
   type TripFormData 
-} from "@/services/trips";
-import { getDriverRouteTemplates, type RouteTemplate } from "@/services/route-templates";
-import { getDriverVehicles } from "@/services/vehicles";
-import { getDriverLuggagePolicies } from "@/services/luggage-policies";
+} from "@/services/supabase/trips";
+import { getDriverRouteTemplates, type RouteTemplate } from "@/services/supabase/route-templates";
+import { getDriverVehicles } from "@/services/supabase/vehicles";
+import { getDriverLuggagePolicies } from "@/services/supabase/luggage-policies";
 import { toast } from "sonner";
 
 const tripFormSchema = z.object({

@@ -27,7 +27,7 @@ import {
   getRoutePathString,
   type TripSearchQueryWithCountry,
   type TripSearchResult,
-} from "@/services/trip-search";
+} from "@/services/supabase/trip-search";
 import TravelExBookingFlow from "@/components/TravelExBookingFlow";
 
 // Trip Search functionality is now handled by TravelExBookingFlow component

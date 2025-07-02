@@ -20,9 +20,9 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { getTripForBooking } from "@/services/trip-search";
-import { createPaymentIntent } from "@/services/payments";
-import type { SeatMap } from "@/services/vehicles";
+import { getTripForBooking } from "@/services/supabase/trip-search";
+import { createPaymentIntent } from "@/services/supabase/payments";
+import type { SeatMap } from "@/services/supabase/vehicles";
 
 interface BookingFormData {
   pickupStationId: string;

@@ -13,7 +13,7 @@ import {
   updateLuggagePolicy,
   type LuggagePolicy,
 
-} from "@/services/luggage-policies";
+} from "@/services/supabase/luggage-policies";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 

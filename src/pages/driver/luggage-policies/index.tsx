@@ -10,7 +10,7 @@ import {
   setDefaultLuggagePolicy,
   formatLuggagePolicy,
   type LuggagePolicy
-} from "@/services/luggage-policies";
+} from "@/services/supabase/luggage-policies.ts";
 import {
   Table,
   TableBody,

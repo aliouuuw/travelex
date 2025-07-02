@@ -16,7 +16,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getAvailableCountries, getAvailableCitiesByCountry, createCity, type Country, type CityWithCountry } from "@/services/countries";
+import { getAvailableCountries, getAvailableCitiesByCountry, createCity, type Country, type CityWithCountry } from "@/services/supabase/countries";
 import { CountryRequestModal } from "./country-request-modal";
 import { toast } from "sonner";
 

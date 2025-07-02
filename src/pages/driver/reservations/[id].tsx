@@ -25,7 +25,7 @@ import { toast } from "sonner";
 import { 
   getReservationById, 
   updateReservationStatus,
-} from "@/services/reservations";
+} from "@/services/supabase/reservations";
 
 // Status badge colors
 const getStatusColor = (status: string) => {

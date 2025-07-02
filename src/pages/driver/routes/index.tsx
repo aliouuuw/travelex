@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Route, Clock, DollarSign, MapPin, ArrowRight, Edit, Users, Loader2, Trash2, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getDriverRouteTemplates, deleteRouteTemplate, type RouteTemplate } from "@/services/route-templates";
+import { getDriverRouteTemplates, deleteRouteTemplate, type RouteTemplate } from "@/services/supabase/route-templates";
 import { toast } from "sonner";
 
 // Types are now imported from the service layer

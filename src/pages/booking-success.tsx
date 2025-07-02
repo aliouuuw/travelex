@@ -18,8 +18,8 @@ import {
   Home,
   RefreshCw
 } from "lucide-react";
-import { getTempBooking, checkPaymentStatus } from "@/services/payments";
-import { getTripForBooking } from "@/services/trip-search";
+import { getTempBooking, checkPaymentStatus } from "@/services/supabase/payments";
+import { getTripForBooking } from "@/services/supabase/trip-search";
 import { format } from "date-fns";
 
 export default function BookingSuccessPage() {

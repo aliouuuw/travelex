@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { getDrivers, type Driver } from "@/services/users";
+import { getDrivers, type Driver } from "@/services/supabase/users";
 import {
   Table,
   TableBody,
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Loader2, Mail, Plus, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { resetPassword } from "@/services/auth";
+import { resetPassword } from "@/services/supabase/auth";
 import { toast } from "sonner";
 
 const DriverRow = ({ driver }: { driver: Driver }) => {

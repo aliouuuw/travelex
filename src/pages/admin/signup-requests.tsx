@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getSignupRequests, updateSignupRequestStatus, type SignupRequest } from "@/services/signup-requests";
+import { getSignupRequests, updateSignupRequestStatus, type SignupRequest } from "@/services/supabase/signup-requests";
 import {
   Table,
   TableBody,
@@ -14,7 +14,7 @@ import { Loader2, Check, X, UserCheck, Clock, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
-import { supabase } from "@/services/supabase";
+import { supabase } from "@/services/supabase/supabase";
 
 // Function to invite approved users
 const inviteDriver = async (email: string, fullName: string) => {
