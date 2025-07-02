@@ -14,10 +14,12 @@ This document outlines the comprehensive migration plan from Supabase to Convex 
 - [x] Convex client and provider setup
 
 ### 🔄 **Phase 2: Frontend Auth Integration (IN PROGRESS)**
-- [ ] Update main app to use Convex providers
-- [ ] Migrate auth context to use Convex
-- [ ] Update auth components and pages
-- [ ] Test authentication flow
+- [x] Update main app to use Convex providers
+- [x] Migrate auth context to use Convex
+- [] Update auth components and pages (in progress)
+  - [x] Admin sign up & in
+  - [] Driver sign up request & sign in
+- [] Test authentication flow (in progress)
 
 ### ⏳ **Phase 3: Core Business Logic Migration**
 - [ ] Countries and cities management
