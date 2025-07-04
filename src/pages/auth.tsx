@@ -13,18 +13,25 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useConvexAuth } from "@/services/convex/auth";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { useCreateSignupRequest } from "@/services/convex/signup-requests";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Car, Shield, CheckCircle } from "lucide-react";
+import { Loader2, Car, Shield, CheckCircle, Eye, EyeOff, Check, X } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect, useState } from "react";
 
+const passwordSchema = z.string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character");
+
 const signupFormSchema = z.object({
     full_name: z.string().min(2, "Full name must be at least 2 characters"),
     email: z.string().email(),
-    password: z.string().optional(),
+    password: passwordSchema.optional(),
     message: z.string().optional(),
 });
 
@@ -33,13 +40,22 @@ const loginFormSchema = z.object({
     password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
-const resetPasswordFormSchema = z.object({
+const resetRequestFormSchema = z.object({
     email: z.string().email(),
 });
 
+const resetCodeFormSchema = z.object({
+    code: z.string().min(1, "Code is required"),
+    newPassword: passwordSchema,
+    confirmPassword: passwordSchema,
+}).refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+});
+
 const setPasswordFormSchema = z.object({
-    password: z.string().min(8, "Password must be at least 8 characters"),
-    confirmPassword: z.string().min(8, "Password must be at least 8 characters"),
+    password: passwordSchema,
+    confirmPassword: passwordSchema,
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
@@ -47,16 +63,95 @@ const setPasswordFormSchema = z.object({
 
 type SignupFormData = z.infer<typeof signupFormSchema>;
 type LoginFormData = z.infer<typeof loginFormSchema>;
-type ResetPasswordFormData = z.infer<typeof resetPasswordFormSchema>;
+type ResetRequestFormData = z.infer<typeof resetRequestFormSchema>;
+type ResetCodeFormData = z.infer<typeof resetCodeFormSchema>;
 type SetPasswordFormData = z.infer<typeof setPasswordFormSchema>;
+
+// Password Input Component with show/hide functionality
+const PasswordInput = ({ 
+    register, 
+    name, 
+    placeholder, 
+    error, 
+    showPassword, 
+    setShowPassword,
+    ...props 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+}: any) => (
+    <div className="relative">
+        <Input
+            {...register(name)}
+            type={showPassword ? "text" : "password"}
+            placeholder={placeholder}
+            className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20 pr-10"
+            {...props}
+        />
+        <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+        >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+        {error && (
+            <p className="text-xs text-destructive mt-1">{error}</p>
+        )}
+    </div>
+);
+
+// Password Match Indicator Component
+const PasswordMatchIndicator = ({ password, confirmPassword }: { password: string; confirmPassword: string }) => {
+    if (!password || !confirmPassword) return null;
+    
+    const matches = password === confirmPassword;
+    return (
+        <div className={`flex items-center gap-2 text-xs mt-1 ${matches ? 'text-green-600' : 'text-red-500'}`}>
+            {matches ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+            <span>{matches ? 'Passwords match' : 'Passwords do not match'}</span>
+        </div>
+    );
+};
+
+// Password Requirements Indicator Component
+const PasswordRequirements = ({ password }: { password: string }) => {
+    if (!password) return null;
+    
+    const requirements = [
+        { test: password.length >= 8, text: 'At least 8 characters' },
+        { test: /[A-Z]/.test(password), text: 'One uppercase letter' },
+        { test: /[0-9]/.test(password), text: 'One number' },
+        { test: /[^A-Za-z0-9]/.test(password), text: 'One special character' },
+    ];
+    
+    return (
+        <div className="text-xs mt-1 space-y-1">
+            {requirements.map((req, index) => (
+                <div key={index} className={`flex items-center gap-2 ${req.test ? 'text-green-600' : 'text-gray-400'}`}>
+                    {req.test ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                    <span>{req.text}</span>
+                </div>
+            ))}
+        </div>
+    );
+};
 
 export default function AuthPage() {
     const navigate = useNavigate();
     const { user, isLoading, isPasswordSetup } = useAuth();
     const { signIn: convexSignIn, signUp: convexSignUp, isFirstUser, adminSignUp } = useConvexAuth();
+    const { signIn } = useAuthActions();
     const createSignupRequestMutation = useCreateSignupRequest();
     const [searchParams] = useSearchParams();
     const [activeTab, setActiveTab] = useState("login");
+    const [resetStep, setResetStep] = useState<"forgot" | { email: string }>("forgot");
+    
+    // Password visibility states
+    const [showLoginPassword, setShowLoginPassword] = useState(false);
+    const [showSignupPassword, setShowSignupPassword] = useState(false);
+    const [showSetPassword, setShowSetPassword] = useState(false);
+    const [showSetConfirmPassword, setShowSetConfirmPassword] = useState(false);
+    const [showResetNewPassword, setShowResetNewPassword] = useState(false);
+    const [showResetConfirmPassword, setShowResetConfirmPassword] = useState(false);
 
     useEffect(() => {
         if (user && !isLoading) {
@@ -97,10 +192,19 @@ export default function AuthPage() {
         },
     });
 
-    const resetPasswordForm = useForm<ResetPasswordFormData>({
-        resolver: zodResolver(resetPasswordFormSchema),
+    const resetRequestForm = useForm<ResetRequestFormData>({
+        resolver: zodResolver(resetRequestFormSchema),
         defaultValues: {
             email: "",
+        },
+    });
+
+    const resetCodeForm = useForm<ResetCodeFormData>({
+        resolver: zodResolver(resetCodeFormSchema),
+        defaultValues: {
+            code: "",
+            newPassword: "",
+            confirmPassword: "",
         },
     });
 
@@ -135,8 +239,13 @@ export default function AuthPage() {
         mutationFn: async (data: SignupFormData) => {
             if (isFirstUser) {
                 // First user gets to create account directly and becomes admin
-                if (!data.password || data.password.length < 8) {
-                    throw new Error("Password must be at least 8 characters for admin signup");
+                if (!data.password) {
+                    throw new Error("Password is required for admin signup");
+                }
+                // Validate password strength
+                const passwordValidation = passwordSchema.safeParse(data.password);
+                if (!passwordValidation.success) {
+                    throw new Error(passwordValidation.error.errors[0].message);
                 }
                 return await adminSignUp({
                     email: data.email,
@@ -170,33 +279,70 @@ export default function AuthPage() {
         },
     });
 
-    const { mutate: resetPasswordMutation, isPending: isResettingPassword } = useMutation({
-        mutationFn: async (data: ResetPasswordFormData) => {
-            // TODO: Implement password reset with Convex Auth - will use data.email when implemented
-            console.log('Reset password requested for:', data.email);
-            throw new Error("Password reset not yet implemented for Convex");
+    // Password reset step 1: Request reset code
+    const { mutate: resetRequestMutation, isPending: isRequestingReset } = useMutation({
+        mutationFn: async (data: ResetRequestFormData) => {
+            const formData = new FormData();
+            formData.append("email", data.email);
+            formData.append("flow", "reset");
+            await signIn("password", formData);
+        },
+        onSuccess: (_, variables) => {
+            toast.success("Reset code sent! Please check your email.");
+            setResetStep({ email: variables.email });
+            resetRequestForm.reset();
+        },
+        onError: (error) => {
+            if (error.message.includes("InvalidAccountId")) {
+                toast.error("Invalid account. Please try again.");
+            } else {
+                console.error(error);
+                toast.error("An error occurred. Please enter valid credentials and try again.");
+            } 
+        },
+    });
+
+    // Password reset step 2: Verify code and set new password
+    const { mutate: resetCodeMutation, isPending: isResettingPassword } = useMutation({
+        mutationFn: async (data: ResetCodeFormData) => {
+            if (resetStep === "forgot") throw new Error("Invalid reset state");
+            
+            const formData = new FormData();
+            formData.append("email", resetStep.email);
+            formData.append("code", data.code);
+            formData.append("newPassword", data.newPassword);
+            formData.append("flow", "reset-verification");
+            await signIn("password", formData);
         },
         onSuccess: () => {
-            toast.success("Password reset email sent! Please check your inbox.");
-            resetPasswordForm.reset();
+            toast.success("Password reset successfully! You can now log in with your new password.");
+            setResetStep("forgot");
+            resetCodeForm.reset();
             setActiveTab('login');
         },
         onError: (error) => {
-            toast.error(error.message);
+            if (error.message.includes("InvalidAccountId")) {
+                toast.error("Invalid account. Please try again.");
+            } else {
+                console.error(error);
+                toast.error("An error occurred. Please enter valid credentials and try again.");
+            }
         },
     });
 
     const { mutate: setPasswordMutation, isPending: isSettingPassword } = useMutation({
         mutationFn: async (data: SetPasswordFormData) => {
-            if (!user) {
+            if (user) {
+                // Regular password setup for invited users
+                await convexSignUp({
+                    email: user.email,
+                    password: data.password,
+                    full_name: user.profile?.fullName || '',
+                });
+                return null;
+            } else {
                 throw new Error("No user found");
             }
-            
-            await convexSignUp({
-                email: user.email,
-                password: data.password,
-                full_name: user.profile?.fullName || '',
-            });
         },
         onSuccess: () => {
             toast.success("Password set successfully! Welcome to TravelEx!");
@@ -214,7 +360,12 @@ export default function AuthPage() {
         },
         onError: (error) => {
             console.error('Password update failed:', error);
-            toast.error(`Failed to update password: ${error.message}`);
+            if (error.message.includes("InvalidAccountId")) {
+                toast.error("Invalid account. Please try again.");
+            } else {
+                console.error(error);
+                toast.error("An error occurred. Please enter valid credentials and try again.");
+            }
         },
         retry: false,
     });
@@ -227,8 +378,12 @@ export default function AuthPage() {
         signupMutation(data);
     };
 
-    const onResetPasswordSubmit = (data: ResetPasswordFormData) => {
-        resetPasswordMutation(data);
+    const onResetRequestSubmit = (data: ResetRequestFormData) => {
+        resetRequestMutation(data);
+    };
+
+    const onResetCodeSubmit = (data: ResetCodeFormData) => {
+        resetCodeMutation(data);
     };
 
     const onSetPasswordSubmit = (data: SetPasswordFormData) => {
@@ -238,12 +393,14 @@ export default function AuthPage() {
     // Set the active tab based on URL mode or password status
     useEffect(() => {
         const mode = searchParams.get('mode');
-        if (mode === 'reset-password') {
-            setActiveTab('reset-password');
+        const token = searchParams.get('token');
+        if (mode === 'invitation' && token) {
+            // Redirect to invitation page
+            navigate(`/invitation?token=${token}`);
         } else if (user && !isPasswordSetup) {
             setActiveTab('driver-setup');
         }
-    }, [searchParams, user, isPasswordSetup]);
+    }, [searchParams, user, isPasswordSetup, navigate]);
 
     // Determine which view to show
     const showPasswordSetup = user && !isPasswordSetup;
@@ -326,42 +483,42 @@ export default function AuthPage() {
                                 <form onSubmit={setPasswordForm.handleSubmit(onSetPasswordSubmit)} className="space-y-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="password">New Password</Label>
-                                        <Input
-                                            {...setPasswordForm.register("password")}
-                                            id="password"
-                                            type="password"
+                                        <PasswordInput
+                                            register={setPasswordForm.register}
+                                            name="password"
                                             placeholder="••••••••"
-                                            className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                            autoComplete="current-password"
+                                            error={setPasswordForm.formState.errors.password?.message}
+                                            showPassword={showSetPassword}
+                                            setShowPassword={setShowSetPassword}
+                                            id="password"
                                         />
-                                        {setPasswordForm.formState.errors.password && (
-                                            <p className="text-xs text-destructive">
-                                                {setPasswordForm.formState.errors.password.message}
-                                            </p>
-                                        )}
+                                        <PasswordRequirements password={setPasswordForm.watch("password") || ""} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                                        <Input
-                                            {...setPasswordForm.register("confirmPassword")}
-                                            id="confirmPassword"
-                                            type="password"
+                                        <PasswordInput
+                                            register={setPasswordForm.register}
+                                            name="confirmPassword"
                                             placeholder="••••••••"
-                                            className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                            error={setPasswordForm.formState.errors.confirmPassword?.message}
+                                            showPassword={showSetConfirmPassword}
+                                            setShowPassword={setShowSetConfirmPassword}
+                                            id="confirmPassword"
                                         />
-                                        {setPasswordForm.formState.errors.confirmPassword && (
-                                            <p className="text-xs text-destructive">
-                                                {setPasswordForm.formState.errors.confirmPassword.message}
-                                            </p>
-                                        )}
+                                        <PasswordMatchIndicator 
+                                            password={setPasswordForm.watch("password") || ""} 
+                                            confirmPassword={setPasswordForm.watch("confirmPassword") || ""} 
+                                        />
                                     </div>
                                     <div className="pt-2">
-                                        <Button
-                                            type="submit"
-                                            disabled={isSettingPassword}
+                                        <Button 
+                                            type="submit" 
                                             className="w-full h-11 bg-brand-orange hover:bg-brand-orange-600 text-white shadow-brand hover:shadow-brand-hover transition-all font-medium"
+                                            disabled={isSettingPassword}
                                         >
                                             {isSettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                            Set Password & Continue
+                                            Set Password
                                         </Button>
                                     </div>
                                 </form>
@@ -376,9 +533,9 @@ export default function AuthPage() {
                             <TabsContent value="login">
                                 <Card className="premium-card border-0 shadow-premium">
                                     <CardHeader className="text-center space-y-2 pb-6">
-                                        <CardTitle className="font-heading text-2xl text-foreground">Driver Login</CardTitle>
+                                        <CardTitle className="font-heading text-2xl text-foreground">Welcome to TravelEx</CardTitle>
                                         <CardDescription className="text-muted-foreground">
-                                            Enter your credentials to access your driver dashboard.
+                                            Enter your credentials to access your account.
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent>
@@ -389,6 +546,7 @@ export default function AuthPage() {
                                                     {...loginForm.register("email")}
                                                     id="email"
                                                     type="email"
+                                                    autoComplete="email"
                                                     placeholder="m@example.com"
                                                     className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
                                                 />
@@ -410,15 +568,16 @@ export default function AuthPage() {
                                                         Forgot password?
                                                     </a>
                                                 </div>
-                                                <Input
-                                                    {...loginForm.register("password")}
+                                                <PasswordInput
+                                                    register={loginForm.register}
+                                                    name="password"
+                                                    placeholder="••••••••"
+                                                    autoComplete="current-password"
+                                                    error={loginForm.formState.errors.password?.message}
+                                                    showPassword={showLoginPassword}
+                                                    setShowPassword={setShowLoginPassword}
                                                     id="password"
-                                                    type="password"
-                                                    className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
                                                 />
-                                                {loginForm.formState.errors.password && (
-                                                    <p className="text-xs text-destructive">{loginForm.formState.errors.password.message}</p>
-                                                )}
                                             </div>
                                             <div className="pt-2">
                                                 <Button
@@ -456,6 +615,7 @@ export default function AuthPage() {
                                                     id="full_name"
                                                     type="text"
                                                     placeholder="John Doe"
+                                                    autoComplete="name"
                                                     className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
                                                 />
                                                 {signupForm.formState.errors.full_name && (
@@ -468,6 +628,7 @@ export default function AuthPage() {
                                                     {...signupForm.register("email")}
                                                     id="email"
                                                     type="email"
+                                                    autoComplete="email"
                                                     placeholder="m@example.com"
                                                     className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
                                                 />
@@ -478,18 +639,18 @@ export default function AuthPage() {
                                             {isFirstUser && (
                                                 <div className="space-y-2">
                                                     <Label htmlFor="signup_password" className="text-sm font-medium">Password</Label>
-                                                    <Input
-                                                        {...signupForm.register("password")}
-                                                        id="signup_password"
-                                                        type="password"
+                                                    <PasswordInput
+                                                        register={signupForm.register}
+                                                        name="password"
                                                         placeholder="••••••••"
-                                                        className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                                        error={signupForm.formState.errors.password?.message}
+                                                        showPassword={showSignupPassword}
+                                                        setShowPassword={setShowSignupPassword}
+                                                        id="signup_password"
                                                     />
-                                                    {signupForm.formState.errors.password && (
-                                                        <p className="text-xs text-destructive">{signupForm.formState.errors.password.message}</p>
-                                                    )}
-                                                    <p className="text-xs text-muted-foreground">
-                                                        As the first user, you'll become the admin. Choose a strong password (min 8 characters).
+                                                    <PasswordRequirements password={signupForm.watch("password") || ""} />
+                                                    <p className="text-xs text-muted-foreground mt-2">
+                                                        As the first user, you'll become the admin.
                                                     </p>
                                                 </div>
                                             )}
@@ -507,11 +668,11 @@ export default function AuthPage() {
                                                 )}
                                             </div>
                                             <div className="pt-2">
-                                                                                             <Button
+                                                <Button
                                                     type="submit"
                                                     disabled={isSigningUp}
                                                     className="w-full h-11 bg-brand-orange hover:bg-brand-orange-600 text-white shadow-brand hover:shadow-brand-hover transition-all font-medium"
-                                                 >
+                                                >
                                                     {isSigningUp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                                     {isFirstUser ? "Create Admin Account" : "Submit Application"}
                                                 </Button>
@@ -523,48 +684,126 @@ export default function AuthPage() {
                             <TabsContent value="reset-password">
                                 <Card className="premium-card border-0 shadow-premium">
                                     <CardHeader className="text-center space-y-2 pb-6">
-                                        <CardTitle className="font-heading text-2xl text-foreground">Reset Password</CardTitle>
+                                        <CardTitle className="font-heading text-2xl text-foreground">
+                                            {resetStep === "forgot" ? "Reset Password" : "Enter Reset Code"}
+                                        </CardTitle>
                                         <CardDescription className="text-muted-foreground">
-                                            Enter your email and we'll send you a link to reset your password.
+                                            {resetStep === "forgot" 
+                                                ? "Enter your email and we'll send you a reset code."
+                                                : `Enter the code sent to ${resetStep.email} and your new password.`
+                                            }
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent>
-                                        <form onSubmit={resetPasswordForm.handleSubmit(onResetPasswordSubmit)} className="space-y-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="email">Email</Label>
-                                                <Input
-                                                    {...resetPasswordForm.register("email")}
-                                                    id="email"
-                                                    type="email"
-                                                    placeholder="m@example.com"
-                                                    className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
-                                                />
-                                                {resetPasswordForm.formState.errors.email && (
-                                                    <p className="text-xs text-destructive">{resetPasswordForm.formState.errors.email.message}</p>
-                                                )}
-                                            </div>
-                                            <div className="pt-2">
-                                                <Button
-                                                    type="submit"
-                                                    disabled={isResettingPassword}
-                                                    className="w-full h-11 bg-brand-dark-blue hover:bg-brand-dark-blue/90 text-white"
-                                                >
-                                                    {isResettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                    Send Reset Link
-                                                </Button>
-                                            </div>
-                                        </form>
+                                        {resetStep === "forgot" ? (
+                                            <form onSubmit={resetRequestForm.handleSubmit(onResetRequestSubmit)} className="space-y-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="reset_email">Email</Label>
+                                                    <Input
+                                                        {...resetRequestForm.register("email")}
+                                                        id="reset_email"
+                                                        type="email"
+                                                        autoComplete="email"
+                                                        placeholder="m@example.com"
+                                                        className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                                    />
+                                                    {resetRequestForm.formState.errors.email && (
+                                                        <p className="text-xs text-destructive">{resetRequestForm.formState.errors.email.message}</p>
+                                                    )}
+                                                </div>
+                                                <div className="pt-2">
+                                                    <Button
+                                                        type="submit"
+                                                        disabled={isRequestingReset}
+                                                        className="w-full h-11 bg-brand-dark-blue hover:bg-brand-dark-blue/90 text-white"
+                                                    >
+                                                        {isRequestingReset && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                        Send Reset Code
+                                                    </Button>
+                                                </div>
+                                            </form>
+                                        ) : (
+                                            <form onSubmit={resetCodeForm.handleSubmit(onResetCodeSubmit)} className="space-y-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="reset_code">Reset Code</Label>
+                                                    <Input
+                                                        {...resetCodeForm.register("code")}
+                                                        id="reset_code"
+                                                        type="text"
+                                                        placeholder="Enter 6-digit code"
+                                                        className="h-11 border-border/60 focus:border-brand-orange focus:ring-brand-orange/20"
+                                                    />
+                                                    {resetCodeForm.formState.errors.code && (
+                                                        <p className="text-xs text-destructive">{resetCodeForm.formState.errors.code.message}</p>
+                                                    )}
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="new_password">New Password</Label>
+                                                    <PasswordInput
+                                                        register={resetCodeForm.register}
+                                                        name="newPassword"
+                                                        placeholder="••••••••"
+                                                        autoComplete="new-password"
+                                                        error={resetCodeForm.formState.errors.newPassword?.message}
+                                                        showPassword={showResetNewPassword}
+                                                        setShowPassword={setShowResetNewPassword}
+                                                        id="new_password"
+                                                    />
+                                                    <PasswordRequirements password={resetCodeForm.watch("newPassword") || ""} />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="confirm_new_password">Confirm New Password</Label>
+                                                    <PasswordInput
+                                                        register={resetCodeForm.register}
+                                                        name="confirmPassword"
+                                                        placeholder="••••••••"
+                                                        autoComplete="new-password"
+                                                        error={resetCodeForm.formState.errors.confirmPassword?.message}
+                                                        showPassword={showResetConfirmPassword}
+                                                        setShowPassword={setShowResetConfirmPassword}
+                                                        id="confirm_new_password"
+                                                    />
+                                                    <PasswordMatchIndicator 
+                                                        password={resetCodeForm.watch("newPassword") || ""} 
+                                                        confirmPassword={resetCodeForm.watch("confirmPassword") || ""} 
+                                                    />
+                                                </div>
+                                                <div className="pt-2">
+                                                    <Button
+                                                        type="submit"
+                                                        disabled={isResettingPassword}
+                                                        className="w-full h-11 bg-brand-dark-blue hover:bg-brand-dark-blue/90 text-white"
+                                                    >
+                                                        {isResettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                        Reset Password
+                                                    </Button>
+                                                </div>
+                                            </form>
+                                        )}
                                         <div className="mt-4 text-center text-sm">
-                                            <a
-                                                href="#"
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    setActiveTab('login');
-                                                }}
-                                                className="font-medium text-brand-orange hover:underline"
-                                            >
-                                                Back to Login
-                                            </a>
+                                            {resetStep === "forgot" ? (
+                                                <a
+                                                    href="#"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        setActiveTab('login');
+                                                    }}
+                                                    className="font-medium text-brand-orange hover:underline"
+                                                >
+                                                    Back to Login
+                                                </a>
+                                            ) : (
+                                                <a
+                                                    href="#"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        setResetStep("forgot");
+                                                    }}
+                                                    className="font-medium text-brand-orange hover:underline"
+                                                >
+                                                    Try different email
+                                                </a>
+                                            )}
                                         </div>
                                     </CardContent>
                                 </Card>

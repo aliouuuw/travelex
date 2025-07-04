@@ -240,6 +240,37 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_reviewer", ["reviewedBy"]),
 
+  // Invitation Tokens - For driver signup invitations
+  invitationTokens: defineTable({
+    email: v.string(),
+    token: v.string(),
+    fullName: v.string(),
+    role: v.union(v.literal("driver"), v.literal("admin")),
+    signupRequestId: v.optional(v.id("signupRequests")),
+    createdBy: v.id("profiles"), // Admin who sent the invitation
+    expiresAt: v.number(), // Unix timestamp
+    usedAt: v.optional(v.number()), // When the token was used
+    isUsed: v.boolean(),
+  })
+    .index("by_token", ["token"])
+    .index("by_email", ["email"])
+    .index("by_expires_at", ["expiresAt"])
+    .index("by_signup_request", ["signupRequestId"]),
+
+  // Password Reset Tokens
+  passwordResetTokens: defineTable({
+    email: v.string(),
+    token: v.string(),
+    userId: v.id("users"),
+    expiresAt: v.number(), // Unix timestamp
+    usedAt: v.optional(v.number()),
+    isUsed: v.boolean(),
+  })
+    .index("by_token", ["token"])
+    .index("by_email", ["email"])
+    .index("by_user", ["userId"])
+    .index("by_expires_at", ["expiresAt"]),
+
   // Driver Ratings
   ratings: defineTable({
     tripId: v.id("trips"),

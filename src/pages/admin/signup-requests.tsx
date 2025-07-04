@@ -1,7 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getSignupRequests, updateSignupRequestStatus, type SignupRequest } from "@/services/supabase/signup-requests";
 import {
   Table,
   TableBody,
@@ -13,57 +11,70 @@ import {
 import { Loader2, Check, X, UserCheck, Clock, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import type { Id } from "convex/_generated/dataModel";
+import { useMutation } from "@tanstack/react-query";
 
-import { supabase } from "@/services/supabase/supabase";
+import { 
+  useGetSignupRequests, 
+  useApproveAndInvite, 
+  useUpdateSignupRequestStatus 
+} from "@/services/convex/signup-requests";
+import { useAuth } from "@/hooks/use-auth";
 
-// Function to invite approved users
-const inviteDriver = async (email: string, fullName: string) => {
-  const { data, error } = await supabase.functions.invoke('invite-driver', {
-    body: {
-      email,
-      full_name: fullName,
+interface SignupRequest {
+  _id: string;
+  email: string;
+  fullName: string;
+  status: "pending" | "approved" | "rejected";
+  _creationTime: number;
+  reviewedAt?: number;
+  invitationSent?: boolean;
+}
+
+const SignupRequestRow = ({ request }: { request: SignupRequest }) => {
+  const approveAndInviteHook = useApproveAndInvite();
+  const updateStatusHook = useUpdateSignupRequestStatus();
+
+  const { mutate: approveAndInvite, isPending: isApproving } = useMutation({
+    mutationFn: async (data: { requestId: Id<"signupRequests">; role: "admin" | "driver" }) => {
+      return await approveAndInviteHook(data);
+    },
+    onSuccess: () => {
+      toast.success(`${request.fullName} has been approved and invited!`);
+      // Since this is using Convex, the useGetSignupRequests hook should automatically update
+    },
+    onError: (error) => {
+      console.error("Approval failed:", error);
+      toast.error(`Failed to approve and invite: ${error instanceof Error ? error.message : "Unknown error"}`);
     },
   });
 
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data;
-};
-
-const SignupRequestRow = ({ request }: { request: SignupRequest }) => {
-  const queryClient = useQueryClient();
-
-  const { mutate: updateStatus, isPending: isUpdating } = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'approved' | 'rejected' }) =>
-      updateSignupRequestStatus(id, status),
-    onSuccess: async (updatedRequest) => {
-      queryClient.invalidateQueries({ queryKey: ["signup-requests"] });
-      
-      if (updatedRequest.status === 'approved') {
-        try {
-          await inviteDriver(updatedRequest.email, updatedRequest.full_name);
-          toast.success(`${updatedRequest.full_name} has been approved and invited!`);
-        } catch (error) {
-          console.error(error);
-          toast.error('Request approved but failed to send invitation. Please send invitation manually.');
-        }
-      } else {
-        toast.success(`Request from ${updatedRequest.full_name} has been rejected.`);
-      }
+  const { mutate: updateStatus, isPending: isRejecting } = useMutation({
+    mutationFn: async (data: { requestId: Id<"signupRequests">; status: "rejected" }) => {
+      return await updateStatusHook(data);
+    },
+    onSuccess: () => {
+      toast.success(`Request from ${request.fullName} has been rejected.`);
+      // Since this is using Convex, the useGetSignupRequests hook should automatically update
     },
     onError: (error) => {
-      toast.error(`Failed to update request: ${error.message}`);
+      console.error("Rejection failed:", error);
+      toast.error(`Failed to reject request: ${error instanceof Error ? error.message : "Unknown error"}`);
     },
   });
 
   const handleApprove = () => {
-    updateStatus({ id: request.id, status: 'approved' });
+    approveAndInvite({
+      requestId: request._id as Id<"signupRequests">,
+      role: "driver", // Default to driver role
+    });
   };
 
   const handleReject = () => {
-    updateStatus({ id: request.id, status: 'rejected' });
+    updateStatus({
+      requestId: request._id as Id<"signupRequests">,
+      status: "rejected",
+    });
   };
 
   const getStatusBadge = () => {
@@ -80,6 +91,7 @@ const SignupRequestRow = ({ request }: { request: SignupRequest }) => {
           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
             <Check className="w-3 h-3 mr-1" />
             Approved
+            {request.invitationSent && <span className="ml-1">📧</span>}
           </Badge>
         );
       case 'rejected':
@@ -94,19 +106,10 @@ const SignupRequestRow = ({ request }: { request: SignupRequest }) => {
 
   return (
     <TableRow className="hover:bg-muted/30 transition-colors">
-      <TableCell className="font-medium">{request.full_name}</TableCell>
+      <TableCell className="font-medium">{request.fullName}</TableCell>
       <TableCell className="text-muted-foreground">{request.email}</TableCell>
-      <TableCell className="max-w-md">
-        {request.message ? (
-          <div className="text-sm">
-            <p className="line-clamp-2">{request.message}</p>
-          </div>
-        ) : (
-          <span className="text-muted-foreground italic">No message</span>
-        )}
-      </TableCell>
       <TableCell className="text-muted-foreground">
-        {new Date(request.created_at).toLocaleDateString()}
+        {new Date(request._creationTime).toLocaleDateString()}
       </TableCell>
       <TableCell>{getStatusBadge()}</TableCell>
       <TableCell>
@@ -116,10 +119,10 @@ const SignupRequestRow = ({ request }: { request: SignupRequest }) => {
               variant="outline"
               size="sm"
               onClick={handleApprove}
-              disabled={isUpdating}
+              disabled={isApproving}
               className="text-green-600 hover:text-green-700 hover:bg-green-50 hover:border-green-200 transition-all"
             >
-              {isUpdating ? (
+              {isApproving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Check className="h-4 w-4" />
@@ -129,16 +132,20 @@ const SignupRequestRow = ({ request }: { request: SignupRequest }) => {
               variant="outline"
               size="sm"
               onClick={handleReject}
-              disabled={isUpdating}
+              disabled={isRejecting}
               className="text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200 transition-all"
             >
-              <X className="h-4 w-4" />
+              {isRejecting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <X className="h-4 w-4" />
+              )}
             </Button>
           </div>
         )}
         {request.status !== 'pending' && (
           <span className="text-muted-foreground text-sm">
-            {request.reviewed_at ? new Date(request.reviewed_at).toLocaleDateString() : ''}
+            {request.reviewedAt ? new Date(request.reviewedAt).toLocaleDateString() : ''}
           </span>
         )}
       </TableCell>
@@ -147,14 +154,21 @@ const SignupRequestRow = ({ request }: { request: SignupRequest }) => {
 };
 
 export default function SignupRequestsPage() {
-  const { data: requests, isLoading, isError, error } = useQuery({
-    queryKey: ["signup-requests"],
-    queryFn: getSignupRequests,
-  });
+  const { user } = useAuth();
+  const requests = useGetSignupRequests();
+  const isLoading = requests === undefined;
+  const isError = requests === null;
 
-  const pendingCount = requests?.filter(r => r.status === 'pending').length || 0;
-  const approvedCount = requests?.filter(r => r.status === 'approved').length || 0;
-  const rejectedCount = requests?.filter(r => r.status === 'rejected').length || 0;
+  // Debug information
+  console.log("Debug - user:", user);
+  console.log("Debug - user role:", user?.profile?.role);
+  console.log("Debug - requests:", requests);
+  console.log("Debug - isLoading:", isLoading);
+  console.log("Debug - isError:", isError);
+
+  const pendingCount = requests?.filter((r: SignupRequest) => r.status === 'pending').length || 0;
+  const approvedCount = requests?.filter((r: SignupRequest) => r.status === 'approved').length || 0;
+  const rejectedCount = requests?.filter((r: SignupRequest) => r.status === 'rejected').length || 0;
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -224,7 +238,7 @@ export default function SignupRequestsPage() {
                   {pendingCount} application{pendingCount !== 1 ? 's' : ''} awaiting review
                 </p>
                 <p className="text-sm text-yellow-700">
-                  Review and approve applications to invite new drivers to join TravelEx.
+                  Review and approve applications to send email invitations to new drivers.
                 </p>
               </div>
             </div>
@@ -252,7 +266,12 @@ export default function SignupRequestsPage() {
           {isError && (
             <div className="p-12 text-center">
               <div className="text-destructive mb-2">Error loading applications</div>
-              <div className="text-sm text-muted-foreground">{error.message}</div>
+              <div className="text-sm text-muted-foreground">
+                {user?.profile?.role !== 'admin' 
+                  ? 'Admin access required. Current role: ' + (user?.profile?.role || 'none')
+                  : 'Please try refreshing the page or check your connection'
+                }
+              </div>
             </div>
           )}
           
@@ -275,15 +294,14 @@ export default function SignupRequestsPage() {
                   <TableRow className="border-border/40">
                     <TableHead className="font-semibold text-foreground">Full Name</TableHead>
                     <TableHead className="font-semibold text-foreground">Email</TableHead>
-                    <TableHead className="font-semibold text-foreground">Message</TableHead>
                     <TableHead className="font-semibold text-foreground">Applied</TableHead>
                     <TableHead className="font-semibold text-foreground">Status</TableHead>
                     <TableHead className="font-semibold text-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {requests.map((request) => (
-                    <SignupRequestRow key={request.id} request={request} />
+                  {requests.map((request: SignupRequest) => (
+                    <SignupRequestRow key={request._id} request={request} />
                   ))}
                 </TableBody>
               </Table>

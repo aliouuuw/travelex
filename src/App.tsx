@@ -6,6 +6,7 @@ import {
   useNavigate,
 } from "react-router-dom";
 import Auth from "./pages/auth";
+import InvitationPage from "./pages/invitation";
 import { Toaster, toast } from "sonner";
 import Dashboard from "./pages/dashboard";
 import { ProtectedRoute } from "./components/protected-route";
@@ -292,6 +293,10 @@ const router = createBrowserRouter([
       {
         path: "/auth",
         element: <Auth />,
+      },
+      {
+        path: "/invitation",
+        element: <InvitationPage />,
       },
       {
         element: <ProtectedRoute />,

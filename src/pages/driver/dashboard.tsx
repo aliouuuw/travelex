@@ -65,6 +65,7 @@ const UpdatePasswordForm = () => {
                             id="password" 
                             type="password" 
                             placeholder="Enter your new password"
+                            autoComplete="new-password"
                             className="h-11"
                         />
                         {form.formState.errors.password && (
@@ -94,7 +95,7 @@ export default function DriverDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
           <h1 className="font-heading text-2xl font-bold text-foreground">
-            Welcome back, {user?.profile?.full_name?.split(' ')[0] || 'Driver'}!
+            Welcome back, {user?.profile?.fullName?.split(' ')[0] || 'Driver'}!
           </h1>
           <p className="text-muted-foreground">
             Here's your driver dashboard overview and recent activity
