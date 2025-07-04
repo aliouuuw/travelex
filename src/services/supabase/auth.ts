@@ -44,6 +44,7 @@ export const updateUserPassword = async (password: string) => {
     }
     
     if (!sessionData.session?.user) {
+        console.error('No active session. Please log in again.' + sessionData);
         throw new Error('No active session. Please log in again.');
     }
     

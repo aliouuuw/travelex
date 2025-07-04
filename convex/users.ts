@@ -71,6 +71,50 @@ export const createUserProfile = mutation({
   },
 });
 
+// Generate upload URL for avatar images
+export const generateAvatarUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+// Save avatar storage ID to user profile
+export const saveAvatar = mutation({
+  args: { 
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!profile) {
+      throw new Error("Profile not found");
+    }
+
+    // Get the file URL for the avatar
+    const avatarUrl = await ctx.storage.getUrl(args.storageId);
+    
+    if (!avatarUrl) {
+      throw new Error("Failed to get avatar URL");
+    }
+
+    await ctx.db.patch(profile._id, {
+      avatarUrl,
+    });
+
+    return profile._id;
+  },
+});
+
 // Update user profile
 export const updateUserProfile = mutation({
   args: {
@@ -155,38 +199,19 @@ export const updateUserRole = mutation({
   },
 });
 
-// Get all drivers (admin only)
-export const getDrivers = query({
-  args: {},
+// Check if this is the first user (no profiles exist)
+export const isFirstUser = query({
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-
-    // Check if current user is admin
-    const currentProfile = await ctx.db
-      .query("profiles")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
-
-    if (!currentProfile || currentProfile.role !== "admin") {
-      throw new Error("Admin access required");
-    }
-
-    const drivers = await ctx.db
-      .query("profiles")
-      .withIndex("by_role", (q) => q.eq("role", "driver"))
-      .collect();
-
-    return drivers;
+    const profiles = await ctx.db.query("profiles").collect();
+    return profiles.length === 0;
   },
 });
 
 // Check if user is authenticated
 export const isAuthenticated = query({
-  args: {},
   handler: async (ctx) => {
     const userId = await auth.getUserId(ctx);
-    return !!userId;
+    return userId !== null;
   },
 });
 
@@ -199,10 +224,46 @@ export const getProfileById = query({
   },
 }); 
 
-export const isFirstUser = query({
-  args: {},
-  handler: async (ctx) => {
-    const users = await ctx.db.query("users").collect();
-    return users.length === 0;
+// Change password for authenticated user
+export const changePassword = mutation({
+  args: {
+    currentPassword: v.string(),
+    newPassword: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    // Get the user's profile to get their email
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!profile) {
+      throw new Error("User profile not found");
+    }
+
+    // For now, we'll simulate password verification
+    // In a real implementation, you would verify the current password
+    // against the stored hash in the auth system
+    
+    // TODO: Implement actual password verification logic
+    // This would typically involve checking the current password
+    // against the stored password hash in Convex Auth
+    
+    // For now, we'll just validate that both passwords are provided
+    if (!args.currentPassword || !args.newPassword) {
+      throw new Error("Both current and new passwords are required");
+    }
+
+    // In a real implementation, you would update the password in Convex Auth
+    // This might involve calling internal Convex Auth functions or APIs
+    
+    //console.log(`Password change requested for user ${userId}`);
+    
+    // Return success for now
+    //return { success: true, message: "Password update successfully" };
+    throw new Error("Password update failed");
   },
 }); 
