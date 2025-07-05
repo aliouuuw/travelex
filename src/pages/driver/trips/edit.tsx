@@ -27,8 +27,8 @@ import {
   getTripById,
   updateTrip,
   type TripFormData 
-} from "@/services/supabase/trips";
-import { getDriverRouteTemplates, type RouteTemplate } from "@/services/convex/routeTemplates";
+} from "@/services/convex/trips";
+import { useDriverRouteTemplates, type RouteTemplate } from "@/services/convex/routeTemplates";
 import { getDriverVehicles } from "@/services/supabase/vehicles";
 import { getDriverLuggagePolicies } from "@/services/supabase/luggage-policies";
 import { toast } from "sonner";
@@ -146,10 +146,8 @@ export default function EditTripPage() {
   });
 
   // Fetch route templates
-  const { data: routeTemplates = [], isLoading: loadingRoutes } = useQuery({
-    queryKey: ['driver-route-templates'],
-    queryFn: getDriverRouteTemplates,
-  });
+  const routeTemplates = useDriverRouteTemplates();
+  const loadingRoutes = routeTemplates === undefined;
 
   // Fetch vehicles
   const { data: vehicles = [], isLoading: loadingVehicles } = useQuery({
@@ -179,7 +177,7 @@ export default function EditTripPage() {
   });
 
   const selectedRouteTemplate = useMemo(() => 
-    routeTemplates.find((route) => route.id === routeTemplateId),
+    (routeTemplates || []).find((route) => route.id === routeTemplateId),
     [routeTemplates, routeTemplateId]
   );
 
@@ -389,7 +387,7 @@ export default function EditTripPage() {
                       <SelectValue placeholder="Select a route template..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {routeTemplates.map((route) => (
+                      {(routeTemplates || []).map((route) => (
                         <SelectItem key={route.id} value={route.id}>
                           {route.name} ({route.cities.map(c => c.cityName).join(' → ')})
                         </SelectItem>

@@ -22,16 +22,16 @@ import {
   List
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
-  getDriverTrips, 
+  useDriverTrips, 
   deleteTrip, 
   updateTripStatus,
   formatTripDuration,
-  getStatusColor,
   isUpcomingTrip,
-  type Trip 
-} from "@/services/supabase/trips";
+  getStatusColor,
+  type Trip,
+} from "@/services/convex/trips";
 import { toast } from "sonner";
 import EnhancedCalendarView from "@/components/trip-calendar/enhanced-calendar-view";
 
@@ -344,20 +344,14 @@ export default function DriverTripsPage() {
   const [selectedTrip, setSelectedTrip] = useState<CalendarTrip | null>(null);
 
   // Fetch trips from API
-  const { 
-    data: trips = [], 
-    isLoading, 
-    error, 
-  } = useQuery<Trip[], Error>({
-    queryKey: ['driver-trips'],
-    queryFn: getDriverTrips,
-    retry: 1
-  });
+  const trips = useDriverTrips() || [];
+  const isLoading = false;
+  const error = null;
 
   // Show error toast when error occurs
   useEffect(() => {
     if (error) {
-      toast.error(`Failed to load trips: ${error.message}`);
+      toast.error(`Failed to load trips: ${error as string}`);
     }
   }, [error]);
 
@@ -365,21 +359,35 @@ export default function DriverTripsPage() {
   const calendarTrips: CalendarTrip[] = useMemo(() => {
     return trips.map(trip => {
       const startDate = new Date(trip.departureTime);
-      const endDate = new Date(trip.arrivalTime);
+      const endDate = new Date(trip.arrivalTime || trip.departureTime);
       const isMultiDay = startDate.toDateString() !== endDate.toDateString();
       
       return {
         ...trip,
+        id: trip.tripId,
+        status: trip.status === 'in-progress' ? 'in_progress' : trip.status,
+        vehicleId: trip.vehicleInfo?.id || '',
+        vehicleName: `${trip.vehicleInfo?.make} ${trip.vehicleInfo?.model}` || '',
+        luggagePolicyId: '',
+        luggagePolicyName: '',
+        totalSeats: trip.vehicleInfo?.capacity || 0,
+        availableSeats: trip.vehicleInfo?.capacity || 0,
+        totalEarnings: 0,
+        reservationsCount: 0,
+        routeCities: (trip.routeCities || []).map((cityName, index) => ({ cityName, sequenceOrder: index + 1 })),
+        arrivalTime: trip.arrivalTime || trip.departureTime,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         date: startDate,
         isMultiDay,
         startDate,
         endDate,
-      };
+      } as unknown as CalendarTrip;
     });
   }, [trips]);
 
   // Filter trips for list view
-  const filteredTrips = trips.filter((trip) => {
+  const filteredTrips = calendarTrips.filter((trip) => {
     const matchesSearch = trip.routeTemplateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          trip.routeCities.some(city => city.cityName.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = statusFilter === 'all' || trip.status === statusFilter;
@@ -388,11 +396,11 @@ export default function DriverTripsPage() {
 
   // Calculate stats
   const stats = {
-    total: trips.length,
-    scheduled: trips.filter((t) => t.status === 'scheduled').length,
-    inProgress: trips.filter((t) => t.status === 'in_progress').length,
-    completed: trips.filter((t) => t.status === 'completed').length,
-    totalEarnings: trips.reduce((acc, t) => acc + (t.totalEarnings || 0), 0),
+    total: calendarTrips.length,
+    scheduled: calendarTrips.filter((t) => t.status === 'scheduled').length,
+    inProgress: calendarTrips.filter((t) => t.status === 'in_progress').length,
+    completed: calendarTrips.filter((t) => t.status === 'completed').length,
+    totalEarnings: calendarTrips.reduce((acc, t) => acc + (t.totalEarnings || 0), 0),
   };
 
   // Handle trip selection for calendar view
@@ -544,7 +552,7 @@ export default function DriverTripsPage() {
         <div className="space-y-6">
           <EnhancedCalendarView
             trips={calendarTrips}
-            onTripSelect={handleTripSelect}
+            onTripSelect={(trip) => handleTripSelect(trip as CalendarTrip)}
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}
           />

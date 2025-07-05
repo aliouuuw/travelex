@@ -84,9 +84,9 @@ export const useToggleRouteTemplateStatus = () => {
 };
 
 // Promise-based functions for backward compatibility
-export const getDriverRouteTemplates = async (): Promise<RouteTemplate[]> => {
-  throw new Error("Use useDriverRouteTemplates hook instead");
-};
+// export const getDriverRouteTemplates = async (): Promise<RouteTemplate[]> => {
+//   throw new Error("Use useDriverRouteTemplates hook instead");
+// };
 
 // export const getRouteTemplateById = async (id: string): Promise<RouteTemplate | null> => {
 //   throw new Error("Use useRouteTemplateById hook instead");

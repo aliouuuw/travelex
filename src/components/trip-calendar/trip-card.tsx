@@ -15,7 +15,7 @@ import {
   getStatusColor,
   deleteTrip,
   type Trip 
-} from "@/services/supabase/trips";
+} from "@/services/convex/trips";
 import { toast } from "sonner";
 
 // Trip with enhanced date properties for calendar display

@@ -10,7 +10,7 @@ import {
   DollarSign
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { getStatusColor, type Trip } from "@/services/supabase/trips";
+import { getStatusColor, type Trip } from "@/services/convex/trips";
 import TripCard from "./trip-card";
 
 interface CalendarTrip extends Trip {

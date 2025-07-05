@@ -23,11 +23,11 @@ import {
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getDriverRouteTemplates, type RouteTemplate } from "@/services/convex/routeTemplates";
 import { getDriverVehicles } from "@/services/supabase/vehicles";
 import { getDriverLuggagePolicies } from "@/services/supabase/luggage-policies";
-import { createTrip, type TripFormData } from "@/services/supabase/trips";
+import { createTrip, type TripFormData } from "@/services/convex/trips";
 import { toast } from "sonner";
+import { useDriverRouteTemplates, type RouteTemplate } from "@/services/convex/routeTemplates";
 
 // Form validation schema
 const tripFormSchema = z.object({
@@ -142,10 +142,8 @@ export default function ScheduleTripPage() {
   });
 
   // Fetch route templates
-  const { data: routeTemplates = [], isLoading: loadingRoutes } = useQuery({
-    queryKey: ['driver-route-templates'],
-    queryFn: getDriverRouteTemplates,
-  });
+  const routeTemplates = useDriverRouteTemplates();
+  const loadingRoutes = routeTemplates === undefined;
 
   // Fetch vehicles
   const { data: vehicles = [], isLoading: loadingVehicles } = useQuery({
@@ -179,7 +177,7 @@ export default function ScheduleTripPage() {
   });
 
   const selectedRouteTemplate = useMemo(() => 
-    routeTemplates.find((route) => route.id === routeTemplateId),
+    (routeTemplates || []).find((route) => route.id === routeTemplateId),
     [routeTemplates, routeTemplateId]
   );
 
@@ -322,7 +320,7 @@ export default function ScheduleTripPage() {
                       <SelectValue placeholder="Select a route template..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {routeTemplates.map((route) => (
+                      {(routeTemplates || []).map((route) => (
                         <SelectItem key={route.id} value={route.id}>
                           {route.name} ({route.cities.map(c => c.cityName).join(' → ')})
                         </SelectItem>

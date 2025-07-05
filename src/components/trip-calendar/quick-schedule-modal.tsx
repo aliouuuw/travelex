@@ -17,10 +17,10 @@ import {
   MapPin
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getDriverRouteTemplates, type RouteTemplate } from "@/services/convex/routeTemplates";
+import { useDriverRouteTemplates, type RouteTemplate } from "@/services/convex/routeTemplates";
 import { getDriverVehicles } from "@/services/supabase/vehicles";
 import { getDriverLuggagePolicies } from "@/services/supabase/luggage-policies";
-import { createTrip, type TripFormData } from "@/services/supabase/trips";
+import { createTrip, type TripFormData } from "@/services/convex/trips";
 import { toast } from "sonner";
 
 // Quick schedule form schema
@@ -119,7 +119,7 @@ export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: Qu
   // Fetch data for dropdowns
   const { data: routeTemplates = [] } = useQuery({
     queryKey: ['driver-route-templates'],
-    queryFn: getDriverRouteTemplates,
+    queryFn: useDriverRouteTemplates,
   });
 
   const { data: vehicles = [] } = useQuery({

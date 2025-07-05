@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, QueryCtx } from "./_generated/server";
 import { ConvexError } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 // =============================================
 // TYPE DEFINITIONS
@@ -223,6 +224,39 @@ const calculateSegmentPrice = (
   
   // If no direct pricing, return 0 (will need to implement segment calculation)
   return 0;
+};
+
+const getCurrentUserProfile = async (ctx: QueryCtx) => {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new ConvexError("Not authenticated");
+  }
+  
+  // Try to get user ID using auth.getUserId first
+      const userId = await getAuthUserId(ctx);
+  let currentUser = null;
+  
+  if (userId) {
+    // Try to find profile by userId first
+    currentUser = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+  }
+  
+  if (!currentUser && identity.email) {
+    // Fallback: try to find profile by email
+    currentUser = await ctx.db
+      .query("profiles")
+      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .first();
+  }
+  
+  if (!currentUser) {
+    throw new ConvexError("User profile not found. You may need to complete your profile setup or contact an administrator.");
+  }
+  
+  return currentUser;
 };
 
 const getBookedSeatsForTrip = async (ctx: QueryCtx, tripId: Id<"trips">) => {
@@ -471,11 +505,10 @@ export const getTripForBooking = query({
 });
 
 /**
- * Get trips for a specific driver
+ * Get trips for the current driver
  */
 export const getDriverTrips = query({
   args: {
-    driverId: v.id("profiles"),
     status: v.optional(v.union(
       v.literal("scheduled"),
       v.literal("in-progress"),
@@ -484,26 +517,18 @@ export const getDriverTrips = query({
     )),
   },
   handler: async (ctx, args) => {
-    const { driverId, status } = args;
+    const { status } = args;
     
-    // Verify the current user is the driver or an admin
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new ConvexError("Not authenticated");
+    // Get the current user profile
+    const currentUser = await getCurrentUserProfile(ctx);
+    
+    // Check if user has driver role
+    if (currentUser.role !== "driver" && currentUser.role !== "admin") {
+      throw new ConvexError("Access denied. Driver access required.");
     }
     
-    const currentUser = await ctx.db
-      .query("profiles")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject as Id<"users">))
-      .first();
-    
-    if (!currentUser) {
-      throw new ConvexError("User profile not found");
-    }
-    
-    if (currentUser._id !== driverId && currentUser.role !== "admin") {
-      throw new ConvexError("Access denied");
-    }
+    // Use the current user's ID as the driver ID
+    const driverId = currentUser._id;
     
     let tripsQuery = ctx.db
       .query("trips")
@@ -699,6 +724,287 @@ export const updateTripStatus = mutation({
     await ctx.db.patch(args.tripId, {
       status: args.status,
     });
+    
+    return { success: true };
+  },
+});
+
+/**
+ * Get a single trip by ID
+ */
+export const getTripById = query({
+  args: {
+    tripId: v.id("trips"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new ConvexError("Not authenticated");
+    }
+    
+    const currentUser = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject as Id<"users">))
+      .first();
+    
+    if (!currentUser) {
+      throw new ConvexError("User profile not found");
+    }
+    
+    const trip = await ctx.db.get(args.tripId);
+    if (!trip) {
+      throw new ConvexError("Trip not found");
+    }
+    
+    // Only the driver or admin can view trip details
+    if (trip.driverId !== currentUser._id && currentUser.role !== "admin") {
+      throw new ConvexError("Access denied");
+    }
+    
+    const [routeTemplate, vehicle, luggagePolicy] = await Promise.all([
+      getRouteTemplate(ctx, trip.routeTemplateId),
+      getVehicleInfo(ctx, trip.vehicleId),
+      getLuggagePolicy(ctx, trip.luggagePolicyId),
+    ]);
+    
+    const [tripStations, routeCities] = await Promise.all([
+      getTripStations(ctx, trip._id),
+      getRouteCities(ctx, trip.routeTemplateId),
+    ]);
+    
+    const bookedSeats = await getBookedSeatsForTrip(ctx, trip._id);
+    const availableSeats = (trip.availableSeats || vehicle.capacity) - bookedSeats.length;
+    
+    // Get reservations count and total earnings
+    const reservations = await ctx.db
+      .query("reservations")
+      .withIndex("by_trip", (q) => q.eq("tripId", trip._id))
+      .filter((q) => q.neq(q.field("status"), "cancelled"))
+      .collect();
+    
+    const totalEarnings = reservations.reduce((sum, reservation) => sum + reservation.totalPrice, 0);
+    
+    return {
+      id: trip._id,
+      routeTemplateId: trip.routeTemplateId,
+      routeTemplateName: routeTemplate.name,
+      vehicleId: trip.vehicleId,
+      vehicleName: `${vehicle.make} ${vehicle.model}`,
+      luggagePolicyId: trip.luggagePolicyId,
+      luggagePolicyName: luggagePolicy.name,
+      departureTime: new Date(trip.departureTime).toISOString(),
+      arrivalTime: trip.arrivalTime ? new Date(trip.arrivalTime).toISOString() : undefined,
+      totalSeats: vehicle.capacity,
+      availableSeats,
+      status: trip.status,
+      createdAt: new Date(trip._creationTime).toISOString(),
+      updatedAt: new Date(trip._creationTime).toISOString(), // Convex doesn't have separate update time
+      routeCities: routeCities.map((city, index) => ({
+        id: `${trip.routeTemplateId}-${index}`,
+        cityName: city,
+        sequenceOrder: index,
+        stations: [], // Will be populated from tripStations
+      })),
+             tripStations: tripStations.map((station) => ({
+         id: station.id,
+         stationId: station.id, // Using the same ID as the station ID
+         stationName: station.stationName,
+         stationAddress: station.stationAddress,
+         cityName: station.cityName,
+         sequenceOrder: station.sequenceOrder,
+         isPickupPoint: station.isPickupPoint,
+         isDropoffPoint: station.isDropoffPoint,
+       })),
+      reservationsCount: reservations.length,
+      totalEarnings,
+    };
+  },
+});
+
+/**
+ * Update trip details
+ */
+export const updateTrip = mutation({
+  args: {
+    tripId: v.id("trips"),
+    vehicleId: v.id("vehicles"),
+    luggagePolicyId: v.id("luggagePolicies"),
+    departureTime: v.number(),
+    arrivalTime: v.optional(v.number()),
+    stationSelections: v.array(v.object({
+      routeTemplateCityId: v.id("routeTemplateCities"),
+      stationId: v.id("routeTemplateStations"),
+      isPickupPoint: v.boolean(),
+      isDropoffPoint: v.boolean(),
+      estimatedTime: v.optional(v.number()),
+    })),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new ConvexError("Not authenticated");
+    }
+    
+    const currentUser = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject as Id<"users">))
+      .first();
+    
+    if (!currentUser) {
+      throw new ConvexError("User profile not found");
+    }
+    
+    const trip = await ctx.db.get(args.tripId);
+    if (!trip) {
+      throw new ConvexError("Trip not found");
+    }
+    
+    // Only the driver or admin can update trip
+    if (trip.driverId !== currentUser._id && currentUser.role !== "admin") {
+      throw new ConvexError("Access denied");
+    }
+    
+    // Verify the vehicle belongs to the driver
+    const vehicle = await ctx.db.get(args.vehicleId);
+    if (!vehicle || vehicle.driverId !== currentUser._id) {
+      throw new ConvexError("Vehicle not found or access denied");
+    }
+    
+    // Verify the luggage policy belongs to the driver
+    const luggagePolicy = await ctx.db.get(args.luggagePolicyId);
+    if (!luggagePolicy || luggagePolicy.driverId !== currentUser._id) {
+      throw new ConvexError("Luggage policy not found or access denied");
+    }
+    
+    // Update the trip
+    await ctx.db.patch(args.tripId, {
+      vehicleId: args.vehicleId,
+      luggagePolicyId: args.luggagePolicyId,
+      departureTime: args.departureTime,
+      arrivalTime: args.arrivalTime,
+      availableSeats: vehicle.capacity,
+    });
+    
+    // Delete existing trip stations
+    const existingStations = await ctx.db
+      .query("tripStations")
+      .withIndex("by_trip", (q) => q.eq("tripId", args.tripId))
+      .collect();
+    
+    for (const station of existingStations) {
+      await ctx.db.delete(station._id);
+    }
+    
+    // Create new trip stations
+    for (const station of args.stationSelections) {
+      // Get city information
+      const city = await ctx.db.get(station.routeTemplateCityId);
+      if (!city) {
+        throw new ConvexError("City not found");
+      }
+      
+      const country = await ctx.db.get(city.countryId);
+      if (!country) {
+        throw new ConvexError("Country not found");
+      }
+      
+      await ctx.db.insert("tripStations", {
+        tripId: args.tripId,
+        routeTemplateCityId: station.routeTemplateCityId,
+        stationId: station.stationId,
+        cityName: city.cityName,
+        countryId: city.countryId,
+        countryCode: country.code,
+        sequenceOrder: city.sequenceOrder,
+        isPickupPoint: station.isPickupPoint,
+        isDropoffPoint: station.isDropoffPoint,
+        estimatedTime: station.estimatedTime,
+      });
+    }
+    
+    return { success: true };
+  },
+});
+
+/**
+ * Delete a trip
+ */
+export const deleteTrip = mutation({
+  args: {
+    tripId: v.id("trips"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new ConvexError("Not authenticated");
+    }
+    
+    const currentUser = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject as Id<"users">))
+      .first();
+    
+    if (!currentUser) {
+      throw new ConvexError("User profile not found");
+    }
+    
+    const trip = await ctx.db.get(args.tripId);
+    if (!trip) {
+      throw new ConvexError("Trip not found");
+    }
+    
+    // Only the driver or admin can delete trip
+    if (trip.driverId !== currentUser._id && currentUser.role !== "admin") {
+      throw new ConvexError("Access denied");
+    }
+    
+    // Check if there are any confirmed reservations
+    const confirmedReservations = await ctx.db
+      .query("reservations")
+      .withIndex("by_trip", (q) => q.eq("tripId", args.tripId))
+      .filter((q) => q.or(
+        q.eq(q.field("status"), "confirmed"),
+        q.eq(q.field("status"), "pending")
+      ))
+      .collect();
+    
+    if (confirmedReservations.length > 0) {
+      throw new ConvexError("Cannot delete trip with confirmed or pending reservations");
+    }
+    
+    // Delete trip stations first
+    const tripStations = await ctx.db
+      .query("tripStations")
+      .withIndex("by_trip", (q) => q.eq("tripId", args.tripId))
+      .collect();
+    
+    for (const station of tripStations) {
+      await ctx.db.delete(station._id);
+    }
+    
+    // Delete any cancelled reservations
+    const cancelledReservations = await ctx.db
+      .query("reservations")
+      .withIndex("by_trip", (q) => q.eq("tripId", args.tripId))
+      .collect();
+    
+    for (const reservation of cancelledReservations) {
+      // Delete booked seats
+      const bookedSeats = await ctx.db
+        .query("bookedSeats")
+        .withIndex("by_reservation", (q) => q.eq("reservationId", reservation._id))
+        .collect();
+      
+      for (const seat of bookedSeats) {
+        await ctx.db.delete(seat._id);
+      }
+      
+      // Delete reservation
+      await ctx.db.delete(reservation._id);
+    }
+    
+    // Finally delete the trip
+    await ctx.db.delete(args.tripId);
     
     return { success: true };
   },

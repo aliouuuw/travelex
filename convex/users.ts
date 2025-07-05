@@ -1,21 +1,25 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { auth } from "./auth";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 // Get current authenticated user with profile
 export const getCurrentUser = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
+    //console.log("userId", userId);
     if (!userId) return null;
 
-    const user = await ctx.db.get(userId);
-    if (!user) return null;
-
+    // Find the profile that references this auth user
     const profile = await ctx.db
       .query("profiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
+
+    if (!profile) return null;
+
+    // Optionally get the auth user document if you need it
+    const user = await ctx.db.get(userId);
 
     return {
       ...user,
@@ -33,7 +37,7 @@ export const createUserProfile = mutation({
     role: v.optional(v.union(v.literal("admin"), v.literal("driver"), v.literal("passenger"))),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
     // This mutation is only for creating admin profiles (first user)
@@ -75,7 +79,7 @@ export const createUserProfile = mutation({
 export const generateAvatarUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
     return await ctx.storage.generateUploadUrl();
@@ -88,7 +92,7 @@ export const saveAvatar = mutation({
     storageId: v.id("_storage"),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
     const profile = await ctx.db
@@ -123,7 +127,7 @@ export const updateUserProfile = mutation({
     avatarUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
     const profile = await ctx.db
@@ -149,7 +153,7 @@ export const updateUserProfile = mutation({
 export const getUserByEmail = query({
   args: { email: v.string() },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
     // Check if current user is admin
@@ -178,7 +182,7 @@ export const updateUserRole = mutation({
     role: v.union(v.literal("admin"), v.literal("driver"), v.literal("passenger")),
   },
   handler: async (ctx, args) => {
-    const currentUserId = await auth.getUserId(ctx);
+    const currentUserId = await getAuthUserId(ctx);
     if (!currentUserId) throw new Error("Not authenticated");
 
     // Check if current user is admin
@@ -210,7 +214,7 @@ export const isFirstUser = query({
 // Check if user is authenticated
 export const isAuthenticated = query({
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     return userId !== null;
   },
 });
@@ -231,7 +235,7 @@ export const changePassword = mutation({
     newPassword: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
     // Get the user's profile to get their email
@@ -265,5 +269,39 @@ export const changePassword = mutation({
     // Return success for now
     //return { success: true, message: "Password update successfully" };
     throw new Error("Password update failed");
+  },
+}); 
+
+// Temporary mutation to create profile for authenticated user (for migration purposes)
+export const createDriverProfile = mutation({
+  args: {
+    fullName: v.string(),
+    email: v.string(),
+    phone: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    // Check if profile already exists
+    const existingProfile = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (existingProfile) {
+      throw new Error("Profile already exists");
+    }
+
+    const profileId = await ctx.db.insert("profiles", {
+      userId,
+      fullName: args.fullName,
+      email: args.email,
+      phone: args.phone,
+      role: "driver",
+      rating: 0,
+    });
+
+    return profileId;
   },
 }); 

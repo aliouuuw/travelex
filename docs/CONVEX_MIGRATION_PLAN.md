@@ -33,8 +33,15 @@ This document outlines the comprehensive migration plan from Supabase to Convex 
   - [x] Update all route template CRUD operations
   - [x] Migrate reusable cities/stations to Convex
   - [x] Fix authentication issues in route template functions
-- [ ] **Vehicle and luggage policies**
-- [ ] **Trip scheduling and management**
+- [x] **Trip scheduling and management (COMPLETED)**
+  - [x] Migrate trip CRUD operations to Convex
+  - [x] Implement trip calendar and scheduling system
+  - [x] Update driver trip management pages
+  - [x] Fix authentication issues in trip functions
+- [ ] **Vehicle and luggage policies (PENDING MIGRATION)**
+  - [ ] Migrate vehicle management system from Supabase to Convex
+  - [ ] Migrate luggage policy management from Supabase to Convex
+  - [ ] Update integration points with trip scheduling
 
 ### ⏳ **Phase 4: Reservation and Payment System**
 - [ ] Reservation management
@@ -142,17 +149,100 @@ Migrate route template management:
 - Pricing configuration
 - Reusable cities/stations
 
-#### **2.3 Vehicle Management**
+#### **2.3 Vehicle Management (COMPLETED - NEED CONVEX MIGRATION)**
 Replace Supabase vehicle functions:
 - Fleet management
 - Vehicle features and status
 - Default vehicle selection
 
-#### **2.4 Luggage Policies**
+#### **2.4 Luggage Policies (COMPLETED - NEED CONVEX MIGRATION)**
 Migrate bag-based pricing system:
 - Policy creation and management
 - Fee calculation
 - Default policy enforcement
+
+### **Phase 3: Vehicle and Luggage Management Migration**
+
+#### **3.1 Vehicle Management System Migration**
+**Current State:** Fully implemented in Supabase with comprehensive features:
+- Multi-step vehicle creation/editing forms with tabbed interface
+- Professional fleet management UI with statistics dashboard
+- Automatic seat map generation based on vehicle type and capacity
+- Vehicle feature selection and amenity management
+- Maintenance tracking (insurance, registration, maintenance dates)
+- Default vehicle management with automatic enforcement
+- Vehicle status management (active, maintenance, inactive)
+- Complete CRUD operations with search and filtering
+
+**Migration Tasks:**
+1. **Convex Schema Setup**
+   - Create vehicles table in Convex schema with all existing fields
+   - Define indexes for efficient queries (driver_id, status, is_default)
+   - Set up proper field types (seat_map as JSON, features as array)
+
+2. **Convex Functions Implementation**
+   - `createVehicle` - Vehicle creation with validation
+   - `updateVehicle` - Vehicle updates with seat map regeneration
+   - `deleteVehicle` - Safe deletion with dependency checks
+   - `getDriverVehicles` - Paginated vehicle listing with filters
+   - `getDefaultVehicle` - Default vehicle selection logic
+   - `setDefaultVehicle` - Default vehicle management
+   - `getVehicleById` - Single vehicle retrieval
+
+3. **Convex Service Layer**
+   - Replace `src/services/supabase/vehicles.ts` with Convex equivalent
+   - Maintain same API interface for seamless frontend integration
+   - Add vehicle utility functions (seat map generation, feature management)
+
+4. **Frontend Integration**
+   - Update vehicle management pages to use Convex hooks
+   - Migrate vehicle forms to use Convex mutations
+   - Update vehicle selection components in trip creation
+   - Test all vehicle management workflows
+
+#### **3.2 Luggage Policy Management Migration**
+**Current State:** Fully implemented in Supabase with bag-based pricing model:
+- Intuitive bag-based pricing (1 free bag + flat fee per additional bag)
+- Complete CRUD operations for luggage policies
+- Default policy management system
+- Real-time fee calculation and policy preview
+- Search and filtering capabilities
+- Professional policy management interface
+- Backward compatibility with weight-based policies
+
+**Migration Tasks:**
+1. **Convex Schema Setup**
+   - Create luggage_policies table in Convex schema
+   - Include bag-based pricing fields (free_weight_kg, excess_fee_per_kg as flat fee)
+   - Set up proper field types and validation rules
+   - Define indexes for efficient queries
+
+2. **Convex Functions Implementation**
+   - `createLuggagePolicy` - Policy creation with validation
+   - `updateLuggagePolicy` - Policy updates with fee recalculation
+   - `deleteLuggagePolicy` - Safe deletion with dependency checks
+   - `getDriverLuggagePolicies` - Paginated policy listing
+   - `getDefaultLuggagePolicy` - Default policy selection
+   - `setDefaultLuggagePolicy` - Default policy management
+   - `calculateLuggageFee` - Fee calculation utilities
+
+3. **Convex Service Layer**
+   - Replace `src/services/supabase/luggage-policies.ts` with Convex equivalent
+   - Maintain pricing calculation compatibility
+   - Add policy utility functions (fee calculation, validation)
+
+4. **Frontend Integration**
+   - Update luggage policy management pages to use Convex hooks
+   - Migrate policy forms to use Convex mutations
+   - Update policy selection components in trip creation
+   - Test all luggage policy workflows
+
+#### **3.3 Integration Points Update**
+After both systems are migrated:
+- Update trip creation/editing forms to use Convex for vehicle and policy selection
+- Update reservation system to use Convex for luggage fee calculation
+- Ensure all cross-system references work correctly
+- Test end-to-end workflows involving vehicles and luggage policies
 
 ### **Phase 3: Trip and Reservation System**
 
@@ -208,8 +298,8 @@ Migrate bag-based pricing system:
 ### **Business Logic Services**
 - `src/services/countries.ts` → `convex/countries.ts`
 - `src/services/route-templates.ts` → `convex/route-templates.ts`
-- `src/services/vehicles.ts` → `convex/vehicles.ts`
-- `src/services/luggage-policies.ts` → `convex/luggage-policies.ts`
+- `src/services/supabase/vehicles.ts` → `convex/vehicles.ts` + `src/services/convex/vehicles.ts`
+- `src/services/supabase/luggage-policies.ts` → `convex/luggage-policies.ts` + `src/services/convex/luggage-policies.ts`
 - `src/services/trips.ts` → `convex/trips.ts`
 - `src/services/reservations.ts` → `convex/reservations.ts`
 - `src/services/payments.ts` → `convex/payments.ts`

@@ -1,7 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { ConvexError } from "convex/values";
-import { auth } from "./auth";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 // Types for route templates
 const RouteTemplateStatus = v.union(v.literal("draft"), v.literal("active"), v.literal("inactive"));
@@ -33,13 +33,13 @@ const InterCityFareSchema = v.object({
 export const getDriverRouteTemplates = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new ConvexError("Authentication required");
-    }
+    // const identity = await ctx.auth.getUserIdentity();
+    // if (!identity) {
+    //   throw new ConvexError("Authentication required");
+    // }
 
     // Get user ID from auth, then look up profile by userId (not email)
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new ConvexError("User ID not found");
     }
@@ -137,7 +137,7 @@ export const getDriverRouteTemplates = query({
 export const getRouteTemplateById = query({
   args: { routeTemplateId: v.id("routeTemplates") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new ConvexError("Authentication required");
     }
@@ -228,7 +228,7 @@ export const createRouteTemplate = mutation({
     intercityFares: v.array(InterCityFareSchema),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new ConvexError("Authentication required");
     }
@@ -317,7 +317,7 @@ export const updateRouteTemplate = mutation({
     intercityFares: v.array(InterCityFareSchema),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new ConvexError("Authentication required");
     }
@@ -438,7 +438,7 @@ export const updateRouteTemplate = mutation({
 export const deleteRouteTemplate = mutation({
   args: { routeTemplateId: v.id("routeTemplates") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new ConvexError("Authentication required");
     }
@@ -520,7 +520,7 @@ export const toggleRouteTemplateStatus = mutation({
     newStatus: RouteTemplateStatus,
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new ConvexError("Authentication required");
     }
@@ -558,7 +558,7 @@ export const toggleRouteTemplateStatus = mutation({
 export const validateRouteCountries = query({
   args: { routeTemplateId: v.id("routeTemplates") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new ConvexError("Authentication required");
     }

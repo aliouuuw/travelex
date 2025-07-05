@@ -175,6 +175,86 @@
     - [ ] Create booking summary with full route visibility
     - [ ] Handle payment processing for segment bookings
 
+## Phase 6: Vehicle & Luggage Management Convex Migration ⏳ **NEXT PRIORITY**
+
+### **Migration Overview**
+The vehicle and luggage management systems are fully functional in Supabase and need to be migrated to Convex for consistency with the rest of the platform. This migration will complete the core business logic migration phase.
+
+### **Current State Analysis**
+- **Vehicle Management:** ✅ **100% Complete in Supabase**
+  - Multi-step vehicle creation/editing with tabbed interface
+  - Professional fleet management UI with statistics dashboard
+  - Automatic seat map generation based on vehicle type and capacity
+  - Vehicle feature selection and amenity management
+  - Maintenance tracking (insurance, registration, maintenance dates)
+  - Default vehicle management with automatic enforcement
+  - Vehicle status management (active, maintenance, inactive)
+  - Complete CRUD operations with search and filtering
+  - Integration with trip scheduling system
+
+- **Luggage Policy Management:** ✅ **100% Complete in Supabase**
+  - Intuitive bag-based pricing model (1 free bag + flat fee per additional bag)
+  - Complete CRUD operations for luggage policies
+  - Default policy management system
+  - Real-time fee calculation and policy preview
+  - Search and filtering capabilities
+  - Professional policy management interface
+  - Backward compatibility with weight-based policies
+  - Integration with trip scheduling and reservation systems
+
+### **Migration Tasks**
+
+- [ ] **Phase 6.1: Vehicle Management Migration**
+  - [ ] Create Convex schema for vehicles table with all existing fields
+  - [ ] Implement Convex mutations for vehicle CRUD operations
+  - [ ] Create Convex queries for vehicle listing and filtering
+  - [ ] Build Convex service layer to replace Supabase vehicle service
+  - [ ] Update vehicle management pages to use Convex hooks
+  - [ ] Test all vehicle management workflows with Convex
+  - [ ] Update trip creation/editing to use Convex for vehicle selection
+
+- [ ] **Phase 6.2: Luggage Policy Migration**
+  - [ ] Create Convex schema for luggage policies with bag-based pricing
+  - [ ] Implement Convex mutations for luggage policy CRUD operations
+  - [ ] Create Convex queries for policy listing and default management
+  - [ ] Build Convex service layer to replace Supabase luggage service
+  - [ ] Update luggage policy management pages to use Convex hooks
+  - [ ] Test all luggage policy workflows with Convex
+  - [ ] Update trip creation/editing to use Convex for policy selection
+
+- [ ] **Phase 6.3: Integration Testing**
+  - [ ] Test vehicle and luggage policy integration with trip scheduling
+  - [ ] Verify reservation system works with Convex luggage fee calculation
+  - [ ] Test end-to-end workflows involving vehicles and luggage policies
+  - [ ] Update any remaining cross-system references
+  - [ ] Performance testing and optimization
+
+### **Files to Migrate**
+**Supabase Services → Convex:**
+- `src/services/supabase/vehicles.ts` → `convex/vehicles.ts` + `src/services/convex/vehicles.ts`
+- `src/services/supabase/luggage-policies.ts` → `convex/luggage-policies.ts` + `src/services/convex/luggage-policies.ts`
+
+**Frontend Pages (Update to use Convex):**
+- `src/pages/driver/vehicles/index.tsx` - Vehicle listing page
+- `src/pages/driver/vehicles/form.tsx` - Vehicle creation/editing form
+- `src/pages/driver/vehicles/new.tsx` - New vehicle route
+- `src/pages/driver/vehicles/edit.tsx` - Edit vehicle route
+- `src/pages/driver/luggage-policies/index.tsx` - Luggage policy listing page
+- `src/pages/driver/luggage-policies/form.tsx` - Luggage policy creation/editing form
+
+**Integration Points:**
+- `src/pages/driver/trips/schedule.tsx` - Trip creation with vehicle/policy selection
+- `src/pages/driver/trips/edit.tsx` - Trip editing with vehicle/policy updates
+- Reservation system components for luggage fee calculation
+
+### **Success Criteria**
+- All vehicle management features work identically with Convex
+- All luggage policy management features work identically with Convex
+- Trip scheduling integrates seamlessly with Convex vehicle/policy data
+- Reservation system calculates luggage fees correctly using Convex
+- No functionality regression from Supabase version
+- Performance is equal or better than Supabase implementation
+
 ## Pending Deliverables (Future Tasks)
 - [x] **Country Request System Enhancement (COMPLETED):**
     - [x] ~~Decide on passenger vs driver-only country requests~~ - Implemented driver-only system for better control

@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query, internalAction } from "./_generated/server";
-import { auth } from "./auth";
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
 
 // Generate a secure random token
@@ -214,7 +214,7 @@ export const validateResetToken = query({
 export const cleanupExpiredResetTokens = mutation({
   args: {},
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Authentication required");
 
     // Check if current user is admin

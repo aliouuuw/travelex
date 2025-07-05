@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query, internalAction, internalMutation } from "./_generated/server";
-import { auth } from "./auth";
 import { internal } from "./_generated/api";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 // Generate a secure random token
 function generateToken(): string {
@@ -179,7 +179,7 @@ export const createInvitation = mutation({
     signupRequestId: v.optional(v.id("signupRequests")),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Authentication required");
 
     // Check if current user is admin
@@ -362,7 +362,7 @@ export const createProfileFromInvitation = mutation({
     token: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
     // Find and validate the invitation token
@@ -453,7 +453,7 @@ export const getInvitationByToken = query({
 export const cleanupExpiredTokens = mutation({
   args: {},
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Authentication required");
 
     // Check if current user is admin
