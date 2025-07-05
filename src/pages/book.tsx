@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useQuery, useMutation } from "@tanstack/react-query";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { getTripForBooking } from "@/services/supabase/trip-search";
+import { useTripForBooking } from "@/services/convex/tripSearch";
 import { createPaymentIntent } from "@/services/supabase/payments";
 import type { SeatMap } from "@/services/supabase/vehicles";
 
@@ -158,12 +158,10 @@ export default function BookingPage() {
     },
   });
 
-  // Fetch trip details
-  const { data: trip, isLoading, error } = useQuery({
-    queryKey: ['trip-booking', tripId],
-    queryFn: () => getTripForBooking(tripId!),
-    enabled: !!tripId,
-  });
+  // Fetch trip details using Convex
+  const trip = useTripForBooking(tripId || "");
+  const isLoading = trip === undefined && !!tripId;
+  const error = null; // Convex handles errors differently
 
   // Get available stations based on selected pickup/dropoff and search context
   const availablePickupStations = useMemo(() => {

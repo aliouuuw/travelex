@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Route, Clock, DollarSign, MapPin, ArrowRight, Edit, Users, Loader2, Trash2, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getDriverRouteTemplates, deleteRouteTemplate, type RouteTemplate } from "@/services/supabase/route-templates";
+import { useDriverRouteTemplates, useDeleteRouteTemplate, type RouteTemplate } from "@/services/convex/routeTemplates";
 import { toast } from "sonner";
+import type { Id } from "convex/_generated/dataModel";
+import { useGetCurrentUser } from "@/services/convex/users";
 
 // Types are now imported from the service layer
 
@@ -201,7 +202,7 @@ const RouteFlowChart = ({ route }: { route: RouteTemplate }) => {
 
 // DriverRouteCard Component - Updated for intercity route templates
 const DriverRouteCard = ({ route }: { route: RouteTemplate }) => {
-  const queryClient = useQueryClient();
+  const deleteMutation = useDeleteRouteTemplate();
   
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -213,21 +214,14 @@ const DriverRouteCard = ({ route }: { route: RouteTemplate }) => {
 
   const totalRouteFare = calculateTotalRouteFare(route);
 
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: deleteRouteTemplate,
-    onSuccess: () => {
-      toast.success("Route template deleted successfully!");
-      queryClient.invalidateQueries({ queryKey: ['driver-route-templates'] });
-    },
-    onError: (error: Error) => {
-      toast.error(`Failed to delete route template: ${error.message}`);
-    }
-  });
-
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (window.confirm(`Are you sure you want to delete "${route.name}"? This action cannot be undone.`)) {
-      deleteMutation.mutate(route.id);
+      try {
+        await deleteMutation({ routeTemplateId: route.id as Id<"routeTemplates"> });
+        toast.success("Route template deleted successfully!");
+      } catch (error) {
+        toast.error(`Failed to delete route template: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     }
   };
 
@@ -278,14 +272,9 @@ const DriverRouteCard = ({ route }: { route: RouteTemplate }) => {
               variant="ghost" 
               size="sm" 
               onClick={handleDelete}
-              disabled={deleteMutation.isPending}
               className="text-red-500 hover:text-red-700 hover:bg-red-50"
             >
-              {deleteMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Trash2 className="w-4 h-4" />
-              )}
+              <Trash2 className="w-4 h-4" />
             </Button>
           </div>
         </div>
@@ -316,35 +305,29 @@ const DriverRouteCard = ({ route }: { route: RouteTemplate }) => {
 export default function DriverRoutesPage() {
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'draft'>('all');
 
-  // Fetch route templates from API
-  const { 
-    data: routeTemplates = [], 
-    isLoading, 
-    error,
-    refetch 
-  } = useQuery<RouteTemplate[], Error>({
-    queryKey: ['driver-route-templates'],
-    queryFn: getDriverRouteTemplates,
-    retry: 1
-  });
+  // Check authentication
+  const currentUser = useGetCurrentUser();
+  
+  // Fetch route templates from Convex
+  const routeTemplates = useDriverRouteTemplates();
+  const isLoading = routeTemplates === undefined;
+  const error = null; // Convex handles errors differently
 
-  // Show error toast when error occurs
-  useEffect(() => {
-    if (error) {
-      toast.error(`Failed to load route templates: ${error.message}`);
-    }
-  }, [error]);
+  // Debug: Log auth state
+  console.log("Current User:", currentUser);
+  console.log("Route Templates Data:", routeTemplates);
+  console.log("Is Loading:", isLoading);
 
-  const filteredRoutes = routeTemplates.filter((route) => 
+  const filteredRoutes = (routeTemplates || []).filter((route) => 
     selectedStatus === 'all' || route.status === selectedStatus
   );
 
   const stats = {
-    total: routeTemplates.length,
-    active: routeTemplates.filter((r) => r.status === 'active').length,
-    draft: routeTemplates.filter((r) => r.status === 'draft').length,
-    totalEarnings: routeTemplates.reduce((acc, r) => acc + r.totalEarnings, 0),
-    scheduledTrips: routeTemplates.reduce((acc, r) => acc + r.scheduledTrips, 0)
+    total: (routeTemplates || []).length,
+    active: (routeTemplates || []).filter((r) => r.status === 'active').length,
+    draft: (routeTemplates || []).filter((r) => r.status === 'draft').length,
+    totalEarnings: (routeTemplates || []).reduce((acc, r) => acc + r.totalEarnings, 0),
+    scheduledTrips: (routeTemplates || []).reduce((acc, r) => acc + r.scheduledTrips, 0)
   };
 
   // Loading state
@@ -361,7 +344,7 @@ export default function DriverRoutesPage() {
     );
   }
 
-  // Error state
+  // Error state (Convex handles errors differently, so this won't trigger)
   if (error) {
     return (
       <div className="space-y-6">
@@ -375,10 +358,10 @@ export default function DriverRoutesPage() {
                 Failed to load route templates
               </h3>
               <p className="text-muted-foreground">
-                {error instanceof Error ? error.message : 'An unexpected error occurred'}
+                An unexpected error occurred
               </p>
               <Button 
-                onClick={() => refetch()}
+                onClick={() => window.location.reload()}
                 className="bg-brand-orange hover:bg-brand-orange-600 text-white"
               >
                 Try Again

@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getDriverRouteTemplates, type RouteTemplate } from "@/services/supabase/route-templates";
+import { getDriverRouteTemplates, type RouteTemplate } from "@/services/convex/routeTemplates";
 import { getDriverVehicles } from "@/services/supabase/vehicles";
 import { getDriverLuggagePolicies } from "@/services/supabase/luggage-policies";
 import { createTrip, type TripFormData } from "@/services/supabase/trips";

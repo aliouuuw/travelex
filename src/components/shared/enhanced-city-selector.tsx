@@ -15,8 +15,7 @@ import {
   Globe,
   AlertCircle
 } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getAvailableCountries, getAvailableCitiesByCountry, createCity, type Country, type CityWithCountry } from "@/services/supabase/countries";
+import { useAvailableCountries, useAvailableCitiesByCountry, useCreateGlobalCity } from "@/services/convex/countries";
 import { CountryRequestModal } from "./country-request-modal";
 import { toast } from "sonner";
 
@@ -38,46 +37,32 @@ export const EnhancedCitySelector = ({
   const [showCountryRequest, setShowCountryRequest] = useState(false);
   const [showNewCityDialog, setShowNewCityDialog] = useState(false);
   const [newCityName, setNewCityName] = useState("");
-  const queryClient = useQueryClient();
+  const [isCreatingCity, setIsCreatingCity] = useState(false);
 
   // Fetch countries and cities
-  const { data: countries = [], isLoading: countriesLoading } = useQuery<Country[]>({
-    queryKey: ['available-countries'],
-    queryFn: getAvailableCountries,
-  });
-
-  const { data: allCities = [], isLoading: citiesLoading } = useQuery<CityWithCountry[]>({
-    queryKey: ['available-cities-by-country'],
-    queryFn: getAvailableCitiesByCountry,
-  });
+  const countriesData = useAvailableCountries();
+  const citiesData = useAvailableCitiesByCountry();
+  const countries = countriesData || [];
+  const allCities = citiesData || [];
+  const countriesLoading = countriesData === undefined;
+  const citiesLoading = citiesData === undefined;
 
   // Create city mutation
-  const createCityMutation = useMutation({
-    mutationFn: ({ cityName, countryCode }: { cityName: string; countryCode: string }) => 
-      createCity(cityName, countryCode),
-    onSuccess: () => {
-      // Invalidate and refetch cities data
-      queryClient.invalidateQueries({ queryKey: ['available-cities-by-country'] });
-      queryClient.invalidateQueries({ queryKey: ['available-countries'] });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message);
-    }
-  });
+  const createCityMutation = useCreateGlobalCity();
 
   // Filter cities by selected country
   const availableCities = selectedCountry 
-    ? allCities.filter(city => city.countryCode === selectedCountry)
+    ? allCities.filter(city => city?.countryCode === selectedCountry)
     : [];
 
   // Filter cities by search term
   const filteredCities = availableCities.filter(city =>
-    city.cityName.toLowerCase().includes(searchTerm.toLowerCase())
+    city?.cityName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Check if search term matches any existing city exactly
   const exactMatch = availableCities.find(city => 
-    city.cityName.toLowerCase() === searchTerm.toLowerCase()
+    city?.cityName.toLowerCase() === searchTerm.toLowerCase()
   );
 
   const handleCountryChange = (countryCode: string) => {
@@ -121,26 +106,31 @@ export const EnhancedCitySelector = ({
 
   const confirmCreateCity = async () => {
     if (selectedCountry && newCityName) {
+      setIsCreatingCity(true);
       try {
-        await createCityMutation.mutateAsync({ 
-          cityName: newCityName, 
-          countryCode: selectedCountry 
+        await createCityMutation({
+          cityName: newCityName,
+          countryCode: selectedCountry,
         });
         
-        setSearchTerm("");
-        setNewCityName("");
+        // Select the newly created city
+        onSelection(selectedCountry, newCityName);
+        
+        toast.success(`City "${newCityName}" created successfully!`);
         setShowNewCityDialog(false);
-        toast.success(`Created "${newCityName}" in ${selectedCountryData?.name}. You can now select it from the dropdown.`);
+        setNewCityName("");
+        setSearchTerm("");
       } catch (error) {
-        // Error already handled by onError callback
-        console.error('Failed to create city:', error);
+        toast.error(`Failed to create city: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      } finally {
+        setIsCreatingCity(false);
       }
     }
   };
 
-  const selectedCountryData = countries.find(c => c.code === selectedCountry);
+  const selectedCountryData = countries.find(c => c?.code === selectedCountry);
   const selectedCityData = allCities.find(c => 
-    c.countryCode === selectedCountry && c.cityName === selectedCity
+    c?.countryCode === selectedCountry && c?.cityName === selectedCity
   );
 
   return (
@@ -256,11 +246,11 @@ export const EnhancedCitySelector = ({
                 <div className="grid grid-cols-1 gap-1">
                   {filteredCities.map((city) => (
                     <button
-                      key={city.cityName}
+                      key={city?.cityName}
                       type="button"
-                      onClick={() => handleCityChange(city.cityName)}
+                      onClick={() => handleCityChange(city?.cityName || "")}
                       className={`text-left p-3 rounded-lg border transition-colors ${
-                        selectedCity === city.cityName
+                        selectedCity === city?.cityName
                           ? 'border-brand-orange bg-brand-orange/10 text-brand-orange'
                           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       }`}
@@ -268,10 +258,10 @@ export const EnhancedCitySelector = ({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <MapPin className="w-4 h-4 text-blue-600" />
-                          <span className="font-medium">{city.cityName}</span>
+                          <span className="font-medium">{city?.cityName}</span>
                         </div>
                         <Badge variant="secondary" className="text-xs">
-                          {city.tripCount} trips
+                          {city?.tripCount} trips
                         </Badge>
                       </div>
                     </button>
@@ -327,7 +317,8 @@ export const EnhancedCitySelector = ({
               Create New City
             </DialogTitle>
             <DialogDescription>
-              You're about to add "{newCityName}" as a new city in {selectedCountryData?.name} {selectedCountryData?.flagEmoji}
+              You're about to add "{newCityName}" as a new city in {selectedCountryData?.name} {selectedCountryData?.flagEmoji}. 
+              This city will be available for all users to select.
             </DialogDescription>
           </DialogHeader>
           
@@ -358,11 +349,20 @@ export const EnhancedCitySelector = ({
               <Button 
                 type="button"
                 onClick={confirmCreateCity}
-                disabled={createCityMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700"
+                disabled={isCreatingCity}
+                className="bg-blue-600 text-white hover:bg-blue-700"
               >
-                <Check className="w-4 h-4 mr-2" />
-                {createCityMutation.isPending ? 'Creating...' : `Create "${newCityName}"`}
+                {isCreatingCity ? (
+                  <>
+                    <Clock className="w-4 h-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4 mr-2" />
+                    Create "{newCityName}"
+                  </>
+                )}
               </Button>
             </div>
           </div>

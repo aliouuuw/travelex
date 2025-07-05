@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,7 +11,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { getCitiesForCountry } from "@/services/supabase/countries";
+import { useCitiesForCountry } from "@/services/convex/countries";
 
 interface SearchFormData {
   fromCity: string;
@@ -20,10 +20,7 @@ interface SearchFormData {
   passengers: number;
 }
 
-interface City {
-  cityName: string;
-  tripCount: number;
-}
+
 
 interface TravelExBookingFlowProps {
   onSearch?: (searchData: SearchFormData & { fromCountry: string; toCountry: string }) => void;
@@ -41,32 +38,15 @@ export default function TravelExBookingFlow({
   initialValues
 }: TravelExBookingFlowProps) {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [cities, setCities] = useState<City[]>([]);
+  const canadianCities = useCitiesForCountry('CA');
+  const loading = canadianCities === undefined;
+  const cities = canadianCities || [];
   const [searchData, setSearchData] = useState<SearchFormData>({
     fromCity: initialValues?.fromCity || "",
     toCity: initialValues?.toCity || "",
     departureDate: initialValues?.departureDate || undefined,
     passengers: initialValues?.passengers || 1
   });
-
-  // Load Canadian cities on component mount
-  useEffect(() => {
-    const loadCities = async () => {
-      try {
-        setLoading(true);
-        const canadianCities = await getCitiesForCountry('CA');
-        setCities(canadianCities);
-      } catch (error) {
-        console.error('Failed to load cities:', error);
-        toast.error('Failed to load cities. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadCities();
-  }, []);
 
   const updateSearchData = (updates: Partial<SearchFormData>) => {
     setSearchData((prev: SearchFormData) => {

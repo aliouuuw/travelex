@@ -28,7 +28,7 @@ import {
   updateTrip,
   type TripFormData 
 } from "@/services/supabase/trips";
-import { getDriverRouteTemplates, type RouteTemplate } from "@/services/supabase/route-templates";
+import { getDriverRouteTemplates, type RouteTemplate } from "@/services/convex/routeTemplates";
 import { getDriverVehicles } from "@/services/supabase/vehicles";
 import { getDriverLuggagePolicies } from "@/services/supabase/luggage-policies";
 import { toast } from "sonner";

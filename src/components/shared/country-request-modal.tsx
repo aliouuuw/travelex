@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { submitCountryRequest } from "@/services/supabase/countries";
+import { useSubmitCountryRequest } from "@/services/convex/countries";
 
 interface CountryRequestModalProps {
   trigger?: React.ReactNode;
@@ -51,7 +51,7 @@ export const CountryRequestModal = ({
   const queryClient = useQueryClient();
 
   const requestMutation = useMutation({
-    mutationFn: submitCountryRequest,
+    mutationFn: useSubmitCountryRequest(),
     onSuccess: () => {
       toast.success("Country request submitted! We'll review it shortly.");
       setFormData({ countryName: "", countryCode: "", reason: "" });
@@ -78,7 +78,11 @@ export const CountryRequestModal = ({
       return;
     }
 
-    requestMutation.mutate(formData);
+    requestMutation.mutate({
+      countryName: formData.countryName,
+      countryCode: formData.countryCode,
+      reason: formData.reason
+    });
   };
 
   const defaultTrigger = (

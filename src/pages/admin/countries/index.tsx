@@ -16,19 +16,17 @@ import {
   Clock,
   AlertCircle
 } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
-  getAvailableCountries, 
-  type Country,
-  getCountryRequests,
-  approveCountryRequest,
-  rejectCountryRequest,
-  createCountry,
-  type CountryRequest
-} from "@/services/supabase/countries";
-import { toast } from "sonner";
 
-// Services are now imported from @/services/countries
+import { 
+  useAvailableCountries, 
+  useCountryRequests,
+  useApproveCountryRequest,
+  useRejectCountryRequest,
+  useCreateCountry,
+  type Country,
+  type CountryRequest
+} from "@/services/convex/countries";
+import { toast } from "sonner";
 
 const CountryCard = ({ country }: { country: Country }) => {
   return (
@@ -68,30 +66,26 @@ const CountryCard = ({ country }: { country: Country }) => {
 };
 
 const CountryRequestCard = ({ request }: { request: CountryRequest }) => {
-  const queryClient = useQueryClient();
-  
-  const approveMutation = useMutation({
-    mutationFn: approveCountryRequest,
-    onSuccess: () => {
+  const approveMutation = useApproveCountryRequest();
+  const rejectMutation = useRejectCountryRequest();
+
+  const handleApprove = async () => {
+    try {
+      await approveMutation({ requestId: request.id as any });
       toast.success("Country request approved!");
-      queryClient.invalidateQueries({ queryKey: ['country-requests'] });
-      queryClient.invalidateQueries({ queryKey: ['countries'] });
-    },
-    onError: () => {
+    } catch (error) {
       toast.error("Failed to approve country request");
     }
-  });
+  };
 
-  const rejectMutation = useMutation({
-    mutationFn: rejectCountryRequest,
-    onSuccess: () => {
+  const handleReject = async () => {
+    try {
+      await rejectMutation({ requestId: request.id as any });
       toast.success("Country request rejected");
-      queryClient.invalidateQueries({ queryKey: ['country-requests'] });
-    },
-    onError: () => {
+    } catch (error) {
       toast.error("Failed to reject country request");
     }
-  });
+  };
 
   return (
     <Card className="border-orange-200">
@@ -118,8 +112,7 @@ const CountryRequestCard = ({ request }: { request: CountryRequest }) => {
           <Button 
             size="sm" 
             className="bg-green-600 hover:bg-green-700"
-            onClick={() => approveMutation.mutate(request.id)}
-            disabled={approveMutation.isPending}
+            onClick={handleApprove}
           >
             <Check className="w-4 h-4 mr-1" />
             Approve
@@ -128,8 +121,7 @@ const CountryRequestCard = ({ request }: { request: CountryRequest }) => {
             size="sm" 
             variant="outline"
             className="text-red-600 hover:text-red-700"
-            onClick={() => rejectMutation.mutate(request.id)}
-            disabled={rejectMutation.isPending}
+            onClick={handleReject}
           >
             <X className="w-4 h-4 mr-1" />
             Reject
@@ -148,9 +140,17 @@ const AddCountryForm = ({ onAdd }: { onAdd: (country: Country) => void }) => {
     flagEmoji: ""
   });
 
-  const createMutation = useMutation({
-    mutationFn: createCountry,
-    onSuccess: () => {
+  const createMutation = useCreateCountry();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name || !formData.code) {
+      toast.error("Country name and code are required");
+      return;
+    }
+    
+    try {
+      await createMutation(formData);
       toast.success("Country added successfully!");
       setFormData({ name: "", code: "", flagEmoji: "" });
       setIsOpen(false);
@@ -161,19 +161,9 @@ const AddCountryForm = ({ onAdd }: { onAdd: (country: Country) => void }) => {
         cityCount: 0,
         tripCount: 0
       });
-    },
-    onError: () => {
+    } catch (error) {
       toast.error("Failed to add country");
     }
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name || !formData.code) {
-      toast.error("Country name and code are required");
-      return;
-    }
-    createMutation.mutate(formData);
   };
 
   if (!isOpen) {
@@ -233,7 +223,7 @@ const AddCountryForm = ({ onAdd }: { onAdd: (country: Country) => void }) => {
           </div>
           
           <div className="flex gap-2">
-            <Button type="submit" disabled={createMutation.isPending}>
+            <Button type="submit">
               Create Country
             </Button>
             <Button 
@@ -251,20 +241,11 @@ const AddCountryForm = ({ onAdd }: { onAdd: (country: Country) => void }) => {
 };
 
 export default function CountriesManagement() {
-  const queryClient = useQueryClient();
-  
-  const { data: countries = [] } = useQuery<Country[]>({
-    queryKey: ['countries'],
-    queryFn: getAvailableCountries
-  });
-
-  const { data: countryRequests = [] } = useQuery<CountryRequest[]>({
-    queryKey: ['country-requests'],
-    queryFn: () => getCountryRequests()
-  });
+  const countries = useAvailableCountries() || [];
+  const countryRequests = useCountryRequests() || [];
 
   const handleCountryAdded = () => {
-    queryClient.invalidateQueries({ queryKey: ['countries'] });
+    // Convex automatically handles cache invalidation
   };
 
   const pendingRequests = countryRequests.filter(r => r.status === 'pending');

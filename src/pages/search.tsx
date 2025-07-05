@@ -20,14 +20,14 @@ import {
 import { format } from "date-fns";
 import { Link, useSearchParams } from "react-router-dom";
 import { 
-  searchTripsBySegmentWithCountry,
+  useSearchTrips,
   applyTripFilters,
   sortTripResults,
   formatTripDuration,
   getRoutePathString,
   type TripSearchQueryWithCountry,
   type TripSearchResult,
-} from "@/services/supabase/trip-search";
+} from "@/services/convex/tripSearch";
 import TravelExBookingFlow from "@/components/TravelExBookingFlow";
 
 // Trip Search functionality is now handled by TravelExBookingFlow component
@@ -146,8 +146,6 @@ export const TripResultCard = ({
 // Main Search Page Component
 export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState<TripSearchQueryWithCountry | null>(null);
-  const [searchResults, setSearchResults] = useState<TripSearchResult[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [sortBy, setSortBy] = useState<'price' | 'departure' | 'duration' | 'rating'>('departure');
   const [isSearchFormExpanded, setIsSearchFormExpanded] = useState(true);
   const [searchParams] = useSearchParams();
@@ -157,6 +155,17 @@ export default function SearchPage() {
   const toCity = searchParams.get('toCity');
   const departureDateStr = searchParams.get('departureDate');
   const passengersStr = searchParams.get('passengers');
+
+  // Use Convex hook for trip search
+  const searchResults = useSearchTrips(
+    searchQuery?.fromCity || "",
+    searchQuery?.toCity || "",
+    searchQuery?.departureDate,
+    searchQuery?.minSeats,
+    searchQuery?.maxPrice
+  );
+
+  const isLoading = searchResults === undefined && searchQuery !== null;
 
   const initialValues = fromCity && toCity ? {
     fromCity,
@@ -183,20 +192,8 @@ export default function SearchPage() {
 
   const handleSearch = (query: TripSearchQueryWithCountry) => {
     setSearchQuery(query);
-    setIsLoading(true);
-    
-    searchTripsBySegmentWithCountry(query)
-      .then((results) => {
-        setSearchResults(results);
-        setIsLoading(false);
-        // Auto-collapse search form when results are shown
-        if (results.length > 0) {
-          setIsSearchFormExpanded(false);
-        }
-      })
-      .catch(() => {
-        setIsLoading(false);
-      });
+    // Auto-collapse search form when search is initiated
+    setIsSearchFormExpanded(false);
   };
 
   // Handle search from TravelExBookingFlow component
@@ -212,7 +209,7 @@ export default function SearchPage() {
     handleSearch(query);
   };
 
-  const filteredResults = applyTripFilters(searchResults, {});
+  const filteredResults = applyTripFilters(searchResults || [], {});
   const sortedResults = sortTripResults(filteredResults, sortBy);
 
   return (

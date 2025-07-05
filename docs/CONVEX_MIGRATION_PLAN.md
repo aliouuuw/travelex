@@ -13,19 +13,28 @@ This document outlines the comprehensive migration plan from Supabase to Convex 
 - [x] New auth service with React hooks pattern
 - [x] Convex client and provider setup
 
-### 🔄 **Phase 2: Frontend Auth Integration (IN PROGRESS)**
+### ✅ **Phase 2: Frontend Auth Integration (COMPLETED)**
 - [x] Update main app to use Convex providers
 - [x] Migrate auth context to use Convex
-- [] Update auth components and pages (in progress)
+- [x] Update auth components and pages
   - [x] Admin sign up & in
-  - [] Driver sign up request & sign in
-- [] Test authentication flow (in progress)
+  - [x] Driver sign up request & sign in
+- [x] Test authentication flow
 
-### ⏳ **Phase 3: Core Business Logic Migration**
-- [ ] Countries and cities management
-- [ ] Route templates and pricing
-- [ ] Vehicle and luggage policies
-- [ ] Trip scheduling and management
+### 🎯 **Phase 3: Core Business Logic Migration (IN PROGRESS)**
+- [x] **Countries and cities management (COMPLETED)**
+  - [x] Migrate country CRUD operations to Convex
+  - [x] Implement global city creation functionality
+  - [x] Update country request system for Convex
+  - [x] Migrate enhanced city selector to use Convex
+- [x] **Route templates and pricing (COMPLETED)**
+  - [x] Migrate route template creation to Convex
+  - [x] Implement intercity pricing with Convex
+  - [x] Update all route template CRUD operations
+  - [x] Migrate reusable cities/stations to Convex
+  - [x] Fix authentication issues in route template functions
+- [ ] **Vehicle and luggage policies**
+- [ ] **Trip scheduling and management**
 
 ### ⏳ **Phase 4: Reservation and Payment System**
 - [ ] Reservation management
@@ -205,9 +214,45 @@ Migrate bag-based pricing system:
 - `src/services/reservations.ts` → `convex/reservations.ts`
 - `src/services/payments.ts` → `convex/payments.ts`
 
-### **Admin Services**
-- `src/services/users.ts` → `convex/users.ts` (already created)
-- `src/services/signup-requests.ts` → `convex/signup-requests.ts`
+## Migration Achievements
+
+### ✅ **Route Template Migration (COMPLETED)**
+
+**Convex Functions Implemented:**
+- `convex/routeTemplates.ts` - Complete CRUD operations for route templates
+- `convex/countries.ts` - Country management with global city creation
+- `convex/citiesStations.ts` - Reusable cities and stations management
+- `convex/reusableCitiesStations.ts` - Enhanced cities/stations functionality
+
+**Service Layer Migration:**
+- `src/services/convex/routeTemplates.ts` - React hooks for route template operations
+- `src/services/convex/countries.ts` - Country and city management hooks
+- `src/services/convex/citiesStations.ts` - Cities/stations management hooks
+
+**Authentication Updates:**
+- Fixed all route template functions to use `auth.getUserId(ctx)` instead of `identity.email`
+- Updated profile lookups to use `by_user` index instead of `by_email`
+- Resolved "User profile not found" errors in route creation
+
+**Frontend Component Updates:**
+- `src/components/shared/enhanced-city-selector.tsx` - Migrated to use Convex city creation
+- `src/pages/driver/routes/edit.tsx` - Updated to use Convex route template services
+- All route management pages updated to use Convex hooks
+
+**Key Features Migrated:**
+- ✅ Route template creation with cities and stations
+- ✅ Intercity pricing configuration
+- ✅ City sequence management with drag-and-drop
+- ✅ Global city creation for all users
+- ✅ Reusable cities and stations system
+- ✅ Route template editing and deletion
+- ✅ Route validation and country verification
+
+**Database Schema Alignment:**
+- Route templates stored in Convex with same structure as Supabase
+- Cities and stations properly linked with country relationships
+- Pricing data maintained with intercity fare calculations
+- Authentication properly integrated with Convex Auth system
 
 ## Testing Strategy
 
