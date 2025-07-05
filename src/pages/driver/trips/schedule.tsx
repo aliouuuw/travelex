@@ -22,9 +22,9 @@ import {
   Users
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getDriverVehicles } from "@/services/supabase/vehicles";
-import { getDriverLuggagePolicies } from "@/services/supabase/luggage-policies";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useDriverVehicles } from "@/services/convex/vehicles";
+import { useDriverLuggagePolicies } from "@/services/convex/luggage-policies";
 import { createTrip, type TripFormData } from "@/services/convex/trips";
 import { toast } from "sonner";
 import { useDriverRouteTemplates, type RouteTemplate } from "@/services/convex/routeTemplates";
@@ -146,16 +146,12 @@ export default function ScheduleTripPage() {
   const loadingRoutes = routeTemplates === undefined;
 
   // Fetch vehicles
-  const { data: vehicles = [], isLoading: loadingVehicles } = useQuery({
-    queryKey: ['driver-vehicles'],
-    queryFn: getDriverVehicles,
-  });
+  const vehicles = useDriverVehicles();
+  const loadingVehicles = vehicles === undefined;
 
   // Fetch luggage policies
-  const { data: luggagePolicies = [], isLoading: loadingPolicies } = useQuery({
-    queryKey: ['driver-luggage-policies'],
-    queryFn: getDriverLuggagePolicies,
-  });
+  const luggagePolicies = useDriverLuggagePolicies();
+  const loadingPolicies = luggagePolicies === undefined;
 
   // Watch form values for reactivity
   const routeTemplateId = form.watch('routeTemplateId');
@@ -182,7 +178,7 @@ export default function ScheduleTripPage() {
   );
 
   const selectedVehicle = useMemo(() => 
-    vehicles.find((vehicle) => vehicle.id === vehicleId),
+    vehicles?.find((vehicle) => vehicle._id === vehicleId),
     [vehicles, vehicleId]
   );
 
@@ -225,7 +221,8 @@ export default function ScheduleTripPage() {
         const station = city.stations?.find(s => s.id === stationId);
         if (station) {
           return {
-            stationId: station.id,
+            routeTemplateCityId: city.id || city.cityName, // Use city ID if available, fallback to city name
+            routeTemplateStationId: station.id,
             cityName: city.cityName,
             sequenceOrder: city.sequenceOrder,
             isPickupPoint: true,
@@ -234,7 +231,7 @@ export default function ScheduleTripPage() {
         }
       }
       return null;
-    }).filter(Boolean) as TripFormData['selectedStations'];
+    }).filter(Boolean) as unknown as TripFormData['selectedStations'];
 
     const tripData: TripFormData = {
       routeTemplateId: data.routeTemplateId,
@@ -377,7 +374,7 @@ export default function ScheduleTripPage() {
                         {vehicles
                           .filter(v => v.status === 'active')
                           .map((vehicle) => (
-                          <SelectItem key={vehicle.id} value={vehicle.id}>
+                          <SelectItem key={vehicle._id} value={vehicle._id}>
                             {vehicle.make} {vehicle.model} ({vehicle.year}) - {vehicle.capacity} seats
                           </SelectItem>
                         ))}
@@ -419,7 +416,7 @@ export default function ScheduleTripPage() {
                       <SelectContent>
                         <SelectItem value="none">No specific policy</SelectItem>
                         {luggagePolicies.map((policy) => (
-                          <SelectItem key={policy.id} value={policy.id}>
+                          <SelectItem key={policy._id} value={policy._id}>
                             {policy.name}
                           </SelectItem>
                         ))}

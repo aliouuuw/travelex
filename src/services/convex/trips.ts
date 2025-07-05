@@ -57,7 +57,8 @@ export interface TripFormData {
   departureTime: string;
   arrivalTime: string;
   selectedStations: Array<{
-    stationId: string;
+    routeTemplateCityId: string;
+    routeTemplateStationId: string;
     cityName: string;
     sequenceOrder: number;
     isPickupPoint: boolean;
@@ -226,10 +227,9 @@ async function transformTripDataToConvex(tripData: TripFormData) {
   const arrivalTime = new Date(tripData.arrivalTime).getTime();
   
   // Transform selected stations to convex format
-  // For now, we'll create a simplified mapping
   const stationSelections = tripData.selectedStations.map(station => ({
-    routeTemplateCityId: station.stationId as Id<"routeTemplateCities">, // This will need proper mapping
-    stationId: station.stationId as Id<"routeTemplateStations">,
+    routeTemplateCityId: station.routeTemplateCityId as Id<"routeTemplateCities">,
+    stationId: station.routeTemplateStationId as Id<"routeTemplateStations">,
     isPickupPoint: station.isPickupPoint,
     isDropoffPoint: station.isDropoffPoint,
     estimatedTime: undefined,
@@ -255,8 +255,8 @@ async function transformUpdateTripDataToConvex(tripData: Omit<TripFormData, 'rou
   
   // Transform selected stations to convex format
   const stationSelections = tripData.selectedStations.map(station => ({
-    routeTemplateCityId: station.stationId as Id<"routeTemplateCities">, // This needs to be fixed
-    stationId: station.stationId as Id<"routeTemplateStations">,
+    routeTemplateCityId: station.routeTemplateCityId as Id<"routeTemplateCities">,
+    stationId: station.routeTemplateStationId as Id<"routeTemplateStations">,
     isPickupPoint: station.isPickupPoint,
     isDropoffPoint: station.isDropoffPoint,
     estimatedTime: undefined,

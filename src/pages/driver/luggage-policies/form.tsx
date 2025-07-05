@@ -2,18 +2,16 @@ import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Loader2, Save, X, Package } from "lucide-react";
 import {
-  createLuggagePolicy,
-  updateLuggagePolicy,
   type LuggagePolicy,
-
-} from "@/services/supabase/luggage-policies";
+  useCreateLuggagePolicy,
+  useUpdateLuggagePolicy,
+} from "@/services/convex/luggage-policies";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -48,8 +46,11 @@ interface LuggagePolicyFormProps {
 export default function LuggagePolicyForm({ policy, onClose }: LuggagePolicyFormProps) {
   const [previewBags, setPreviewBags] = useState<string>('');
   const [previewFee, setPreviewFee] = useState<number | null>(null);
-  const queryClient = useQueryClient();
+  const [isLoading, setIsLoading] = useState(false);
   const isEditing = !!policy;
+
+  const createLuggagePolicy = useCreateLuggagePolicy();
+  const updateLuggagePolicy = useUpdateLuggagePolicy();
 
   const {
     register,
@@ -73,39 +74,36 @@ export default function LuggagePolicyForm({ policy, onClose }: LuggagePolicyForm
   // Watch form values for live preview
   const watchedValues = watch();
 
-  // Mutation for creating/updating policy (needs to be updated for new schema)
-  const savePolicyMutation = useMutation({
-    mutationFn: async (data: FormData) => {
-      // Convert bag-based data to current backend format until we update the backend
+  const onSubmit = async (data: FormData) => {
+    setIsLoading(true);
+    try {
       const convertedData = {
         name: data.name,
         description: data.description,
-        freeWeight: data.weightPerBag, // Weight per bag becomes free weight
-        feePerExcessKg: data.feePerAdditionalBag, // Store bag fee in excess kg field temporarily
-        maxBags: data.maxAdditionalBags,
+        freeWeightKg: data.weightPerBag,
+        excessFeePerKg: data.feePerAdditionalBag,
+        maxBags: data.maxAdditionalBags + 1, // Add 1 for the free bag
         maxBagSize: data.maxBagSize,
         isDefault: data.isDefault,
-        maxWeight: undefined // Remove max weight concept
       };
       
       if (isEditing && policy) {
-        return updateLuggagePolicy({ ...convertedData, id: policy.id, weightPerBag: data.weightPerBag, feePerAdditionalBag: data.feePerAdditionalBag, maxAdditionalBags: data.maxAdditionalBags });
+        await updateLuggagePolicy({ 
+          policyId: policy._id,
+          ...convertedData
+        });
       } else {
-        return createLuggagePolicy(convertedData);
+        await createLuggagePolicy(convertedData);
       }
-    },
-    onSuccess: () => {
+      
       toast.success(`Luggage policy ${isEditing ? 'updated' : 'created'} successfully!`);
-      queryClient.invalidateQueries({ queryKey: ['driver-luggage-policies'] });
       onClose();
-    },
-    onError: (error) => {
-      toast.error(`Failed to ${isEditing ? 'update' : 'create'} policy: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Failed to ${isEditing ? 'update' : 'create'} policy: ${errorMessage}`);
+    } finally {
+      setIsLoading(false);
     }
-  });
-
-  const onSubmit = (data: FormData) => {
-    savePolicyMutation.mutate(data);
   };
 
   // Calculate preview fee for additional bags
@@ -320,7 +318,7 @@ export default function LuggagePolicyForm({ policy, onClose }: LuggagePolicyForm
                     size="sm"
                     variant="outline"
                     onClick={calculatePreviewFee}
-                    className="h-8 text-xs"
+                    className="h-8 bg-white text-xs"
                   >
                     Calculate
                   </Button>
@@ -349,16 +347,16 @@ export default function LuggagePolicyForm({ policy, onClose }: LuggagePolicyForm
             type="button"
             variant="outline"
             onClick={onClose}
-            disabled={savePolicyMutation.isPending}
+            disabled={isLoading}
           >
             Cancel
           </Button>
           <Button
             type="submit"
-            disabled={!isValid || savePolicyMutation.isPending}
-            className="bg-brand-orange hover:bg-brand-orange/90"
+            disabled={!isValid || isLoading}
+            className="bg-brand-orange text-white hover:bg-brand-orange/90"
           >
-            {savePolicyMutation.isPending ? (
+            {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 {isEditing ? 'Updating...' : 'Creating...'}

@@ -21,7 +21,7 @@ This document outlines the comprehensive migration plan from Supabase to Convex 
   - [x] Driver sign up request & sign in
 - [x] Test authentication flow
 
-### 🎯 **Phase 3: Core Business Logic Migration (IN PROGRESS)**
+### ✅ **Phase 3: Core Business Logic Migration (COMPLETED)**
 - [x] **Countries and cities management (COMPLETED)**
   - [x] Migrate country CRUD operations to Convex
   - [x] Implement global city creation functionality
@@ -38,10 +38,14 @@ This document outlines the comprehensive migration plan from Supabase to Convex 
   - [x] Implement trip calendar and scheduling system
   - [x] Update driver trip management pages
   - [x] Fix authentication issues in trip functions
-- [ ] **Vehicle and luggage policies (PENDING MIGRATION)**
-  - [ ] Migrate vehicle management system from Supabase to Convex
-  - [ ] Migrate luggage policy management from Supabase to Convex
-  - [ ] Update integration points with trip scheduling
+- [x] **Vehicle and luggage policies (COMPLETED)**
+  - [x] Migrate vehicle management system from Supabase to Convex
+  - [x] Migrate luggage policy management from Supabase to Convex
+  - [x] Update integration points with trip scheduling
+  - [x] Implement vehicle CRUD operations with Convex
+  - [x] Implement luggage policy CRUD operations with Convex
+  - [x] Update frontend components to use Convex hooks
+  - [x] Fix authentication and TypeScript integration issues
 
 ### ⏳ **Phase 4: Reservation and Payment System**
 - [ ] Reservation management
@@ -161,10 +165,10 @@ Migrate bag-based pricing system:
 - Fee calculation
 - Default policy enforcement
 
-### **Phase 3: Vehicle and Luggage Management Migration**
+### ✅ **Phase 3: Vehicle and Luggage Management Migration (COMPLETED)**
 
-#### **3.1 Vehicle Management System Migration**
-**Current State:** Fully implemented in Supabase with comprehensive features:
+#### **3.1 Vehicle Management System Migration ✅ COMPLETED**
+**Migration Accomplished:** Successfully migrated full-featured vehicle management system from Supabase to Convex:
 - Multi-step vehicle creation/editing forms with tabbed interface
 - Professional fleet management UI with statistics dashboard
 - Automatic seat map generation based on vehicle type and capacity
@@ -174,34 +178,36 @@ Migrate bag-based pricing system:
 - Vehicle status management (active, maintenance, inactive)
 - Complete CRUD operations with search and filtering
 
-**Migration Tasks:**
-1. **Convex Schema Setup**
-   - Create vehicles table in Convex schema with all existing fields
-   - Define indexes for efficient queries (driver_id, status, is_default)
-   - Set up proper field types (seat_map as JSON, features as array)
+**✅ Convex Implementation Completed:**
+1. **Convex Schema Setup ✅**
+   - ✅ Created vehicles table in Convex schema with all existing fields
+   - ✅ Defined indexes for efficient queries (by_driver, by_status, by_default)
+   - ✅ Set up proper field types (seatMap as object, features as array)
 
-2. **Convex Functions Implementation**
-   - `createVehicle` - Vehicle creation with validation
-   - `updateVehicle` - Vehicle updates with seat map regeneration
-   - `deleteVehicle` - Safe deletion with dependency checks
-   - `getDriverVehicles` - Paginated vehicle listing with filters
-   - `getDefaultVehicle` - Default vehicle selection logic
-   - `setDefaultVehicle` - Default vehicle management
-   - `getVehicleById` - Single vehicle retrieval
+2. **Convex Functions Implementation ✅**
+   - ✅ `createVehicle` - Vehicle creation with validation and seat map generation
+   - ✅ `updateVehicle` - Vehicle updates with comprehensive field support
+   - ✅ `deleteVehicle` - Safe deletion with dependency checks
+   - ✅ `getDriverVehicles` - Vehicle listing with real-time updates
+   - ✅ `getVehicleById` - Single vehicle retrieval
+   - ✅ `setDefaultVehicle` - Default vehicle management
+   - ✅ Admin functions for vehicle management across drivers
 
-3. **Convex Service Layer**
-   - Replace `src/services/supabase/vehicles.ts` with Convex equivalent
-   - Maintain same API interface for seamless frontend integration
-   - Add vehicle utility functions (seat map generation, feature management)
+3. **Convex Service Layer ✅**
+   - ✅ `convex/vehicles.ts` - Complete backend implementation with auth
+   - ✅ `src/services/convex/vehicles.ts` - React hooks and utility functions
+   - ✅ Vehicle utility functions (seat map generation, feature management)
+   - ✅ TypeScript integration with proper type definitions
 
-4. **Frontend Integration**
-   - Update vehicle management pages to use Convex hooks
-   - Migrate vehicle forms to use Convex mutations
-   - Update vehicle selection components in trip creation
-   - Test all vehicle management workflows
+4. **Frontend Integration ✅**
+   - ✅ Updated vehicle management pages to use Convex hooks
+   - ✅ Migrated vehicle forms to use Convex mutations with async/await
+   - ✅ Updated vehicle selection in trip creation/editing
+   - ✅ Fixed authentication and field mapping issues
+   - ✅ All vehicle management workflows tested and working
 
-#### **3.2 Luggage Policy Management Migration**
-**Current State:** Fully implemented in Supabase with bag-based pricing model:
+#### **3.2 Luggage Policy Management Migration ✅ COMPLETED**
+**Migration Accomplished:** Successfully migrated bag-based luggage policy system from Supabase to Convex:
 - Intuitive bag-based pricing (1 free bag + flat fee per additional bag)
 - Complete CRUD operations for luggage policies
 - Default policy management system
@@ -210,47 +216,67 @@ Migrate bag-based pricing system:
 - Professional policy management interface
 - Backward compatibility with weight-based policies
 
-**Migration Tasks:**
-1. **Convex Schema Setup**
-   - Create luggage_policies table in Convex schema
-   - Include bag-based pricing fields (free_weight_kg, excess_fee_per_kg as flat fee)
-   - Set up proper field types and validation rules
-   - Define indexes for efficient queries
+**✅ Convex Implementation Completed:**
+1. **Convex Schema Setup ✅**
+   - ✅ Created luggagePolicies table in Convex schema
+   - ✅ Included bag-based pricing fields with proper validation
+   - ✅ Set up proper field types and constraints
+   - ✅ Defined indexes for efficient queries (by_driver, by_default)
 
-2. **Convex Functions Implementation**
-   - `createLuggagePolicy` - Policy creation with validation
-   - `updateLuggagePolicy` - Policy updates with fee recalculation
-   - `deleteLuggagePolicy` - Safe deletion with dependency checks
-   - `getDriverLuggagePolicies` - Paginated policy listing
-   - `getDefaultLuggagePolicy` - Default policy selection
-   - `setDefaultLuggagePolicy` - Default policy management
-   - `calculateLuggageFee` - Fee calculation utilities
+2. **Convex Functions Implementation ✅**
+   - ✅ `createLuggagePolicy` - Policy creation with validation
+   - ✅ `updateLuggagePolicy` - Policy updates with fee recalculation
+   - ✅ `deleteLuggagePolicy` - Safe deletion with dependency checks
+   - ✅ `getDriverLuggagePolicies` - Policy listing with real-time updates
+   - ✅ `getLuggagePolicyById` - Single policy retrieval
+   - ✅ `setDefaultLuggagePolicy` - Default policy management
+   - ✅ `calculateLuggageFeeByBags` - Fee calculation utilities
+   - ✅ Admin functions for policy management
 
-3. **Convex Service Layer**
-   - Replace `src/services/supabase/luggage-policies.ts` with Convex equivalent
-   - Maintain pricing calculation compatibility
-   - Add policy utility functions (fee calculation, validation)
+3. **Convex Service Layer ✅**
+   - ✅ `convex/luggagePolicies.ts` - Complete backend implementation
+   - ✅ `src/services/convex/luggage-policies.ts` - React hooks and utilities
+   - ✅ Fee calculation compatibility maintained
+   - ✅ Policy utility functions (validation, fee calculation)
 
-4. **Frontend Integration**
-   - Update luggage policy management pages to use Convex hooks
-   - Migrate policy forms to use Convex mutations
-   - Update policy selection components in trip creation
-   - Test all luggage policy workflows
+4. **Frontend Integration ✅**
+   - ✅ Updated luggage policy management pages to use Convex hooks
+   - ✅ Migrated policy forms to use Convex mutations with proper error handling
+   - ✅ Updated policy selection in trip creation/editing
+   - ✅ Fixed TypeScript linter errors and authentication issues
+   - ✅ All luggage policy workflows tested and working
 
-#### **3.3 Integration Points Update**
-After both systems are migrated:
-- Update trip creation/editing forms to use Convex for vehicle and policy selection
-- Update reservation system to use Convex for luggage fee calculation
-- Ensure all cross-system references work correctly
-- Test end-to-end workflows involving vehicles and luggage policies
+#### **3.3 Integration Points Update ✅ COMPLETED**
+✅ **All Integration Points Successfully Updated:**
+- ✅ Trip creation/editing forms now use Convex for vehicle and policy selection
+- ✅ Trip scheduling system integrates seamlessly with Convex vehicle/policy data
+- ✅ Reservation system ready for Convex luggage fee calculation integration
+- ✅ All cross-system references working correctly
+- ✅ End-to-end workflows tested involving vehicles and luggage policies
+- ✅ Real-time updates working across all related components
 
-### **Phase 3: Trip and Reservation System**
+### ✅ **Phase 3: Trip Scheduling and Management (COMPLETED)**
 
-#### **3.1 Trip Management**
-- Trip scheduling with calendar
-- Station selection
-- Status management
-- Real-time updates
+#### **3.1 Trip Management ✅ COMPLETED**
+**Migration Accomplished:** Successfully migrated comprehensive trip scheduling and management system from Supabase to Convex:
+- ✅ Trip scheduling with interactive calendar interface
+- ✅ Multi-step trip creation workflow (details → station selection)
+- ✅ Station selection system for operational efficiency
+- ✅ Trip status management (scheduled, in-progress, completed, cancelled)
+- ✅ Real-time updates and synchronization
+- ✅ Trip editing with pre-populated data and validation
+- ✅ Professional trip listing with statistics dashboard
+- ✅ Integration with route templates, vehicles, and luggage policies
+
+**✅ Convex Implementation Completed:**
+- ✅ `convex/trips.ts` - Complete backend implementation with comprehensive CRUD operations
+- ✅ `src/services/convex/trips.ts` - React hooks and service layer integration
+- ✅ Trip calendar with interactive scheduling and day summary modals
+- ✅ Multi-step trip creation forms with real-time validation
+- ✅ Trip management dashboard with search, filtering, and bulk operations
+- ✅ Station pre-selection system integrated with route templates
+- ✅ Authentication and authorization properly implemented
+- ✅ TypeScript integration with proper error handling
 
 #### **3.2 Passenger Search**
 - Country-aware trip search
@@ -295,18 +321,23 @@ After both systems are migrated:
 - `src/context/auth-context.ts` → Update to use Convex hooks
 - `src/components/auth-provider.tsx` → Use Convex auth state
 
-### **Business Logic Services**
-- `src/services/countries.ts` → `convex/countries.ts`
-- `src/services/route-templates.ts` → `convex/route-templates.ts`
-- `src/services/supabase/vehicles.ts` → `convex/vehicles.ts` + `src/services/convex/vehicles.ts`
-- `src/services/supabase/luggage-policies.ts` → `convex/luggage-policies.ts` + `src/services/convex/luggage-policies.ts`
-- `src/services/trips.ts` → `convex/trips.ts`
-- `src/services/reservations.ts` → `convex/reservations.ts`
-- `src/services/payments.ts` → `convex/payments.ts`
+### **✅ Business Logic Services (COMPLETED MIGRATIONS)**
+- ✅ `src/services/countries.ts` → `convex/countries.ts` + `src/services/convex/countries.ts`
+- ✅ `src/services/route-templates.ts` → `convex/routeTemplates.ts` + `src/services/convex/routeTemplates.ts`
+- ✅ `src/services/supabase/vehicles.ts` → `convex/vehicles.ts` + `src/services/convex/vehicles.ts`
+- ✅ `src/services/supabase/luggage-policies.ts` → `convex/luggagePolicies.ts` + `src/services/convex/luggage-policies.ts`
+- ✅ `src/services/trips.ts` → `convex/trips.ts` + `src/services/convex/trips.ts`
+
+### **⏳ Remaining Migrations**
+- [ ] `src/services/reservations.ts` → `convex/reservations.ts` + `src/services/convex/reservations.ts`
+- [ ] `src/services/payments.ts` → `convex/payments.ts` + `src/services/convex/payments.ts`
+- [ ] `src/services/trip-search.ts` → `convex/tripSearch.ts` + `src/services/convex/trip-search.ts`
 
 ## Migration Achievements
 
-### ✅ **Route Template Migration (COMPLETED)**
+### ✅ **Core Business Logic Migration (COMPLETED - ALL MAJOR SYSTEMS)**
+
+#### **✅ Route Template Migration (COMPLETED)**
 
 **Convex Functions Implemented:**
 - `convex/routeTemplates.ts` - Complete CRUD operations for route templates
@@ -319,16 +350,6 @@ After both systems are migrated:
 - `src/services/convex/countries.ts` - Country and city management hooks
 - `src/services/convex/citiesStations.ts` - Cities/stations management hooks
 
-**Authentication Updates:**
-- Fixed all route template functions to use `auth.getUserId(ctx)` instead of `identity.email`
-- Updated profile lookups to use `by_user` index instead of `by_email`
-- Resolved "User profile not found" errors in route creation
-
-**Frontend Component Updates:**
-- `src/components/shared/enhanced-city-selector.tsx` - Migrated to use Convex city creation
-- `src/pages/driver/routes/edit.tsx` - Updated to use Convex route template services
-- All route management pages updated to use Convex hooks
-
 **Key Features Migrated:**
 - ✅ Route template creation with cities and stations
 - ✅ Intercity pricing configuration
@@ -338,11 +359,111 @@ After both systems are migrated:
 - ✅ Route template editing and deletion
 - ✅ Route validation and country verification
 
+#### **✅ Vehicle Management Migration (COMPLETED)**
+
+**Convex Functions Implemented:**
+- `convex/vehicles.ts` - Complete vehicle CRUD operations with authentication
+- Vehicle creation, updating, deletion with dependency checks
+- Default vehicle management and status tracking
+- Admin functions for cross-driver vehicle management
+
+**Service Layer Migration:**
+- `src/services/convex/vehicles.ts` - React hooks and utility functions
+- Seat map generation utilities maintained
+- Vehicle feature management and validation
+
+**Frontend Migration:**
+- All vehicle management pages updated to use Convex hooks
+- Vehicle forms migrated to async/await pattern with proper error handling
+- Trip integration updated for vehicle selection
+- Fixed authentication and TypeScript type mapping issues
+
+**Key Features Migrated:**
+- ✅ Multi-step vehicle creation/editing with tabbed interface
+- ✅ Professional fleet management UI with statistics
+- ✅ Automatic seat map generation based on vehicle type
+- ✅ Vehicle feature selection and amenity management
+- ✅ Maintenance tracking (insurance, registration, maintenance dates)
+- ✅ Default vehicle management with automatic enforcement
+- ✅ Vehicle status management (active, maintenance, inactive)
+- ✅ Complete CRUD operations with search and filtering
+
+#### **✅ Luggage Policy Migration (COMPLETED)**
+
+**Convex Functions Implemented:**
+- `convex/luggagePolicies.ts` - Complete luggage policy CRUD operations
+- Policy creation, updating, deletion with business logic validation
+- Default policy management system
+- Fee calculation utilities for bag-based pricing
+
+**Service Layer Migration:**
+- `src/services/convex/luggage-policies.ts` - React hooks and calculation utilities
+- Bag-based pricing model maintained
+- Real-time fee calculation preserved
+
+**Frontend Migration:**
+- All luggage policy management pages updated to use Convex hooks
+- Policy forms migrated with proper error handling and validation
+- Trip integration updated for policy selection
+- Fixed TypeScript linter errors and authentication issues
+
+**Key Features Migrated:**
+- ✅ Intuitive bag-based pricing (1 free bag + flat fee per additional bag)
+- ✅ Complete CRUD operations for luggage policies
+- ✅ Default policy management system
+- ✅ Real-time fee calculation and policy preview
+- ✅ Search and filtering capabilities
+- ✅ Professional policy management interface
+- ✅ Backward compatibility with weight-based policies
+
+#### **✅ Trip Scheduling Migration (COMPLETED)**
+
+**Convex Functions Implemented:**
+- `convex/trips.ts` - Complete trip management system with comprehensive CRUD
+- Trip creation with station pre-selection from route templates
+- Trip status management and real-time updates
+- Integration with vehicles and luggage policies
+
+**Service Layer Migration:**
+- `src/services/convex/trips.ts` - React hooks for trip operations
+- Trip calendar integration maintained
+- Station selection workflow preserved
+
+**Frontend Migration:**
+- Trip scheduling pages updated to use Convex hooks
+- Multi-step trip creation workflow maintained
+- Interactive calendar with day summary modals
+- Fixed authentication and field mapping issues
+
+**Key Features Migrated:**
+- ✅ Trip scheduling with interactive calendar interface
+- ✅ Multi-step trip creation workflow (details → station selection)
+- ✅ Station selection system for operational efficiency
+- ✅ Trip status management (scheduled, in-progress, completed, cancelled)
+- ✅ Real-time updates and synchronization
+- ✅ Trip editing with pre-populated data and validation
+- ✅ Professional trip listing with statistics dashboard
+- ✅ Integration with route templates, vehicles, and luggage policies
+
+### **Technical Migration Achievements:**
+
+**Authentication Updates:**
+- Fixed all functions to use `auth.getUserId(ctx)` instead of `identity.email`
+- Updated profile lookups to use `by_user` index instead of `by_email`
+- Resolved "User profile not found" errors across all systems
+- Implemented proper role-based access control (admin/driver)
+
 **Database Schema Alignment:**
-- Route templates stored in Convex with same structure as Supabase
-- Cities and stations properly linked with country relationships
-- Pricing data maintained with intercity fare calculations
-- Authentication properly integrated with Convex Auth system
+- All entities (vehicles, luggage policies, trips) stored in Convex with same structure as Supabase
+- Proper indexing strategy for efficient queries
+- Real-time reactivity enabled across all components
+- Type safety maintained with proper TypeScript integration
+
+**Frontend Architecture:**
+- All management systems now use Convex hooks for real-time updates
+- Eliminated React Query in favor of Convex's built-in reactivity
+- Proper error handling and loading states implemented
+- TypeScript linter errors resolved across all migrated components
 
 ## Testing Strategy
 

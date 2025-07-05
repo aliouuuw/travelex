@@ -76,6 +76,7 @@ export const getDriverRouteTemplates = query({
               .collect();
             
             return {
+              id: city._id,
               cityName: city.cityName,
               countryCode: city.countryCode,
               countryName: undefined, // Will be populated if needed
@@ -176,6 +177,7 @@ export const getRouteTemplateById = query({
           .collect();
         
         return {
+          id: city._id,
           cityName: city.cityName,
           countryCode: city.countryCode,
           countryName: undefined,

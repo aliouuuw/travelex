@@ -21,20 +21,19 @@ import {
   CheckCircle,
   Users,
 } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  createVehicle,
-  updateVehicle,
-  getDriverVehicles,
+  useDriverVehicles,
+  useCreateVehicle,
+  useUpdateVehicle,
   generateBasicSeatMap,
   VEHICLE_TYPES,
   FUEL_TYPES,
   VEHICLE_STATUS,
   VEHICLE_FEATURES,
-  type CreateVehicleData,
-  type UpdateVehicleData,
-} from "@/services/supabase/vehicles";
+} from "@/services/convex/vehicles";
 import { toast } from "sonner";
+import type { Id } from "convex/_generated/dataModel";
+
 
 // Validation Schema
 const vehicleFormSchema = z.object({
@@ -102,9 +101,13 @@ export default function VehicleForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
-  const queryClient = useQueryClient();
+  const [isLoading, setIsLoading] = useState(false);
   
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
+
+  const vehicles = useDriverVehicles();
+  const createVehicle = useCreateVehicle();
+  const updateVehicle = useUpdateVehicle();
 
   const form = useForm<VehicleFormData>({
     resolver: zodResolver(vehicleFormSchema),
@@ -127,14 +130,7 @@ export default function VehicleForm() {
     },
   });
 
-  // Fetch vehicles to find the one being edited
-  const { data: vehicles = [] } = useQuery({
-    queryKey: ['driver-vehicles'],
-    queryFn: getDriverVehicles,
-    enabled: isEditing,
-  });
-
-  const currentVehicle = isEditing ? vehicles.find(v => v.id === id) : null;
+  const currentVehicle = isEditing ? vehicles?.find(v => v._id === id) : null;
 
   // Load vehicle data for editing
   useEffect(() => {
@@ -143,63 +139,78 @@ export default function VehicleForm() {
         make: currentVehicle.make,
         model: currentVehicle.model,
         year: currentVehicle.year,
-        license_plate: currentVehicle.license_plate,
-        vehicle_type: currentVehicle.vehicle_type,
-        fuel_type: currentVehicle.fuel_type,
+        license_plate: currentVehicle.licensePlate || "",
+        vehicle_type: (currentVehicle.type as "car" | "van" | "bus" | "suv") || "car",
+        fuel_type: (currentVehicle.fuelType as "gasoline" | "diesel" | "electric" | "hybrid") || "gasoline",
         color: currentVehicle.color || "",
         capacity: currentVehicle.capacity,
         features: currentVehicle.features || [],
         status: currentVehicle.status,
-        insurance_expiry: currentVehicle.insurance_expiry || "",
-        registration_expiry: currentVehicle.registration_expiry || "",
-        last_maintenance: currentVehicle.last_maintenance || "",
-        mileage: currentVehicle.mileage,
+        insurance_expiry: currentVehicle.insuranceExpiry || "",
+        registration_expiry: currentVehicle.registrationExpiry || "",
+        last_maintenance: currentVehicle.lastMaintenance || "",
+        mileage: currentVehicle.mileage || 0,
         description: currentVehicle.description || "",
       });
       setSelectedFeatures(currentVehicle.features || []);
     }
   }, [currentVehicle, form]);
 
-  const { mutate: createVehicleMutation, isPending: isCreating } = useMutation({
-    mutationFn: createVehicle,
-    onSuccess: () => {
-      toast.success("Vehicle created successfully!");
-      queryClient.invalidateQueries({ queryKey: ['driver-vehicles'] });
+  const onSubmit = async (data: VehicleFormData) => {
+    setIsLoading(true);
+    try {
+      const formData = {
+        make: data.make,
+        model: data.model,
+        year: data.year,
+        licensePlate: data.license_plate,
+        vehicleType: data.vehicle_type,
+        fuelType: data.fuel_type,
+        color: data.color,
+        capacity: data.capacity,
+        features: selectedFeatures,
+        seatMap: generateBasicSeatMap(data.capacity, data.vehicle_type),
+        // Convert empty strings to undefined for optional date fields
+        insuranceExpiry: data.insurance_expiry || undefined,
+        registrationExpiry: data.registration_expiry || undefined,
+        lastMaintenance: data.last_maintenance || undefined,
+        mileage: data.mileage,
+        description: data.description,
+        ...(isEditing && { status: data.status }),
+      };
+
+      if (isEditing && id) {
+        await updateVehicle({ 
+          vehicleId: id as Id<"vehicles">,
+          make: formData.make,
+          model: formData.model,
+          year: formData.year,
+          licensePlate: formData.licensePlate,
+          vehicleType: formData.vehicleType,
+          fuelType: formData.fuelType,
+          color: formData.color,
+          capacity: formData.capacity,
+          seatMap: formData.seatMap,
+          features: formData.features,
+          insuranceExpiry: formData.insuranceExpiry,
+          registrationExpiry: formData.registrationExpiry,
+          lastMaintenance: formData.lastMaintenance,
+          mileage: formData.mileage,
+          description: formData.description,
+          status: formData.status,
+        });
+        toast.success("Vehicle updated successfully!");
+      } else {
+        await createVehicle(formData);
+        toast.success("Vehicle created successfully!");
+      }
+      
       navigate('/driver/vehicles');
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to create vehicle");
-    },
-  });
-
-  const { mutate: updateVehicleMutation, isPending: isUpdating } = useMutation({
-    mutationFn: ({ vehicleId, data }: { vehicleId: string; data: UpdateVehicleData }) =>
-      updateVehicle(vehicleId, data),
-    onSuccess: () => {
-      toast.success("Vehicle updated successfully!");
-      queryClient.invalidateQueries({ queryKey: ['driver-vehicles'] });
-      navigate('/driver/vehicles');
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to update vehicle");
-    },
-  });
-
-  const onSubmit = (data: VehicleFormData) => {
-    const formData = {
-      ...data,
-      features: selectedFeatures,
-      seat_map: generateBasicSeatMap(data.capacity, data.vehicle_type),
-      // Convert empty strings to undefined for optional date fields
-      insurance_expiry: data.insurance_expiry || undefined,
-      registration_expiry: data.registration_expiry || undefined,
-      last_maintenance: data.last_maintenance || undefined,
-    };
-
-    if (isEditing && id) {
-      updateVehicleMutation({ vehicleId: id, data: formData });
-    } else {
-      createVehicleMutation(formData as CreateVehicleData);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Failed to ${isEditing ? 'update' : 'create'} vehicle: ${errorMessage}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -211,11 +222,11 @@ export default function VehicleForm() {
     );
   };
 
-  const isPending = isCreating || isUpdating;
+  const isPending = isLoading;
   const watchedCapacity = form.watch("capacity");
   const watchedVehicleType = form.watch("vehicle_type");
 
-  if (isEditing && !currentVehicle && vehicles.length > 0) {
+  if (isEditing && !currentVehicle && vehicles && vehicles.length > 0) {
     return (
       <div className="p-6 space-y-6 max-w-4xl mx-auto">
         <div className="text-center py-12">

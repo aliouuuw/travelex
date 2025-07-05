@@ -94,7 +94,11 @@ export default defineSchema({
     driverId: v.id("profiles"),
     make: v.string(),
     model: v.string(),
+    year: v.optional(v.number()),
+    licensePlate: v.optional(v.string()),
     type: v.optional(v.string()),
+    fuelType: v.optional(v.string()),
+    color: v.optional(v.string()),
     capacity: v.number(),
     seatMap: v.optional(v.any()), // JSON for seat configuration
     features: v.optional(v.array(v.string())),
@@ -103,6 +107,8 @@ export default defineSchema({
     insuranceExpiry: v.optional(v.string()),
     registrationExpiry: v.optional(v.string()),
     lastMaintenance: v.optional(v.string()),
+    mileage: v.optional(v.number()),
+    description: v.optional(v.string()),
   })
     .index("by_driver", ["driverId"])
     .index("by_status", ["status"])

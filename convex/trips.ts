@@ -604,14 +604,14 @@ export const createTrip = mutation({
     })),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
       throw new ConvexError("Not authenticated");
     }
     
     const currentUser = await ctx.db
       .query("profiles")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject as Id<"users">))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
     
     if (!currentUser) {

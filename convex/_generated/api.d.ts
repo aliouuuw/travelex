@@ -19,6 +19,7 @@ import type * as citiesStations from "../citiesStations.js";
 import type * as countries from "../countries.js";
 import type * as http from "../http.js";
 import type * as invitations from "../invitations.js";
+import type * as luggagePolicies from "../luggagePolicies.js";
 import type * as passwordReset from "../passwordReset.js";
 import type * as reusableCitiesStations from "../reusableCitiesStations.js";
 import type * as routeTemplates from "../routeTemplates.js";
@@ -26,6 +27,7 @@ import type * as signupRequests from "../signupRequests.js";
 import type * as tripSearch from "../tripSearch.js";
 import type * as trips from "../trips.js";
 import type * as users from "../users.js";
+import type * as vehicles from "../vehicles.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -42,6 +44,7 @@ declare const fullApi: ApiFromModules<{
   countries: typeof countries;
   http: typeof http;
   invitations: typeof invitations;
+  luggagePolicies: typeof luggagePolicies;
   passwordReset: typeof passwordReset;
   reusableCitiesStations: typeof reusableCitiesStations;
   routeTemplates: typeof routeTemplates;
@@ -49,6 +52,7 @@ declare const fullApi: ApiFromModules<{
   tripSearch: typeof tripSearch;
   trips: typeof trips;
   users: typeof users;
+  vehicles: typeof vehicles;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

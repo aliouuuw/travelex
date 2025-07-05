@@ -12,6 +12,7 @@ export interface Station {
 }
 
 export interface CityWithStations {
+  id?: string;
   cityName: string;
   countryCode?: string;
   countryName?: string;
