@@ -41,7 +41,7 @@ export interface Trip {
   arrivalTime: string;
   totalSeats: number;
   availableSeats: number;
-  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
   createdAt: string;
   updatedAt: string;
   routeCities: RouteCity[];
@@ -194,12 +194,13 @@ export const updateTripStatus = async (tripId: string, status: Trip['status']): 
 /**
  * Transform trip data from convex format to our interface
  */
-function transformTripFromConvex(convexTrip: any): Trip {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformTripFromConvex(convexTrip: Record<string, any>): Trip {
   return {
-    id: convexTrip.id || convexTrip.tripId,
+    id: convexTrip.tripId || convexTrip.id,
     routeTemplateId: convexTrip.routeTemplateId,
     routeTemplateName: convexTrip.routeTemplateName,
-    vehicleId: convexTrip.vehicleId,
+    vehicleId: convexTrip.vehicleInfo?.id || convexTrip.vehicleId,
     vehicleName: convexTrip.vehicleName || 
       (convexTrip.vehicleInfo ? `${convexTrip.vehicleInfo.make} ${convexTrip.vehicleInfo.model}` : null),
     luggagePolicyId: convexTrip.luggagePolicyId,
@@ -211,7 +212,14 @@ function transformTripFromConvex(convexTrip: any): Trip {
     status: convexTrip.status,
     createdAt: convexTrip.createdAt || new Date().toISOString(),
     updatedAt: convexTrip.updatedAt || new Date().toISOString(),
-    routeCities: convexTrip.routeCities || [],
+    routeCities: Array.isArray(convexTrip.routeCities) 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ? convexTrip.routeCities.map((city: any) => 
+          typeof city === 'string' 
+            ? { cityName: city, sequenceOrder: 0 }
+            : city
+        )
+      : [],
     tripStations: convexTrip.tripStations || [],
     reservationsCount: convexTrip.reservationsCount || 0,
     totalEarnings: convexTrip.totalEarnings || 0,
@@ -297,7 +305,7 @@ export const getStatusColor = (status: Trip['status']): string => {
   switch (status) {
     case 'scheduled':
       return 'bg-blue-100 text-blue-800';
-    case 'in_progress':
+    case 'in-progress':
       return 'bg-yellow-100 text-yellow-800';
     case 'completed':
       return 'bg-green-100 text-green-800';

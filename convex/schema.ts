@@ -214,6 +214,7 @@ export default defineSchema({
       v.literal("completed"), 
       v.literal("cancelled")
     ),
+    updatedAt: v.optional(v.number()), // Track when status was last updated
     expiresAt: v.optional(v.number()), // For anonymous booking timeout
   })
     .index("by_trip", ["tripId"])

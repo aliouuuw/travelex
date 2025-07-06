@@ -93,6 +93,7 @@ export interface TripBookingDetails {
   arrivalTime?: string;
   availableSeats: number;
   totalSeats: number;
+  bookedSeats: string[];
   routeCities: string[];
   tripStations: Array<{
     id: string;
@@ -453,6 +454,7 @@ export const getTripForBooking = query({
       arrivalTime: trip.arrivalTime ? new Date(trip.arrivalTime).toISOString() : undefined,
       availableSeats,
       totalSeats: vehicle.capacity,
+      bookedSeats,
       routeCities,
       tripStations,
       pricing,

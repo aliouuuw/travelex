@@ -94,6 +94,7 @@ export interface TripBookingDetails {
   arrivalTime?: string;
   availableSeats: number;
   totalSeats: number;
+  bookedSeats: string[];
   routeCities: string[];
   tripStations: Array<{
     id: string;
@@ -487,6 +488,7 @@ export const getTripForBooking = query({
       arrivalTime: trip.arrivalTime ? new Date(trip.arrivalTime).toISOString() : undefined,
       availableSeats,
       totalSeats: vehicle.capacity,
+      bookedSeats,
       routeCities,
       tripStations,
       pricing,
@@ -542,7 +544,7 @@ export const getDriverTrips = query({
     
     const results = await Promise.all(
       trips.map(async (trip) => {
-        const [routeTemplate, vehicle] = await Promise.all([
+        const [routeTemplate, vehicle, luggagePolicy] = await Promise.all([
           getRouteTemplate(ctx, trip.routeTemplateId),
           getVehicleInfo(ctx, trip.vehicleId),
           getLuggagePolicy(ctx, trip.luggagePolicyId),
@@ -553,11 +555,21 @@ export const getDriverTrips = query({
           getRouteCities(ctx, trip.routeTemplateId),
         ]);
         
+        // Real-time calculation of booked seats
         const bookedSeats = await getBookedSeatsForTrip(ctx, trip._id);
-        const availableSeats = (trip.availableSeats || vehicle.capacity) - bookedSeats.length;
+        const availableSeats = Math.max(0, (trip.availableSeats || vehicle.capacity) - bookedSeats.length);
+        
+        // Real-time calculation of reservations count and earnings
+        const activeReservations = await ctx.db
+          .query("reservations")
+          .withIndex("by_trip", (q) => q.eq("tripId", trip._id))
+          .filter((q) => q.neq(q.field("status"), "cancelled"))
+          .collect();
+        
+        const totalEarnings = activeReservations.reduce((sum, reservation) => sum + reservation.totalPrice, 0);
         
         return {
-          tripId: trip._id,
+          id: trip._id,
           routeTemplateId: trip.routeTemplateId,
           routeTemplateName: routeTemplate.name,
           departureTime: new Date(trip.departureTime).toISOString(),
@@ -565,7 +577,12 @@ export const getDriverTrips = query({
           status: trip.status,
           availableSeats,
           totalSeats: vehicle.capacity,
-          routeCities,
+          routeCities: routeCities.map((city, index) => ({
+            id: `${trip.routeTemplateId}-${index}`,
+            cityName: city,
+            sequenceOrder: index,
+            stations: [],
+          })),
           tripStations,
           vehicleInfo: {
             id: vehicle._id,
@@ -573,6 +590,10 @@ export const getDriverTrips = query({
             model: vehicle.model,
             capacity: vehicle.capacity,
           },
+          vehicleName: `${vehicle.make} ${vehicle.model}`,
+          luggagePolicyName: luggagePolicy.name,
+          reservationsCount: activeReservations.length,
+          totalEarnings,
         };
       })
     );
@@ -730,21 +751,21 @@ export const updateTripStatus = mutation({
 });
 
 /**
- * Get a single trip by ID
+ * Get a single trip by ID with real-time reservation updates
  */
 export const getTripById = query({
   args: {
     tripId: v.id("trips"),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
       throw new ConvexError("Not authenticated");
     }
     
     const currentUser = await ctx.db
       .query("profiles")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject as Id<"users">))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
     
     if (!currentUser) {
@@ -772,17 +793,18 @@ export const getTripById = query({
       getRouteCities(ctx, trip.routeTemplateId),
     ]);
     
+    // Real-time calculation of booked seats
     const bookedSeats = await getBookedSeatsForTrip(ctx, trip._id);
-    const availableSeats = (trip.availableSeats || vehicle.capacity) - bookedSeats.length;
+    const availableSeats = Math.max(0, (trip.availableSeats || vehicle.capacity) - bookedSeats.length);
     
-    // Get reservations count and total earnings
-    const reservations = await ctx.db
+    // Real-time calculation of reservations count and earnings
+    const activeReservations = await ctx.db
       .query("reservations")
       .withIndex("by_trip", (q) => q.eq("tripId", trip._id))
       .filter((q) => q.neq(q.field("status"), "cancelled"))
       .collect();
     
-    const totalEarnings = reservations.reduce((sum, reservation) => sum + reservation.totalPrice, 0);
+    const totalEarnings = activeReservations.reduce((sum, reservation) => sum + reservation.totalPrice, 0);
     
     return {
       id: trip._id,
@@ -798,24 +820,24 @@ export const getTripById = query({
       availableSeats,
       status: trip.status,
       createdAt: new Date(trip._creationTime).toISOString(),
-      updatedAt: new Date(trip._creationTime).toISOString(), // Convex doesn't have separate update time
+      updatedAt: new Date(trip._creationTime).toISOString(),
       routeCities: routeCities.map((city, index) => ({
         id: `${trip.routeTemplateId}-${index}`,
         cityName: city,
         sequenceOrder: index,
-        stations: [], // Will be populated from tripStations
+        stations: [],
       })),
-             tripStations: tripStations.map((station) => ({
-         id: station.id,
-         stationId: station.id, // Using the same ID as the station ID
-         stationName: station.stationName,
-         stationAddress: station.stationAddress,
-         cityName: station.cityName,
-         sequenceOrder: station.sequenceOrder,
-         isPickupPoint: station.isPickupPoint,
-         isDropoffPoint: station.isDropoffPoint,
-       })),
-      reservationsCount: reservations.length,
+      tripStations: tripStations.map((station) => ({
+        id: station.id,
+        stationId: station.id,
+        stationName: station.stationName,
+        stationAddress: station.stationAddress,
+        cityName: station.cityName,
+        sequenceOrder: station.sequenceOrder,
+        isPickupPoint: station.isPickupPoint,
+        isDropoffPoint: station.isDropoffPoint,
+      })),
+      reservationsCount: activeReservations.length,
       totalEarnings,
     };
   },

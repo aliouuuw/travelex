@@ -18,12 +18,14 @@ import {
   RefreshCw
 } from "lucide-react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 import { 
   useTempBooking, 
   usePaymentStatus, 
   useReservationByTempBookingId,
 } from "@/services/convex/payments";
 import { useTripForBooking } from "@/services/convex/tripSearch";
+import { useSendBookingConfirmation } from "@/services/convex/booking-confirmation";
 import type { Id } from "../../convex/_generated/dataModel";
 
 export default function BookingSuccessPage() {
@@ -35,12 +37,14 @@ export default function BookingSuccessPage() {
   const [paymentStatus, setPaymentStatus] = useState<'loading' | 'confirmed' | 'failed' | 'processing'>('loading');
   const [finalBookingRef, setFinalBookingRef] = useState<string | null>(bookingReference);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isEmailSending, setIsEmailSending] = useState(false);
 
   // Use Convex hooks instead of React Query
   const tempBooking = useTempBooking(bookingId as Id<"tempBookings"> | null);
   const paymentStatusData = usePaymentStatus(bookingId as Id<"tempBookings"> | null);
   const reservationData = useReservationByTempBookingId(bookingId as Id<"tempBookings"> | null);
   const trip = useTripForBooking(tempBooking?.tripId || reservationData?.tripId || "");
+  const sendBookingConfirmation = useSendBookingConfirmation();
 
   // Check if queries are still loading (undefined = loading, null = loaded but empty)
   const isLoadingBooking = tempBooking === undefined;
@@ -114,10 +118,52 @@ export default function BookingSuccessPage() {
     window.print();
   };
 
-  const handleEmailTicket = () => {
-    // TODO: Implement email ticket functionality
-    if (bookingData?.passengerEmail && bookingData.passengerEmail !== "Check your email for details") {
-      window.location.href = `mailto:${bookingData.passengerEmail}?subject=Your TravelEx Booking Confirmation&body=Your booking reference: ${finalBookingRef}`;
+  const handleEmailTicket = async () => {
+    if (!bookingData?.passengerEmail || bookingData.passengerEmail === "Check your email for details") {
+      return;
+    }
+    
+    if (!trip || !finalBookingRef || finalBookingRef === 'PROCESSING') {
+      console.error("Missing required data for email ticket");
+      return;
+    }
+    
+    setIsEmailSending(true);
+    
+    try {
+      await sendBookingConfirmation({
+        bookingId: bookingId || "",
+        email: bookingData.passengerEmail,
+        passengerName: bookingData.passengerName,
+        bookingReference: finalBookingRef,
+        trip: {
+          routeTemplateName: trip.routeTemplateName || "Your Trip",
+          departureTime: trip.departureTime || new Date().toISOString(),
+          arrivalTime: trip.arrivalTime || new Date().toISOString(),
+          driverName: trip.driverName || "Your Driver",
+          driverRating: trip.driverRating || 5.0,
+          vehicleInfo: trip.vehicleInfo ? {
+            make: trip.vehicleInfo.make,
+            model: trip.vehicleInfo.model,
+            year: trip.vehicleInfo.year || new Date().getFullYear(),
+          } : undefined,
+        },
+        bookingDetails: {
+          selectedSeats: Array.isArray(bookingData.selectedSeats) ? bookingData.selectedSeats : ["--"],
+          numberOfBags: bookingData.numberOfBags || 0,
+          totalPrice: bookingData.totalPrice || 0,
+          passengerPhone: bookingData.passengerPhone || undefined,
+        },
+      });
+      
+      // Show success message
+      toast.success("Booking confirmation email sent successfully!");
+      
+    } catch (error) {
+      console.error("Error sending booking confirmation email:", error);
+      toast.error("Failed to send booking confirmation email. Please try again.");
+    } finally {
+      setIsEmailSending(false);
     }
   };
 
@@ -273,9 +319,23 @@ export default function BookingSuccessPage() {
                     <Download className="w-4 h-4 mr-2" />
                     Download Ticket
                   </Button>
-                  <Button onClick={handleEmailTicket} variant="outline" className="flex-1 min-w-[200px]">
-                    <Mail className="w-4 h-4 mr-2" />
-                    Email Ticket
+                  <Button 
+                    onClick={handleEmailTicket} 
+                    variant="outline" 
+                    className="flex-1 min-w-[200px]"
+                    disabled={isEmailSending || !bookingData?.passengerEmail || bookingData.passengerEmail === "Check your email for details"}
+                  >
+                    {isEmailSending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-4 h-4 mr-2" />
+                        Email Ticket
+                      </>
+                    )}
                   </Button>
                 </div>
               </CardContent>

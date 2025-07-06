@@ -36,7 +36,7 @@ This document outlines the comprehensive migration plan from Supabase to Convex 
 - [x] **Trip scheduling and management (COMPLETED)**
   - [x] Migrate trip CRUD operations to Convex
   - [x] Implement trip calendar and scheduling system
-  - [x] Update driver trip management pages
+  - [x] Update driver trip management pages (including edit-trip form prefill & hook-deps memoization)
   - [x] Fix authentication issues in trip functions
 - [x] **Vehicle and luggage policies (COMPLETED)**
   - [x] Migrate vehicle management system from Supabase to Convex

@@ -15,6 +15,7 @@ import type {
 } from "convex/server";
 import type * as ResendOTPPasswordReset from "../ResendOTPPasswordReset.js";
 import type * as auth from "../auth.js";
+import type * as bookingConfirmation from "../bookingConfirmation.js";
 import type * as citiesStations from "../citiesStations.js";
 import type * as countries from "../countries.js";
 import type * as http from "../http.js";
@@ -42,6 +43,7 @@ import type * as vehicles from "../vehicles.js";
 declare const fullApi: ApiFromModules<{
   ResendOTPPasswordReset: typeof ResendOTPPasswordReset;
   auth: typeof auth;
+  bookingConfirmation: typeof bookingConfirmation;
   citiesStations: typeof citiesStations;
   countries: typeof countries;
   http: typeof http;

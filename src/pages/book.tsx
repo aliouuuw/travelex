@@ -22,8 +22,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { useTripForBooking } from "@/services/convex/tripSearch";
 import { useCreatePaymentIntent } from "@/services/convex/payments";
-import type { SeatMap } from "@/services/supabase/vehicles";
-
+import type { SeatMap } from "@/services/convex/vehicles";
 interface BookingFormData {
   pickupStationId: string;
   dropoffStationId: string;
@@ -463,6 +462,7 @@ export default function BookingPage() {
                       }}
                       selectedSeats={formData.selectedSeats}
                       onSeatSelect={handleSeatSelect}
+                      occupiedSeats={trip.bookedSeats || []}
                     />
 
                     {formData.selectedSeats.length > 0 && (

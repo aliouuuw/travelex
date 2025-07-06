@@ -22,18 +22,25 @@ import {
   List
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "convex/react";
 import { 
-  useDriverTrips, 
-  deleteTrip, 
-  updateTripStatus,
+  useDriverTrips,
   formatTripDuration,
   isUpcomingTrip,
-  getStatusColor,
   type Trip,
 } from "@/services/convex/trips";
 import { toast } from "sonner";
 import EnhancedCalendarView from "@/components/trip-calendar/enhanced-calendar-view";
+import { api } from "../../../../convex/_generated/api";
+import type { Id } from "../../../../convex/_generated/dataModel";
+
+// Fix the status constants to match backend
+const STATUS_COLORS = {
+  scheduled: 'bg-blue-100 text-blue-800',
+  'in-progress': 'bg-yellow-100 text-yellow-800',
+  completed: 'bg-green-100 text-green-800',
+  cancelled: 'bg-red-100 text-red-800'
+} as const;
 
 // Trip with enhanced date properties for calendar display
 interface CalendarTrip extends Trip {
@@ -45,39 +52,36 @@ interface CalendarTrip extends Trip {
 
 // Trip Card Component for List View
 const TripCard = ({ trip }: { trip: Trip }) => {
-  const queryClient = useQueryClient();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteTrip,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['driver-trips'] });
-      toast.success('Trip deleted successfully');
-    },
-    onError: (error) => {
-      toast.error(`Failed to delete trip: ${error.message}`);
-    },
-  });
+  const deleteTripMutation = useMutation(api.trips.deleteTrip);
+  const updateTripStatusMutation = useMutation(api.trips.updateTripStatus);
 
-  const statusMutation = useMutation({
-    mutationFn: ({ tripId, status }: { tripId: string; status: Trip['status'] }) => 
-      updateTripStatus(tripId, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['driver-trips'] });
-      toast.success('Trip status updated successfully');
-    },
-    onError: (error) => {
-      toast.error(`Failed to update trip status: ${error.message}`);
-    },
-  });
-
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this trip? This action cannot be undone.')) {
-      deleteMutation.mutate(trip.id);
+      setIsDeleting(true);
+      try {
+        await deleteTripMutation({ tripId: trip.id as Id<"trips"> });
+        toast.success('Trip deleted successfully');
+      } catch (error) {
+        toast.error(`Failed to delete trip: ${(error as Error).message}`);
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
-  const handleStatusChange = (status: Trip['status']) => {
-    statusMutation.mutate({ tripId: trip.id, status });
+  const handleStatusChange = async (status: Trip['status']) => {
+    setIsUpdatingStatus(true);
+    try {
+      await updateTripStatusMutation({ tripId: trip.id as Id<"trips">, status });
+      toast.success('Trip status updated successfully');
+    } catch (error) {
+      toast.error(`Failed to update trip status: ${(error as Error).message}`);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
   };
 
   const departureDate = new Date(trip.departureTime);
@@ -101,7 +105,7 @@ const TripCard = ({ trip }: { trip: Trip }) => {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <CardTitle className="text-lg font-heading">{trip.routeTemplateName}</CardTitle>
-                <Badge className={getStatusColor(trip.status)}>
+                <Badge className={STATUS_COLORS[trip.status]}>
                   {trip.status.replace('_', ' ')}
                 </Badge>
               </div>
@@ -141,10 +145,10 @@ const TripCard = ({ trip }: { trip: Trip }) => {
               variant="ghost" 
               size="sm" 
               onClick={handleDelete}
-              disabled={deleteMutation.isPending}
+              disabled={isDeleting}
               className="text-red-500 hover:text-red-700 hover:bg-red-50"
             >
-              {deleteMutation.isPending ? (
+              {isDeleting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <Trash2 className="w-4 h-4" />
@@ -206,34 +210,34 @@ const TripCard = ({ trip }: { trip: Trip }) => {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => handleStatusChange('in_progress')}
-              disabled={statusMutation.isPending}
+              onClick={() => handleStatusChange('in-progress')}
+              disabled={isUpdatingStatus}
               className="flex-1 bg-brand-orange text-white hover:bg-brand-orange-600"
             >
-              Start Trip
+              {isUpdatingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Start Trip'}
             </Button>
           </div>
         )}
 
-        {trip.status === 'in_progress' && (
+        {trip.status === 'in-progress' && (
           <div className="flex gap-2 pt-2 border-t border-border/40">
             <Button 
               variant="outline" 
               size="sm" 
               onClick={() => handleStatusChange('completed')}
-              disabled={statusMutation.isPending}
+              disabled={isUpdatingStatus}
               className="flex-1"
             >
-              Complete Trip
+              {isUpdatingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Complete Trip'}
             </Button>
             <Button 
               variant="outline" 
               size="sm" 
               onClick={() => handleStatusChange('cancelled')}
-              disabled={statusMutation.isPending}
+              disabled={isUpdatingStatus}
               className="flex-1 text-red-600 hover:text-red-700"
             >
-              Cancel Trip
+              {isUpdatingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Cancel Trip'}
             </Button>
           </div>
         )}
@@ -262,7 +266,7 @@ const TripDetailsPanel = ({ trip }: { trip: CalendarTrip | null }) => {
             </div>
             <div>
               <CardTitle className="text-lg font-heading">{trip.routeTemplateName}</CardTitle>
-              <Badge className={getStatusColor(trip.status)}>
+              <Badge className={STATUS_COLORS[trip.status]}>
                 {trip.status.replace('_', ' ')}
               </Badge>
             </div>
@@ -337,78 +341,88 @@ const TripDetailsPanel = ({ trip }: { trip: CalendarTrip | null }) => {
 };
 
 export default function DriverTripsPage() {
-  const [activeView, setActiveView] = useState<'list' | 'calendar'>('list');
+  const [view, setView] = useState<'list' | 'calendar'>('list');
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | Trip['status']>('all');
-  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [statusFilter, setStatusFilter] = useState<'all' | 'scheduled' | 'in-progress' | 'completed' | 'cancelled'>('all');
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTrip, setSelectedTrip] = useState<CalendarTrip | null>(null);
 
-  // Fetch trips from API
-  const trips = useDriverTrips() || [];
-  const isLoading = false;
+  const tripsData = useDriverTrips();
+  const isLoading = tripsData === undefined;
   const error = null;
 
-  // Show error toast when error occurs
   useEffect(() => {
     if (error) {
-      toast.error(`Failed to load trips: ${error as string}`);
+      toast.error(`Failed to load trips: ${error}`);
     }
   }, [error]);
 
-  // Transform trips for calendar display
   const calendarTrips: CalendarTrip[] = useMemo(() => {
-    return trips.map(trip => {
+    if (!tripsData) return [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return tripsData.map((trip: any) => {
       const startDate = new Date(trip.departureTime);
       const endDate = new Date(trip.arrivalTime || trip.departureTime);
-      const isMultiDay = startDate.toDateString() !== endDate.toDateString();
-      
       return {
-        ...trip,
-        id: trip.tripId,
-        status: trip.status === 'in-progress' ? 'in_progress' : trip.status,
-        vehicleId: trip.vehicleInfo?.id || '',
-        vehicleName: `${trip.vehicleInfo?.make} ${trip.vehicleInfo?.model}` || '',
-        luggagePolicyId: '',
-        luggagePolicyName: '',
-        totalSeats: trip.vehicleInfo?.capacity || 0,
-        availableSeats: trip.vehicleInfo?.capacity || 0,
-        totalEarnings: 0,
-        reservationsCount: 0,
-        routeCities: (trip.routeCities || []).map((cityName, index) => ({ cityName, sequenceOrder: index + 1 })),
-        arrivalTime: trip.arrivalTime || trip.departureTime,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        id: trip.id,
+        routeTemplateId: trip.routeTemplateId,
+        routeTemplateName: trip.routeTemplateName,
+        vehicleId: trip.vehicleId,
+        vehicleName: trip.vehicleName,
+        luggagePolicyId: trip.luggagePolicyId,
+        luggagePolicyName: trip.luggagePolicyName,
+        departureTime: trip.departureTime,
+        arrivalTime: trip.arrivalTime,
+        totalSeats: trip.totalSeats,
+        availableSeats: trip.availableSeats,
+        status: trip.status,
+        createdAt: trip.createdAt || new Date().toISOString(),
+        updatedAt: trip.updatedAt || new Date().toISOString(),
+        routeCities: trip.routeCities || [],
+        tripStations: trip.tripStations || [],
+        reservationsCount: trip.reservationsCount || 0,
+        totalEarnings: trip.totalEarnings || 0,
         date: startDate,
-        isMultiDay,
+        start: startDate,
+        end: endDate,
+        isMultiDay: startDate.toDateString() !== endDate.toDateString(),
         startDate,
         endDate,
-      } as unknown as CalendarTrip;
+      };
     });
-  }, [trips]);
+  }, [tripsData]);
 
-  // Filter trips for list view
-  const filteredTrips = calendarTrips.filter((trip) => {
-    const matchesSearch = trip.routeTemplateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         trip.routeCities.some(city => city.cityName.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesStatus = statusFilter === 'all' || trip.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredTrips = useMemo(() => {
+    return calendarTrips.filter(trip => {
+      const matchesSearch = trip.routeTemplateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (trip.routeCities && trip.routeCities.some((city) => city.cityName.toLowerCase().includes(searchTerm.toLowerCase())));
+      
+      const matchesStatus = statusFilter === 'all' || trip.status === statusFilter;
 
-  // Calculate stats
-  const stats = {
-    total: calendarTrips.length,
-    scheduled: calendarTrips.filter((t) => t.status === 'scheduled').length,
-    inProgress: calendarTrips.filter((t) => t.status === 'in_progress').length,
-    completed: calendarTrips.filter((t) => t.status === 'completed').length,
-    totalEarnings: calendarTrips.reduce((acc, t) => acc + (t.totalEarnings || 0), 0),
-  };
+      return matchesSearch && matchesStatus;
+    });
+  }, [calendarTrips, searchTerm, statusFilter]);
 
-  // Handle trip selection for calendar view
+  const stats = useMemo(() => {
+    return {
+      total: calendarTrips.length,
+      scheduled: calendarTrips.filter((t) => t.status === 'scheduled').length,
+      inProgress: calendarTrips.filter((t) => t.status === 'in-progress').length,
+      completed: calendarTrips.filter((t) => t.status === 'completed').length,
+      totalEarnings: calendarTrips.reduce((acc, t) => acc + (t.totalEarnings || 0), 0),
+    };
+  }, [calendarTrips]);
+
   const handleTripSelect = (trip: CalendarTrip) => {
     setSelectedTrip(trip);
   };
 
-  // Loading state
+  const handleDateChange = (date: Date) => {
+    setSelectedDate(date);
+    setView('list'); // Switch to list view when a date is clicked
+    // Optionally filter trips for this date
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -472,7 +486,7 @@ export default function DriverTripsPage() {
       {/* View Toggle and Filters */}
       <div className="flex flex-col lg:flex-row gap-4">
         {/* View Toggle */}
-        <Tabs value={activeView} onValueChange={(value) => setActiveView(value as 'list' | 'calendar')}>
+        <Tabs value={view} onValueChange={(value) => setView(value as 'list' | 'calendar')}>
           <TabsList className="w-fit">
             <TabsTrigger value="list" className="flex items-center gap-2">
               <List className="w-4 h-4" />
@@ -486,7 +500,7 @@ export default function DriverTripsPage() {
         </Tabs>
 
         {/* Search and Filters (only for list view) */}
-        {activeView === 'list' && (
+        {view === 'list' && (
           <div className="flex flex-col sm:flex-row gap-4 flex-1">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -498,12 +512,12 @@ export default function DriverTripsPage() {
               />
             </div>
             <div className="flex gap-2 flex-wrap">
-              {(['all', 'scheduled', 'in_progress', 'completed', 'cancelled'] as const).map((status) => (
+              {(['all', 'scheduled', 'in-progress', 'completed', 'cancelled'] as const).map((status) => (
                 <Button
                   key={status}
                   variant={statusFilter === status ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setStatusFilter(status)}
+                  onClick={() => setStatusFilter(status as 'all' | 'scheduled' | 'in-progress' | 'completed' | 'cancelled')}
                   className={statusFilter === status ? "bg-brand-orange text-white hover:bg-brand-orange-600" : ""}
                 >
                   {status === 'all' ? 'All' : status.replace('_', ' ')}
@@ -515,14 +529,14 @@ export default function DriverTripsPage() {
       </div>
 
       {/* Content based on active view */}
-      {activeView === 'list' ? (
+      {view === 'list' ? (
         /* List View */
         <div className="space-y-4">
-          {filteredTrips.map((trip) => (
+          {filteredTrips?.map((trip) => (
             <TripCard key={trip.id} trip={trip} />
           ))}
           
-          {filteredTrips.length === 0 && (
+          {filteredTrips?.length === 0 && (
             <Card className="bg-white">
               <CardContent className="p-12 text-center">
                 <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -551,10 +565,10 @@ export default function DriverTripsPage() {
         /* Calendar View */
         <div className="space-y-6">
           <EnhancedCalendarView
-            trips={calendarTrips}
+            trips={calendarTrips || []}
             onTripSelect={(trip) => handleTripSelect(trip as CalendarTrip)}
             selectedDate={selectedDate}
-            onDateSelect={setSelectedDate}
+            onDateSelect={handleDateChange}
           />
           
           {/* Trip Details Panel - Shows when a trip is selected */}

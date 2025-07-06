@@ -101,6 +101,7 @@ export interface TripBookingDetails {
   arrivalTime?: string;
   availableSeats: number;
   totalSeats: number;
+  bookedSeats: string[];
   routeCities: string[];
   tripStations: Array<{
     id: string;

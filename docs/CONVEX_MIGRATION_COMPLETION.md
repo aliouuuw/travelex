@@ -40,6 +40,7 @@
 ### 5. **Trip Scheduling & Management**
 - **Interactive calendar interface** with click-to-schedule
 - **Multi-step trip creation** (details → station selection)
+- **Edit-trip form prefilling & stable hook dependencies** for improved performance and UX
 - **Trip status management** (scheduled, in-progress, completed, cancelled)
 - **Station pre-selection** from route templates
 - **Professional trip listing** with statistics dashboard

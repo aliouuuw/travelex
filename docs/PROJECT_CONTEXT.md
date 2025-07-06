@@ -30,7 +30,7 @@ TravelEx is a comprehensive intercity travel booking platform that connects pass
 ### **For Drivers**
 - **Route Management:** Create and manage intercity routes with pricing
 - **Vehicle Fleet:** Comprehensive vehicle management with maintenance tracking
-- **Trip Scheduling:** Interactive calendar with click-to-schedule functionality
+- **Trip Scheduling:** Interactive calendar with click-to-schedule functionality and edit-trip form prefilling & hook stability improvements
 - **Reservation Dashboard:** Real-time booking updates and passenger management
 - **Luggage Policies:** Flexible bag-based pricing system
 - **Analytics:** Revenue tracking and trip statistics

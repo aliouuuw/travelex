@@ -142,7 +142,7 @@ export const getDriverReservations = query({
         status: reservation.status,
         bookingReference: reservation.bookingReference,
         createdAt: reservation._creationTime,
-        updatedAt: reservation._creationTime, // Convex doesn't have updatedAt, using creation time
+        updatedAt: reservation.updatedAt || reservation._creationTime,
         tripDepartureTime: trip.departureTime,
         tripArrivalTime: trip.arrivalTime,
         tripStatus: trip.status,
@@ -250,9 +250,10 @@ export const updateReservationStatus = mutation({
       throw new Error("Unauthorized: This reservation doesn't belong to your trips");
     }
 
-    // Update the reservation status
+    // Update the reservation status with timestamp
     await ctx.db.patch(args.reservationId, {
       status: args.status,
+      updatedAt: Date.now(),
     });
 
     return { success: true };
@@ -324,7 +325,7 @@ export const getReservationById = query({
       status: reservation.status,
       bookingReference: reservation.bookingReference,
       createdAt: reservation._creationTime,
-      updatedAt: reservation._creationTime,
+      updatedAt: reservation.updatedAt || reservation._creationTime,
       tripDepartureTime: trip.departureTime,
       tripArrivalTime: trip.arrivalTime,
       tripStatus: trip.status,
@@ -403,7 +404,7 @@ export const getTripReservations = query({
         status: reservation.status,
         bookingReference: reservation.bookingReference,
         createdAt: reservation._creationTime,
-        updatedAt: reservation._creationTime,
+        updatedAt: reservation.updatedAt || reservation._creationTime,
         tripDepartureTime: trip.departureTime,
         tripArrivalTime: trip.arrivalTime,
         tripStatus: trip.status,
