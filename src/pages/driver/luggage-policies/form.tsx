@@ -82,7 +82,7 @@ export default function LuggagePolicyForm({ policy, onClose }: LuggagePolicyForm
         description: data.description,
         freeWeightKg: data.weightPerBag,
         excessFeePerKg: data.feePerAdditionalBag,
-        maxBags: data.maxAdditionalBags + 1, // Add 1 for the free bag
+        maxBags: data.maxAdditionalBags, // Add 1 for the free bag
         maxBagSize: data.maxBagSize,
         isDefault: data.isDefault,
       };

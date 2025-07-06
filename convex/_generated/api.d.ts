@@ -21,6 +21,8 @@ import type * as http from "../http.js";
 import type * as invitations from "../invitations.js";
 import type * as luggagePolicies from "../luggagePolicies.js";
 import type * as passwordReset from "../passwordReset.js";
+import type * as payments from "../payments.js";
+import type * as reservations from "../reservations.js";
 import type * as reusableCitiesStations from "../reusableCitiesStations.js";
 import type * as routeTemplates from "../routeTemplates.js";
 import type * as signupRequests from "../signupRequests.js";
@@ -46,6 +48,8 @@ declare const fullApi: ApiFromModules<{
   invitations: typeof invitations;
   luggagePolicies: typeof luggagePolicies;
   passwordReset: typeof passwordReset;
+  payments: typeof payments;
+  reservations: typeof reservations;
   reusableCitiesStations: typeof reusableCitiesStations;
   routeTemplates: typeof routeTemplates;
   signupRequests: typeof signupRequests;

@@ -21,7 +21,7 @@ import {
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useTripForBooking } from "@/services/convex/tripSearch";
-import { createPaymentIntent } from "@/services/supabase/payments";
+import { useCreatePaymentIntent } from "@/services/convex/payments";
 import type { SeatMap } from "@/services/supabase/vehicles";
 
 interface BookingFormData {
@@ -241,40 +241,43 @@ export default function BookingPage() {
     }
   };
 
-  // Create payment intent mutation
-  const createPaymentMutation = useMutation({
-    mutationFn: async (data: BookingFormData) => {
-      if (!trip) throw new Error('Trip data not available');
-      
+  // Create payment intent action
+  const createPaymentIntent = useCreatePaymentIntent();
+  const [isCreatingPayment, setIsCreatingPayment] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!trip) {
+      toast.error('Trip data not available');
+      return;
+    }
+
+    setIsCreatingPayment(true);
+    
+    try {
       const paymentData = {
         tripId: trip.tripId,
         passengerInfo: {
-          fullName: data.passengerInfo.fullName,
-          email: data.passengerInfo.email,
-          phone: data.passengerInfo.phone || '',
+          fullName: formData.passengerInfo.fullName,
+          email: formData.passengerInfo.email,
+          phone: formData.passengerInfo.phone || '',
         },
-        pickupStationId: data.pickupStationId,
-        dropoffStationId: data.dropoffStationId,
-        selectedSeats: data.selectedSeats,
-        numberOfBags: data.numberOfBags,
+        pickupStationId: formData.pickupStationId,
+        dropoffStationId: formData.dropoffStationId,
+        selectedSeats: formData.selectedSeats,
+        numberOfBags: formData.numberOfBags,
         totalPrice: totalPrice,
       };
       
-      return await createPaymentIntent(paymentData);
-    },
-    onSuccess: (response) => {
+      const response = await createPaymentIntent(paymentData);
+      
       toast.success('Redirecting to payment...');
       // Navigate to payment page with client secret
       navigate(`/payment/${response.tempBookingId}?client_secret=${response.clientSecret}`);
-    },
-    onError: (error) => {
-      toast.error('Failed to create payment session: ' + error.message);
-    },
-  });
-
-  const handleSubmit = () => {
-    // No authentication required for anonymous booking
-    createPaymentMutation.mutate(formData);
+    } catch (error) {
+      toast.error('Failed to create payment session: ' + (error as Error).message);
+    } finally {
+      setIsCreatingPayment(false);
+    }
   };
 
   // Loading and error states
@@ -308,8 +311,8 @@ export default function BookingPage() {
     );
   }
 
-  const departureTime = new Date(trip.departureTime);
-  const arrivalTime = new Date(trip.arrivalTime);
+  const departureTime = new Date(trip.departureTime || "");
+  const arrivalTime = new Date(trip.arrivalTime || "");
 
   // Validation for each step
   const canProceedFromStep1 = formData.pickupStationId && formData.dropoffStationId;
@@ -385,7 +388,7 @@ export default function BookingPage() {
                               <SelectItem key={station.id} value={station.id}>
                                 <div>
                                   <div className="font-medium">{station.cityName}</div>
-                                  <div className="text-sm text-muted-foreground">{station.stationInfo.name}</div>
+                                  <div className="text-sm text-muted-foreground">{station.stationName}</div>
                                 </div>
                               </SelectItem>
                             ))}
@@ -408,7 +411,7 @@ export default function BookingPage() {
                               <SelectItem key={station.id} value={station.id}>
                                 <div>
                                   <div className="font-medium">{station.cityName}</div>
-                                  <div className="text-sm text-muted-foreground">{station.stationInfo.name}</div>
+                                  <div className="text-sm text-muted-foreground">{station.stationName}</div>
                                 </div>
                               </SelectItem>
                             ))}
@@ -444,7 +447,7 @@ export default function BookingPage() {
                     </div>
 
                     <SeatSelectionGrid
-                      seatMap={trip.vehicleInfo?.seatMap || {
+                      seatMap={trip.vehicleInfo?.seatMap as unknown as SeatMap || {
                         rows: 0,
                         columns: 0,
                         layout: [] as Array<{
@@ -677,10 +680,10 @@ export default function BookingPage() {
                   ) : (
                     <Button
                       onClick={handleSubmit}
-                      disabled={!canSubmit || createPaymentMutation.isPending}
+                      disabled={!canSubmit || isCreatingPayment}
                       className="bg-brand-orange hover:bg-brand-orange/90"
                     >
-                      {createPaymentMutation.isPending ? (
+                      {isCreatingPayment ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                           Processing...

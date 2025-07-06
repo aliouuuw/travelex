@@ -166,6 +166,33 @@ export default defineSchema({
     .index("by_trip", ["tripId"])
     .index("by_sequence", ["tripId", "sequenceOrder"]),
 
+  // Temporary Bookings (for payment processing)
+  tempBookings: defineTable({
+    tripId: v.string(),
+    passengerName: v.string(),
+    passengerEmail: v.string(),
+    passengerPhone: v.string(),
+    pickupStationId: v.string(),
+    dropoffStationId: v.string(),
+    selectedSeats: v.array(v.string()),
+    numberOfBags: v.number(),
+    totalPrice: v.number(),
+    bookingReference: v.string(),
+    paymentIntentId: v.optional(v.string()),
+    status: v.union(
+      v.literal("pending"), 
+      v.literal("processing"), 
+      v.literal("completed"), 
+      v.literal("expired")
+    ),
+    expiresAt: v.number(), // Unix timestamp for expiry
+  })
+    .index("by_trip", ["tripId"])
+    .index("by_booking_reference", ["bookingReference"])
+    .index("by_payment_intent", ["paymentIntentId"])
+    .index("by_expires_at", ["expiresAt"])
+    .index("by_status", ["status"]),
+
   // Passenger Reservations
   reservations: defineTable({
     tripId: v.id("trips"),
@@ -180,6 +207,7 @@ export default defineSchema({
     passengerEmail: v.string(),
     passengerPhone: v.string(),
     bookingReference: v.string(),
+    tempBookingId: v.optional(v.string()),
     status: v.union(
       v.literal("pending"), 
       v.literal("confirmed"), 
@@ -191,6 +219,7 @@ export default defineSchema({
     .index("by_trip", ["tripId"])
     .index("by_passenger", ["passengerId"])
     .index("by_booking_reference", ["bookingReference"])
+    .index("by_temp_booking_id", ["tempBookingId"]) // ADD THIS INDEX
     .index("by_status", ["status"])
     .index("by_expires_at", ["expiresAt"]),
 

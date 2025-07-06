@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,11 +23,12 @@ import {
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { 
-  getDriverReservations, 
-  getDriverReservationStats, 
-  updateReservationStatus,
-  type Reservation, 
-} from "@/services/supabase/reservations";
+  useDriverReservations, 
+  useDriverReservationStats, 
+  useUpdateReservationStatus,
+  type DriverReservation, 
+} from "@/services/convex/reservations";
+import type { Id } from "convex/_generated/dataModel";
 
 // Status badge colors
 const getStatusColor = (status: string) => {
@@ -51,8 +51,8 @@ const ReservationCard = ({
   reservation, 
   onStatusUpdate 
 }: { 
-  reservation: Reservation; 
-  onStatusUpdate: (id: string, status: 'confirmed' | 'cancelled' | 'completed') => void;
+  reservation: DriverReservation; 
+  onStatusUpdate: (id: Id<"reservations">, status: 'confirmed' | 'cancelled' | 'completed') => void;
 }) => {
   const departureDate = new Date(reservation.tripDepartureTime);
   const createdDate = new Date(reservation.createdAt);
@@ -94,7 +94,7 @@ const ReservationCard = ({
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => onStatusUpdate(reservation.id, 'confirmed')}
+                  onClick={() => onStatusUpdate(reservation._id, 'confirmed')}
                   className="text-green-600 border-green-200 hover:bg-green-50"
                 >
                   <CheckCircle className="w-4 h-4 mr-1" />
@@ -103,7 +103,7 @@ const ReservationCard = ({
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => onStatusUpdate(reservation.id, 'cancelled')}
+                  onClick={() => onStatusUpdate(reservation._id, 'cancelled')}
                   className="text-red-600 border-red-200 hover:bg-red-50"
                 >
                   <XCircle className="w-4 h-4 mr-1" />
@@ -115,14 +115,14 @@ const ReservationCard = ({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => onStatusUpdate(reservation.id, 'completed')}
+                onClick={() => onStatusUpdate(reservation._id, 'completed')}
                 className="text-blue-600 border-blue-200 hover:bg-blue-50"
               >
                 <CheckCircle className="w-4 h-4 mr-1" />
                 Complete
               </Button>
             )}
-            <Link to={`/driver/reservations/${reservation.id}`}>
+            <Link to={`/driver/reservations/${reservation._id}`}>
               <Button size="sm" variant="outline">
                 <Eye className="w-4 h-4 mr-1" />
                 View
@@ -204,36 +204,16 @@ const ReservationCard = ({
 };
 
 export default function ReservationsPage() {
-  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'date' | 'passenger' | 'price'>('date');
 
-  // Fetch reservations
-  const { data: reservations = [], isLoading } = useQuery({
-    queryKey: ['driver-reservations'],
-    queryFn: () => getDriverReservations(),
-  });
+  // Fetch reservations and stats using Convex hooks
+  const reservations = useDriverReservations() || [];
+  const stats = useDriverReservationStats();
+  const updateReservationStatus = useUpdateReservationStatus();
 
-  // Fetch reservation statistics
-  const { data: stats } = useQuery({
-    queryKey: ['driver-reservation-stats'],
-    queryFn: getDriverReservationStats,
-  });
-
-  // Update reservation status mutation
-  const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'confirmed' | 'cancelled' | 'completed' }) =>
-      updateReservationStatus(id, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['driver-reservations'] });
-      queryClient.invalidateQueries({ queryKey: ['driver-reservation-stats'] });
-      toast.success('Reservation status updated successfully!');
-    },
-    onError: (error) => {
-      toast.error(`Failed to update reservation: ${error.message}`);
-    },
-  });
+  const isLoading = reservations === undefined;
 
   // Filter and sort reservations
   const filteredReservations = useMemo(() => {
@@ -241,7 +221,7 @@ export default function ReservationsPage() {
 
     // Apply search filter
     if (searchQuery) {
-      filtered = filtered.filter(reservation =>
+      filtered = filtered.filter((reservation: DriverReservation) =>
         reservation.passengerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         reservation.bookingReference.toLowerCase().includes(searchQuery.toLowerCase()) ||
         reservation.routeTemplateName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -252,11 +232,11 @@ export default function ReservationsPage() {
 
     // Apply status filter
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(reservation => reservation.status === statusFilter);
+      filtered = filtered.filter((reservation: DriverReservation) => reservation.status === statusFilter);
     }
 
     // Apply sorting
-    filtered.sort((a, b) => {
+    filtered.sort((a: DriverReservation, b: DriverReservation) => {
       switch (sortBy) {
         case 'date':
           return new Date(b.tripDepartureTime).getTime() - new Date(a.tripDepartureTime).getTime();
@@ -272,8 +252,13 @@ export default function ReservationsPage() {
     return filtered;
   }, [reservations, searchQuery, statusFilter, sortBy]);
 
-  const handleStatusUpdate = (id: string, status: 'confirmed' | 'cancelled' | 'completed') => {
-    updateStatusMutation.mutate({ id, status });
+  const handleStatusUpdate = async (reservationId: Id<"reservations">, status: 'confirmed' | 'cancelled' | 'completed') => {
+    try {
+      await updateReservationStatus({ reservationId, status });
+      toast.success('Reservation status updated successfully!');
+    } catch (error) {
+      toast.error(`Failed to update reservation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   if (isLoading) {
@@ -393,7 +378,7 @@ export default function ReservationsPage() {
         ) : (
           filteredReservations.map((reservation) => (
             <ReservationCard
-              key={reservation.id}
+              key={reservation._id}
               reservation={reservation}
               onStatusUpdate={handleStatusUpdate}
             />

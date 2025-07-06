@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useSearchParams, useNavigate, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -18,9 +17,14 @@ import {
   Home,
   RefreshCw
 } from "lucide-react";
-import { getTempBooking, checkPaymentStatus } from "@/services/supabase/payments";
-import { getTripForBooking } from "@/services/supabase/trip-search";
 import { format } from "date-fns";
+import { 
+  useTempBooking, 
+  usePaymentStatus, 
+  useReservationByTempBookingId,
+} from "@/services/convex/payments";
+import { useTripForBooking } from "@/services/convex/tripSearch";
+import type { Id } from "../../convex/_generated/dataModel";
 
 export default function BookingSuccessPage() {
   const { bookingId } = useParams<{ bookingId: string }>();
@@ -32,32 +36,29 @@ export default function BookingSuccessPage() {
   const [finalBookingRef, setFinalBookingRef] = useState<string | null>(bookingReference);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Fetch temporary booking details
-  const { data: tempBooking, isLoading: isLoadingBooking } = useQuery({
-    queryKey: ['temp-booking-success', bookingId],
-    queryFn: () => getTempBooking(bookingId!),
-    enabled: !!bookingId,
-  });
+  // Use Convex hooks instead of React Query
+  const tempBooking = useTempBooking(bookingId as Id<"tempBookings"> | null);
+  const paymentStatusData = usePaymentStatus(bookingId as Id<"tempBookings"> | null);
+  const reservationData = useReservationByTempBookingId(bookingId as Id<"tempBookings"> | null);
+  const trip = useTripForBooking(tempBooking?.tripId || reservationData?.tripId || "");
 
-  // Fetch trip details
-  const { data: trip, isLoading: isLoadingTrip } = useQuery({
-    queryKey: ['trip-success', tempBooking?.tripId],
-    queryFn: () => getTripForBooking(tempBooking!.tripId),
-    enabled: !!tempBooking?.tripId,
-  });
+  // Check if queries are still loading (undefined = loading, null = loaded but empty)
+  const isLoadingBooking = tempBooking === undefined;
+  const isLoadingReservation = reservationData === undefined;
+  const isLoadingPaymentStatus = paymentStatusData === undefined;
+  const isLoadingTrip = trip === undefined && !!(tempBooking?.tripId || reservationData?.tripId);
 
   // Function to check payment status
   const checkBookingStatus = useCallback(async () => {
-    if (!bookingId) return;
+    if (!bookingId || !paymentStatusData) return;
     
     try {
       setIsRefreshing(true);
-      const status = await checkPaymentStatus(bookingId);
       
-      if (status.status === 'succeeded' && status.bookingReference) {
+      if (paymentStatusData.status === 'succeeded' && paymentStatusData.bookingReference) {
         setPaymentStatus('confirmed');
-        setFinalBookingRef(status.bookingReference);
-      } else if (status.status === 'failed') {
+        setFinalBookingRef(paymentStatusData.bookingReference);
+      } else if (paymentStatusData.status === 'failed') {
         setPaymentStatus('failed');
       } else {
         if (bookingReference === 'PROCESSING') {
@@ -71,7 +72,7 @@ export default function BookingSuccessPage() {
     } finally {
       setIsRefreshing(false);
     }
-  }, [bookingId, bookingReference]);
+  }, [bookingId, bookingReference, paymentStatusData]);
 
   // Poll for payment confirmation if we don't have a booking reference yet
   useEffect(() => {
@@ -82,7 +83,10 @@ export default function BookingSuccessPage() {
       return;
     }
     
-    checkBookingStatus();
+    // Check status when paymentStatusData changes
+    if (paymentStatusData) {
+      checkBookingStatus();
+    }
     
     let pollCount = 0;
     const maxPolls = 15;
@@ -97,11 +101,13 @@ export default function BookingSuccessPage() {
         return;
       }
       
-      checkBookingStatus();
+      if (paymentStatusData) {
+        checkBookingStatus();
+      }
     }, 2000);
     
     return () => clearInterval(pollInterval);
-  }, [bookingId, finalBookingRef, checkBookingStatus, paymentStatus]);
+  }, [bookingId, finalBookingRef, checkBookingStatus, paymentStatus, paymentStatusData]);
 
   const handleDownloadTicket = () => {
     // TODO: Implement ticket download functionality
@@ -110,13 +116,13 @@ export default function BookingSuccessPage() {
 
   const handleEmailTicket = () => {
     // TODO: Implement email ticket functionality
-    if (tempBooking?.passengerEmail) {
-      window.location.href = `mailto:${tempBooking.passengerEmail}?subject=Your TravelEx Booking Confirmation&body=Your booking reference: ${finalBookingRef}`;
+    if (bookingData?.passengerEmail && bookingData.passengerEmail !== "Check your email for details") {
+      window.location.href = `mailto:${bookingData.passengerEmail}?subject=Your TravelEx Booking Confirmation&body=Your booking reference: ${finalBookingRef}`;
     }
   };
 
-  // Loading states
-  if (isLoadingBooking || isLoadingTrip || paymentStatus === 'loading') {
+  // Loading states - wait for all critical queries to complete
+  if (isLoadingBooking || isLoadingReservation || isLoadingPaymentStatus || isLoadingTrip || paymentStatus === 'loading') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -177,8 +183,8 @@ export default function BookingSuccessPage() {
     );
   }
 
-  // Error state
-  if (paymentStatus === 'failed' || !tempBooking) {
+  // Error state - only show error if payment failed OR (all queries loaded but no data found)
+  if (paymentStatus === 'failed' || (!tempBooking && !reservationData && !isLoadingBooking && !isLoadingReservation)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -202,21 +208,31 @@ export default function BookingSuccessPage() {
     );
   }
 
-  const departureTime = trip ? new Date(trip.departureTime) : null;
-  const arrivalTime = trip ? new Date(trip.arrivalTime) : null;
+  const departureTime = trip ? new Date(trip.departureTime || "") : null;
+  const arrivalTime = trip ? new Date(trip.arrivalTime || "") : null;
+
+  // Get booking data from either temp booking (during payment) or reservation data (after success)
+  const bookingData = tempBooking || reservationData || {
+    passengerName: "Booking Complete",
+    passengerEmail: "Check your email for details",
+    passengerPhone: "",
+    selectedSeats: ["--"],
+    numberOfBags: 0,
+    totalPrice: 0,
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50">
+    <div className="min-h-screen bg-white">
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Success Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center">
               <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-green-900 mb-2">Booking Confirmed!</h1>
-          <p className="text-lg text-green-700">
+          <h1 className="text-3xl font-bold mb-2">Booking Confirmed!</h1>
+          <p className="text-lg">
             Your trip has been successfully booked. 
             {finalBookingRef === 'PROCESSING' 
               ? ' Your booking is being processed and you will receive confirmation shortly.' 
@@ -229,10 +245,10 @@ export default function BookingSuccessPage() {
           {/* Main Booking Details */}
           <div className="lg:col-span-2 space-y-6">
             {/* Booking Reference */}
-            <Card className="border-green-200 bg-white">
+            <Card className="bg-white">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-green-800">
-                  <CheckCircle className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-brand-orange" />
                   Booking Confirmation
                 </CardTitle>
               </CardHeader>
@@ -246,7 +262,9 @@ export default function BookingSuccessPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Total Paid</p>
-                    <p className="text-xl font-bold text-green-800">₵{tempBooking.totalPrice}</p>
+                    <p className="text-xl font-bold text-green-800">
+                      ₵{bookingData.totalPrice || (paymentStatusData?.status === 'succeeded' ? 'Paid' : '0')}
+                    </p>
                   </div>
                 </div>
                 
@@ -351,25 +369,25 @@ export default function BookingSuccessPage() {
               <CardContent className="space-y-3">
                 <div>
                   <p className="text-sm text-muted-foreground">Name</p>
-                  <p className="font-medium">{tempBooking.passengerName}</p>
+                  <p className="font-medium">{bookingData.passengerName}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-medium">{tempBooking.passengerEmail}</p>
+                  <p className="font-medium">{bookingData.passengerEmail}</p>
                 </div>
-                {tempBooking.passengerPhone && (
+                {bookingData.passengerPhone && (
                   <div>
                     <p className="text-sm text-muted-foreground">Phone</p>
-                    <p className="font-medium">{tempBooking.passengerPhone}</p>
+                    <p className="font-medium">{bookingData.passengerPhone}</p>
                   </div>
                 )}
                 <div>
                   <p className="text-sm text-muted-foreground">Seats</p>
-                  <p className="font-medium">{tempBooking.selectedSeats.join(', ')}</p>
+                  <p className="font-medium">{bookingData.selectedSeats.join(', ')}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Luggage</p>
-                  <p className="font-medium">{tempBooking.numberOfBags} bag{tempBooking.numberOfBags > 1 ? 's' : ''}</p>
+                  <p className="font-medium">{bookingData.numberOfBags} bag{bookingData.numberOfBags > 1 ? 's' : ''}</p>
                 </div>
               </CardContent>
             </Card>
@@ -389,7 +407,9 @@ export default function BookingSuccessPage() {
                     </div>
                     <div>
                       <p className="font-medium">Check your email</p>
-                      <p className="text-muted-foreground">We've sent confirmation details to {tempBooking.passengerEmail}</p>
+                      <p className="text-muted-foreground">
+                        We've sent confirmation details to {bookingData.passengerEmail}
+                      </p>
                     </div>
                   </div>
                   
