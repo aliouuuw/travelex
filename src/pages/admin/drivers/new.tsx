@@ -5,11 +5,11 @@ import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation } from "convex/react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/services/supabase/supabase";
+import { api } from "../../../../convex/_generated/api";
 
 const newDriverFormSchema = z.object({
     full_name: z.string().min(2, "Full name must be at least 2 characters"),
@@ -28,30 +28,20 @@ export default function NewDriverPage() {
         },
     });
 
-    const { mutate: createDriver, isPending } = useMutation({
-        mutationFn: async (data: NewDriverFormData) => {
-            const { error } = await supabase.functions.invoke("invite-driver", {
-                body: {
-                    email: data.email,
-                    full_name: data.full_name,
-                },
+    const createInvitation = useMutation(api.invitations.createInvitation);
+
+    const onSubmit = async (data: NewDriverFormData) => {
+        try {
+            await createInvitation({
+                email: data.email,
+                fullName: data.full_name,
+                role: "driver",
             });
-
-            if (error) {
-                throw new Error(error.message);
-            }
-        },
-        onSuccess: () => {
-            toast.success("Driver created successfully! Invitation sent.");
+            toast.success("Driver invitation sent successfully!");
             navigate("/admin/drivers");
-        },
-        onError: (error) => {
-            toast.error(error.message);
-        },
-    });
-
-    const onSubmit = (data: NewDriverFormData) => {
-        createDriver(data);
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Failed to send invitation");
+        }
     };
 
     return (
@@ -74,9 +64,9 @@ export default function NewDriverPage() {
                             {form.formState.errors.email && <p className="text-red-500 text-xs">{form.formState.errors.email.message}</p>}
                         </div>
                         <div className="pt-2">
-                            <Button type="submit" className="w-full" disabled={isPending}>
-                                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Add Driver
+                            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                                {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Send Invitation
                             </Button>
                         </div>
                     </form>

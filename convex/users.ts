@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { internal } from "./_generated/api";
 
 // Get current authenticated user with profile
 export const getCurrentUser = query({
@@ -303,5 +304,68 @@ export const createDriverProfile = mutation({
     });
 
     return profileId;
+  },
+}); 
+
+// Get all drivers for admin use
+export const getAllDrivers = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    // Check if current user is admin
+    const currentProfile = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!currentProfile || currentProfile.role !== "admin") {
+      throw new Error("Admin access required");
+    }
+
+    // Get all driver profiles
+    const drivers = await ctx.db
+      .query("profiles")
+      .withIndex("by_role", (q) => q.eq("role", "driver"))
+      .collect();
+
+    return drivers.map(driver => ({
+      id: driver._id,
+      full_name: driver.fullName || "",
+      email: driver.email,
+      phone: driver.phone,
+      rating: driver.rating,
+      created_at: driver._creationTime,
+      role: driver.role,
+    }));
+  },
+});
+
+// Send password reset email to driver
+export const sendDriverPasswordReset = mutation({
+  args: {
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    // Check if current user is admin
+    const currentProfile = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!currentProfile || currentProfile.role !== "admin") {
+      throw new Error("Admin access required");
+    }
+
+    // Use the existing password reset functionality
+    await ctx.scheduler.runAfter(0, internal.passwordReset.requestPasswordResetInternal, {
+      email: args.email,
+    });
+
+    return { success: true };
   },
 }); 

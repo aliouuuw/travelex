@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, internalAction } from "./_generated/server";
+import { mutation, query, internalAction, internalMutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
 
@@ -115,6 +115,64 @@ export const sendPasswordResetEmail = internalAction({
 
 // Request password reset
 export const requestPasswordReset = mutation({
+  args: {
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Check if user exists
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+
+    if (!profile) {
+      // Don't reveal if email exists or not for security
+      return { success: true };
+    }
+
+    // Get the auth user
+    const user = await ctx.db.get(profile.userId);
+    if (!user) {
+      return { success: true };
+    }
+
+    // Invalidate any existing unused tokens for this user
+    const existingTokens = await ctx.db
+      .query("passwordResetTokens")
+      .withIndex("by_user", (q) => q.eq("userId", profile.userId))
+      .filter((q) => q.eq(q.field("isUsed"), false))
+      .collect();
+
+    for (const token of existingTokens) {
+      await ctx.db.patch(token._id, { isUsed: true });
+    }
+
+    // Generate new token
+    const token = generateToken();
+    const expiresAt = Date.now() + (1 * 60 * 60 * 1000); // 1 hour
+
+    // Create password reset token
+    await ctx.db.insert("passwordResetTokens", {
+      email: args.email,
+      token,
+      userId: profile.userId,
+      expiresAt,
+      isUsed: false,
+    });
+
+    // Send password reset email
+    await ctx.scheduler.runAfter(0, internal.passwordReset.sendPasswordResetEmail, {
+      email: args.email,
+      fullName: profile.fullName || 'User',
+      token,
+    });
+
+    return { success: true };
+  },
+});
+
+// Internal mutation for password reset (called from other files)
+export const requestPasswordResetInternal = internalMutation({
   args: {
     email: v.string(),
   },

@@ -41,6 +41,37 @@ export const useChangePassword = () => {
   return useMutation(api.users.changePassword);
 };
 
+// Hook to get all drivers for admin use
+export const useGetAllDrivers = () => {
+  return useQuery(api.users.getAllDrivers);
+};
+
+// Hook to send password reset email to driver
+export const useSendDriverPasswordReset = () => {
+  return useMutation(api.users.sendDriverPasswordReset);
+};
+
+// Driver type for TypeScript
+export interface Driver {
+  id: Id<"profiles">;
+  full_name: string;
+  email: string;
+  phone?: string;
+  rating?: number;
+  created_at: number;
+  role: string;
+}
+
+// Function to get all drivers (for backward compatibility)
+export const getDrivers = async (): Promise<Driver[]> => {
+  throw new Error('Use useGetAllDrivers hook instead');
+};
+
+// Function to send password reset (for backward compatibility)
+export const resetPassword = async (email: string): Promise<void> => {
+  throw new Error('Use useSendDriverPasswordReset hook instead');
+};
+
 // Helper function to upload avatar image using Convex file storage
 export const uploadAvatarImage = async (
   file: File,
