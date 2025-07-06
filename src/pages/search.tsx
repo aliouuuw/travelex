@@ -25,10 +25,16 @@ import {
   sortTripResults,
   formatTripDuration,
   getRoutePathString,
-  type TripSearchQueryWithCountry,
+  type TripSearchQueryWithCountry as BaseTripSearchQueryWithCountry,
   type TripSearchResult,
 } from "@/services/convex/tripSearch";
 import TravelExBookingFlow from "@/components/TravelExBookingFlow";
+
+// Extend the base interface to include station parameters
+interface TripSearchQueryWithCountry extends BaseTripSearchQueryWithCountry {
+  fromStation?: string;
+  toStation?: string;
+}
 
 // Trip Search functionality is now handled by TravelExBookingFlow component
 
@@ -36,16 +42,33 @@ import TravelExBookingFlow from "@/components/TravelExBookingFlow";
 export const TripResultCard = ({ 
   trip, 
   searchFromCity, 
-  searchToCity 
+  searchToCity,
+  searchFromStation,
+  searchToStation
 }: { 
   trip: TripSearchResult;
   searchFromCity?: string;
   searchToCity?: string;
+  searchFromStation?: string;
+  searchToStation?: string;
 }) => {
   const departureTime = new Date(trip.departureTime);
-  const arrivalTime = new Date(trip.arrivalTime);
+  const arrivalTime = new Date(trip.arrivalTime || trip.departureTime);
   const duration = formatTripDuration(trip.departureTime, trip.arrivalTime);
   const routePath = getRoutePathString(trip.routeCities);
+
+  // Build booking URL with station parameters
+  const buildBookingUrl = () => {
+    const baseUrl = `/book/${trip.tripId}`;
+    const params = new URLSearchParams();
+    
+    if (searchFromCity) params.append('fromCity', searchFromCity);
+    if (searchToCity) params.append('toCity', searchToCity);
+    if (searchFromStation) params.append('fromStation', searchFromStation);
+    if (searchToStation) params.append('toStation', searchToStation);
+    
+    return params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+  };
 
   return (
     <Card className="premium-card bg-white hover:shadow-premium-hover transition-all">
@@ -124,13 +147,10 @@ export const TripResultCard = ({
 
             <Button 
               asChild
-              className="bg-brand-orange hover:bg-brand-orange/90 text-white w-full lg:w-auto"
+              className="bg-brand-orange text-white hover:bg-brand-orange/90 text-white w-full lg:w-auto"
             >
               <Link 
-                to={searchFromCity && searchToCity 
-                  ? `/book/${trip.tripId}?fromCity=${encodeURIComponent(searchFromCity)}&toCity=${encodeURIComponent(searchToCity)}`
-                  : `/book/${trip.tripId}`
-                }
+                to={buildBookingUrl()}
               >
                 Book Now
                 <ArrowRight className="ml-2 w-4 h-4" />
@@ -153,6 +173,8 @@ export default function SearchPage() {
   // Extract initial values from URL parameters
   const fromCity = searchParams.get('fromCity');
   const toCity = searchParams.get('toCity');
+  const fromStation = searchParams.get('fromStation');
+  const toStation = searchParams.get('toStation');
   const departureDateStr = searchParams.get('departureDate');
   const passengersStr = searchParams.get('passengers');
 
@@ -170,6 +192,8 @@ export default function SearchPage() {
   const initialValues = fromCity && toCity ? {
     fromCity,
     toCity,
+    fromStation: fromStation || "",
+    toStation: toStation || "",
     departureDate: departureDateStr ? new Date(departureDateStr) : undefined,
     passengers: passengersStr ? parseInt(passengersStr) : 1,
   } : undefined;
@@ -182,6 +206,8 @@ export default function SearchPage() {
         toCountry: 'CA',
         fromCity,
         toCity,
+        fromStation: fromStation || undefined,
+        toStation: toStation || undefined,
         departureDate: departureDateStr || undefined,
         minSeats: passengersStr ? parseInt(passengersStr) : 1,
       };
@@ -197,12 +223,14 @@ export default function SearchPage() {
   };
 
   // Handle search from TravelExBookingFlow component
-  const handleSearchFromFlow = (searchData: { fromCity: string; toCity: string; departureDate: Date | undefined; passengers: number; fromCountry: string; toCountry: string }) => {
+  const handleSearchFromFlow = (searchData: { fromCity: string; toCity: string; fromStation?: string; toStation?: string; departureDate: Date | undefined; passengers: number; fromCountry: string; toCountry: string }) => {
     const query: TripSearchQueryWithCountry = {
       fromCountry: searchData.fromCountry,
       toCountry: searchData.toCountry,
       fromCity: searchData.fromCity,
       toCity: searchData.toCity,
+      fromStation: searchData.fromStation,
+      toStation: searchData.toStation,
       departureDate: searchData.departureDate ? format(searchData.departureDate, 'yyyy-MM-dd') : undefined,
       minSeats: searchData.passengers,
     };
@@ -371,6 +399,8 @@ export default function SearchPage() {
                           trip={trip} 
                           searchFromCity={searchQuery?.fromCity}
                           searchToCity={searchQuery?.toCity}
+                          searchFromStation={searchQuery?.fromStation}
+                          searchToStation={searchQuery?.toStation}
                         />
                       ))}
                     </div>
@@ -387,10 +417,7 @@ export default function SearchPage() {
                     <div className="flex flex-col sm:flex-row gap-2 justify-center">
                       <Button 
                         variant="outline" 
-                        onClick={() => {
-                          setSearchQuery(null);
-                          setSearchResults([]);
-                        }}
+                        onClick={() => setSearchQuery(null)}
                         className="text-sm"
                       >
                         Clear Search

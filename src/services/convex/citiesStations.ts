@@ -25,6 +25,14 @@ export const useStationsForCity = (cityName: string) => {
   return useQuery(api.citiesStations.getStationsForCity, { cityName });
 };
 
+// Public hook for getting stations (no authentication required)
+export const usePublicStationsForCity = (cityName: string) => {
+  return useQuery(
+    api.citiesStations.getPublicStationsForCity, 
+    cityName ? { cityName } : "skip"
+  );
+};
+
 // Mutation hooks
 export const useSaveCitiesAndStations = () => {
   return useMutation(api.citiesStations.saveCitiesAndStations);
@@ -44,34 +52,13 @@ export const getDriverCitiesAndStations = async (): Promise<ReusableCity[]> => {
   return result || [];
 };
 
-// export const saveCitiesAndStations = async (cities: ReusableCity[]): Promise<boolean> => {
-//   throw new Error("Use useSaveCitiesAndStations hook instead");
-// };
+export const getStationsForCity = async (cityName: string): Promise<ReusableStation[]> => {
+  const result = await convex.query(api.citiesStations.getStationsForCity, { cityName });
+  return result || [];
+};
 
-// export const getStationsForCity = async (cityName: string): Promise<ReusableStation[]> => {
-//   throw new Error("Use useStationsForCity hook instead");
-// };
-
-// export const addCityWithStations = async (city: ReusableCity): Promise<boolean> => {
-//   throw new Error("Use useAddCityWithStations hook instead");
-// };
-
-// export const updateCityWithStations = async (cityName: string, updatedCity: ReusableCity): Promise<boolean> => {
-//   throw new Error("Use saveCitiesAndStations hook instead");
-// };
-
-// export const deleteCity = async (cityName: string): Promise<boolean> => {
-//   throw new Error("Use saveCitiesAndStations hook instead");
-// };
-
-// export const addStationToCity = async (cityName: string, station: ReusableStation): Promise<boolean> => {
-//   throw new Error("Use saveCitiesAndStations hook instead");
-// };
-
-// export const removeStationFromCity = async (cityName: string, stationName: string): Promise<boolean> => {
-//   throw new Error("Use saveCitiesAndStations hook instead");
-// };
-
-// export const extractAndSaveCitiesFromRoute = async (cities: Array<{ cityName: string; stations: ReusableStation[] }>): Promise<void> => {
-//   throw new Error("Use useExtractAndSaveCitiesFromRoute hook instead");
-// }; 
+// Public function to get stations without authentication
+export const getPublicStationsForCity = async (cityName: string): Promise<ReusableStation[]> => {
+  const result = await convex.query(api.citiesStations.getPublicStationsForCity, { cityName });
+  return result || [];
+}; 

@@ -200,7 +200,7 @@ export default function BookingSuccessPage() {
               <Button
                 onClick={checkBookingStatus}
                 disabled={isRefreshing}
-                className="bg-brand-orange hover:bg-brand-orange/90 w-full"
+                className="bg-brand-orange text-white hover:bg-brand-orange/90 w-full"
               >
                 {isRefreshing ? (
                   <>
@@ -241,7 +241,7 @@ export default function BookingSuccessPage() {
               There was an issue processing your booking. Please contact support or try again.
             </p>
             <div className="space-y-2">
-              <Button onClick={() => navigate('/search')} className="w-full bg-brand-orange hover:bg-brand-orange/90">
+              <Button onClick={() => navigate('/search')} className="w-full bg-brand-orange text-white hover:bg-brand-orange/90">
                 Search Again
               </Button>
               <Button variant="outline" onClick={() => navigate('/')} className="w-full">
@@ -495,7 +495,7 @@ export default function BookingSuccessPage() {
                 </div>
 
                 <div className="pt-4 border-t space-y-3">
-                  <Button asChild className="w-full bg-brand-orange hover:bg-brand-orange/90">
+                  <Button asChild className="w-full bg-brand-orange text-white hover:bg-brand-orange/90">
                     <Link to="/search">
                       <Home className="w-4 h-4 mr-2" />
                       Book Another Trip

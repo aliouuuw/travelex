@@ -144,7 +144,7 @@ const PaymentForm = ({
       <Button
         type="submit"
         disabled={!stripe || isProcessing}
-        className="w-full bg-brand-orange hover:bg-brand-orange/90 text-white py-3"
+        className="w-full bg-brand-orange text-white hover:bg-brand-orange/90 text-white py-3"
         size="lg"
       >
         {isProcessing ? (
@@ -241,7 +241,7 @@ export default function PaymentPage() {
             <p className="text-muted-foreground mb-4">
               The payment session could not be found or has expired. Please start your booking again.
             </p>
-            <Button onClick={() => navigate('/search')} className="bg-brand-orange hover:bg-brand-orange/90">
+            <Button onClick={() => navigate('/search')} className="bg-brand-orange text-white hover:bg-brand-orange/90">
               Back to Search
             </Button>
           </CardContent>

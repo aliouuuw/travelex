@@ -5,11 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   ArrowLeft, 
   ArrowRight, 
-  MapPin, 
   Users, 
   Star, 
   Car,
@@ -142,14 +140,17 @@ export default function BookingPage() {
   const searchParams = new URLSearchParams(window.location.search);
   const searchFromCity = searchParams.get('fromCity');
   const searchToCity = searchParams.get('toCity');
+  const fromStationId = searchParams.get('fromStation');
+  const toStationId = searchParams.get('toStation');
 
-  // Form state
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
+  // Form state - skip station selection if stations are pre-selected
+  const hasPreSelectedStations = fromStationId && toStationId;
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(hasPreSelectedStations ? 1 : 1); // Always start at step 1 (seat selection)
   const [formData, setFormData] = useState<BookingFormData>({
-    pickupStationId: '',
-    dropoffStationId: '',
+    pickupStationId: fromStationId || '',
+    dropoffStationId: toStationId || '',
     selectedSeats: [],
-    numberOfBags: 1, // Start with 1 free bag
+    numberOfBags: 1, // Will be updated when seats are selected
     passengerInfo: {
       fullName: '',
       email: '',
@@ -162,65 +163,50 @@ export default function BookingPage() {
   const isLoading = trip === undefined && !!tripId;
   const error = null; // Convex handles errors differently
 
-  // Get available stations based on selected pickup/dropoff and search context
-  const availablePickupStations = useMemo(() => {
-    if (!trip) return [];
-    
-    let stations = trip.tripStations.filter(station => station.isPickupPoint);
-    
-    // If we have search context, filter to only show stations from the search origin city
-    if (searchFromCity) {
-      stations = stations.filter(station => station.cityName === searchFromCity);
+  // Map station names to IDs when trip data is available
+  useMemo(() => {
+    if (trip && fromStationId && toStationId) {
+      const pickupStation = trip.tripStations.find(s => 
+        s.stationName === fromStationId && s.cityName === searchFromCity
+      );
+      const dropoffStation = trip.tripStations.find(s => 
+        s.stationName === toStationId && s.cityName === searchToCity
+      );
+      
+      if (pickupStation && dropoffStation) {
+        setFormData(prev => ({
+          ...prev,
+          pickupStationId: pickupStation.id,
+          dropoffStationId: dropoffStation.id,
+        }));
+      }
     }
-    
-    return stations;
-  }, [trip, searchFromCity]);
+  }, [trip, fromStationId, toStationId, searchFromCity, searchToCity]);
 
-  const availableDropoffStations = useMemo(() => {
-    if (!trip || !formData.pickupStationId) return [];
-    
-    const pickupStation = trip.tripStations.find(s => s.id === formData.pickupStationId);
-    if (!pickupStation) return [];
-    
-    let stations = trip.tripStations.filter(station => 
-      station.isDropoffPoint && station.sequenceOrder > pickupStation.sequenceOrder
-    );
-    
-    // If we have search context, filter to only show stations from the search destination city
-    if (searchToCity) {
-      stations = stations.filter(station => station.cityName === searchToCity);
-    }
-    
-    return stations;
-  }, [trip, formData.pickupStationId, searchToCity]);
-
-  // Calculate pricing
+  // Calculate pricing based on city names from search context
   const segmentPrice = useMemo(() => {
-    if (!trip || !formData.pickupStationId || !formData.dropoffStationId) return 0;
+    if (!trip || !searchFromCity || !searchToCity) return 0;
     
-    const pickupStation = trip.tripStations.find(s => s.id === formData.pickupStationId);
-    const dropoffStation = trip.tripStations.find(s => s.id === formData.dropoffStationId);
-    
-    if (!pickupStation || !dropoffStation) return 0;
-    
+    // Find pricing segment based on city names
     const pricingSegment = trip.pricing.find(p => 
-      p.fromCity === pickupStation.cityName && p.toCity === dropoffStation.cityName
+      p.fromCity === searchFromCity && p.toCity === searchToCity
     );
     
     return pricingSegment?.price || 50; // fallback price
-  }, [trip, formData.pickupStationId, formData.dropoffStationId]);
+  }, [trip, searchFromCity, searchToCity]);
 
   const luggageFee = useMemo(() => {
-    if (!trip?.luggagePolicy || formData.numberOfBags <= 1) {
-      return 0; // First bag is always free
+    if (!trip?.luggagePolicy || formData.numberOfBags <= formData.selectedSeats.length) {
+      return 0; // No fee if bags <= number of passengers (each gets 1 free bag)
     }
-    // Calculate fee for additional bags using the new bag-based model
-    const additionalBags = formData.numberOfBags - 1; // Subtract 1 for the free bag
+    // Calculate fee for additional bags beyond the free allowance
+    const totalFreeBags = formData.selectedSeats.length; // 1 free bag per passenger
+    const additionalBags = formData.numberOfBags - totalFreeBags;
     const feePerBag = trip.luggagePolicy.excessFeePerKg || 0; // This now represents fee per bag
     return additionalBags * feePerBag;
-  }, [trip, formData.numberOfBags]);
+  }, [trip, formData.numberOfBags, formData.selectedSeats.length]);
 
-  const totalPrice = (segmentPrice + luggageFee) * formData.selectedSeats.length;
+  const totalPrice = segmentPrice * formData.selectedSeats.length + luggageFee;
 
   // Handle form updates
   const updateFormData = (updates: Partial<BookingFormData>) => {
@@ -230,12 +216,18 @@ export default function BookingPage() {
   const handleSeatSelect = (seatId: string) => {
     const isSelected = formData.selectedSeats.includes(seatId);
     if (isSelected) {
+      const newSelectedSeats = formData.selectedSeats.filter(id => id !== seatId);
       updateFormData({
-        selectedSeats: formData.selectedSeats.filter(id => id !== seatId)
+        selectedSeats: newSelectedSeats,
+        // Update numberOfBags to match the new number of passengers (free bags)
+        numberOfBags: Math.max(newSelectedSeats.length, formData.numberOfBags)
       });
     } else {
+      const newSelectedSeats = [...formData.selectedSeats, seatId];
       updateFormData({
-        selectedSeats: [...formData.selectedSeats, seatId]
+        selectedSeats: newSelectedSeats,
+        // Update numberOfBags to match the new number of passengers (free bags)
+        numberOfBags: Math.max(newSelectedSeats.length, formData.numberOfBags)
       });
     }
   };
@@ -314,9 +306,8 @@ export default function BookingPage() {
   const arrivalTime = new Date(trip.arrivalTime || "");
 
   // Validation for each step
-  const canProceedFromStep1 = formData.pickupStationId && formData.dropoffStationId;
-  const canProceedFromStep2 = formData.selectedSeats.length > 0;
-  const canProceedFromStep3 = true; // Luggage is optional
+  const canProceedFromStep1 = formData.selectedSeats.length > 0;
+  const canProceedFromStep2 = true; // Luggage is optional
   const canSubmit = formData.passengerInfo.fullName && formData.passengerInfo.email && formData.passengerInfo.phone;
 
   return (
@@ -341,7 +332,7 @@ export default function BookingPage() {
 
         {/* Progress Steps */}
         <div className="flex items-center justify-center gap-4 mb-8">
-          {[1, 2, 3, 4].map((step) => (
+          {(hasPreSelectedStations ? [1, 2, 3] : [1, 2, 3]).map((step, index) => (
             <div key={step} className="flex items-center">
               <div className={`
                 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all
@@ -352,7 +343,7 @@ export default function BookingPage() {
               `}>
                 {currentStep > step ? <CheckCircle className="w-4 h-4" /> : step}
               </div>
-              {step < 4 && (
+              {index < 2 && (
                 <div className={`w-12 h-0.5 ${currentStep > step ? 'bg-brand-orange' : 'bg-gray-200'}`} />
               )}
             </div>
@@ -365,78 +356,28 @@ export default function BookingPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  {currentStep === 1 && <><MapPin className="w-5 h-5 text-brand-orange" /> Select Stations</>}
-                  {currentStep === 2 && <><Users className="w-5 h-5 text-brand-orange" /> Choose Seats</>}
-                  {currentStep === 3 && <><Package className="w-5 h-5 text-brand-orange" /> Luggage Options</>}
-                  {currentStep === 4 && <><CheckCircle className="w-5 h-5 text-brand-orange" /> Review & Book</>}
+                  {currentStep === 1 && <><Users className="w-5 h-5 text-brand-orange" /> Choose Seats</>}
+                  {currentStep === 2 && <><Package className="w-5 h-5 text-brand-orange" /> Luggage Options</>}
+                  {currentStep === 3 && <><CheckCircle className="w-5 h-5 text-brand-orange" /> Review & Book</>}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Step 1: Station Selection */}
-                {currentStep === 1 && (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Pickup Station</Label>
-                        <Select value={formData.pickupStationId} onValueChange={(value) => updateFormData({ pickupStationId: value, dropoffStationId: '' })}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select pickup station" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availablePickupStations.map((station) => (
-                              <SelectItem key={station.id} value={station.id}>
-                                <div>
-                                  <div className="font-medium">{station.cityName}</div>
-                                  <div className="text-sm text-muted-foreground">{station.stationName}</div>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Dropoff Station</Label>
-                        <Select 
-                          value={formData.dropoffStationId} 
-                          onValueChange={(value) => updateFormData({ dropoffStationId: value })}
-                          disabled={!formData.pickupStationId}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select dropoff station" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableDropoffStations.map((station) => (
-                              <SelectItem key={station.id} value={station.id}>
-                                <div>
-                                  <div className="font-medium">{station.cityName}</div>
-                                  <div className="text-sm text-muted-foreground">{station.stationName}</div>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                {/* Station Summary - Always show since stations are pre-selected */}
+                {hasPreSelectedStations && (
+                  <div className="mb-6 p-4 bg-green-50 rounded-lg">
+                    <div className="flex items-center gap-2 text-green-800 mb-2">
+                      <CheckCircle className="w-4 h-4" />
+                      <span className="font-medium">Stations Selected</span>
                     </div>
-
-                    {canProceedFromStep1 && (
-                      <div className="p-4 bg-green-50 rounded-lg">
-                        <div className="flex items-center gap-2 text-green-800 mb-2">
-                          <CheckCircle className="w-4 h-4" />
-                          <span className="font-medium">Route Selected</span>
-                        </div>
-                        <p className="text-sm text-green-700">
-                          Your journey: {availablePickupStations.find(s => s.id === formData.pickupStationId)?.cityName} → {' '}
-                          {availableDropoffStations.find(s => s.id === formData.dropoffStationId)?.cityName}
-                        </p>
-                        <p className="text-lg font-bold text-green-800 mt-2">₵{segmentPrice} per passenger</p>
-                      </div>
-                    )}
+                    <p className="text-sm text-green-700">
+                      Your journey: {searchFromCity} → {searchToCity}
+                    </p>
+                    <p className="text-lg font-bold text-green-800 mt-2">₵{segmentPrice} per passenger</p>
                   </div>
                 )}
 
-                {/* Step 2: Seat Selection */}
-                {currentStep === 2 && (
+                {/* Step 1: Seat Selection */}
+                {currentStep === 1 && (
                   <div className="space-y-6">
                     <div className="text-center mb-6">
                       <h3 className="text-lg font-semibold mb-2">Select Your Seats</h3>
@@ -476,12 +417,24 @@ export default function BookingPage() {
                   </div>
                 )}
 
-                {/* Step 3: Luggage Options */}
-                {currentStep === 3 && (
+                {/* Step 2: Luggage Options */}
+                {currentStep === 2 && (
                   <div className="space-y-6">
                     <div className="mb-6">
                       <h3 className="text-lg font-semibold mb-2">Luggage Information</h3>
                       <p className="text-muted-foreground">Select additional bags to bring on your trip</p>
+                    </div>
+
+                    {/* Pricing Summary */}
+                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Users className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm font-medium text-blue-900">Pricing Summary</span>
+                      </div>
+                      <div className="text-sm text-blue-800">
+                        <p>Base fare: ₵{segmentPrice} per passenger</p>
+                        <p>Selected seats: {formData.selectedSeats.length} × ₵{segmentPrice} = ₵{segmentPrice * formData.selectedSeats.length}</p>
+                      </div>
                     </div>
 
                     {trip.luggagePolicy ? (
@@ -494,9 +447,11 @@ export default function BookingPage() {
                               <div className="space-y-2">
                                 <div className="flex items-center gap-2">
                                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                  <span className="text-gray-700">Free bag included</span>
+                                  <span className="text-gray-700">Free bags included</span>
                                 </div>
-                                <p className="text-green-800 ml-4">1 bag up to {trip.luggagePolicy.freeWeightKg || 23}kg included in your ticket</p>
+                                <p className="text-green-800 ml-4">
+                                  {formData.selectedSeats.length} bag{formData.selectedSeats.length > 1 ? 's' : ''} up to {trip.luggagePolicy.freeWeightKg || 23}kg each included in your ticket
+                                </p>
                               </div>
                               <div className="space-y-2">
                                 <div className="flex items-center gap-2">
@@ -509,7 +464,7 @@ export default function BookingPage() {
                             {trip.luggagePolicy.maxBags && (
                               <div className="mt-3 p-3 bg-white/60 rounded border border-green-100">
                                 <p className="text-sm text-green-800">
-                                  <strong>Maximum:</strong> {trip.luggagePolicy.maxBags} additional bags per passenger
+                                  <strong>Maximum:</strong> {(trip.luggagePolicy.maxBags * formData.selectedSeats.length)} additional bags total ({trip.luggagePolicy.maxBags} per passenger)
                                 </p>
                               </div>
                             )}
@@ -531,8 +486,8 @@ export default function BookingPage() {
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => updateFormData({ numberOfBags: Math.max(1, formData.numberOfBags - 1) })}
-                          disabled={formData.numberOfBags === 1}
+                          onClick={() => updateFormData({ numberOfBags: Math.max(formData.selectedSeats.length, formData.numberOfBags - 1) })}
+                          disabled={formData.numberOfBags <= formData.selectedSeats.length}
                           className="w-10 h-10 p-0"
                         >
                           -
@@ -540,53 +495,56 @@ export default function BookingPage() {
                         <div className="text-center min-w-[80px]">
                           <div className="text-2xl font-bold text-brand-orange">{formData.numberOfBags}</div>
                           <div className="text-xs text-muted-foreground">
-                            {formData.numberOfBags === 1 ? 'bag (free)' : `bags (1 free + ${formData.numberOfBags - 1})`}
+                            {formData.numberOfBags === formData.selectedSeats.length 
+                              ? `${formData.selectedSeats.length} bag${formData.selectedSeats.length > 1 ? 's' : ''} (all free)` 
+                              : `${formData.selectedSeats.length} free + ${formData.numberOfBags - formData.selectedSeats.length} additional`
+                            }
                           </div>
                         </div>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => updateFormData({ numberOfBags: Math.min((trip?.luggagePolicy?.maxBags || 4) + 1, formData.numberOfBags + 1) })}
-                          disabled={formData.numberOfBags >= ((trip?.luggagePolicy?.maxBags || 4) + 1)}
+                          onClick={() => updateFormData({ numberOfBags: Math.min((trip?.luggagePolicy?.maxBags || 4) * formData.selectedSeats.length + formData.selectedSeats.length, formData.numberOfBags + 1) })}
+                          disabled={formData.numberOfBags >= ((trip?.luggagePolicy?.maxBags || 4) * formData.selectedSeats.length + formData.selectedSeats.length)}
                           className="w-10 h-10 p-0"
                         >
                           +
                         </Button>
                       </div>
                       
-                      {formData.numberOfBags > 1 && trip?.luggagePolicy && (
+                      {formData.numberOfBags > formData.selectedSeats.length && trip?.luggagePolicy && (
                         <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                           <div className="flex justify-between items-center text-sm">
-                            <span>Additional luggage fee ({formData.numberOfBags - 1} additional bag{formData.numberOfBags > 2 ? 's' : ''})</span>
+                            <span>Additional luggage fee ({formData.numberOfBags - formData.selectedSeats.length} additional bag{formData.numberOfBags - formData.selectedSeats.length > 1 ? 's' : ''})</span>
                             <span className="font-semibold text-brand-orange">₵{luggageFee.toFixed(2)}</span>
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">
-                            Each additional bag up to {trip.luggagePolicy.freeWeightKg || 23}kg • First bag is free
+                            Each additional bag up to {trip.luggagePolicy.freeWeightKg || 23}kg • {formData.selectedSeats.length} free bag{formData.selectedSeats.length > 1 ? 's' : ''} included
                           </p>
                         </div>
                       )}
 
-                      {formData.numberOfBags === 1 && (
+                      {formData.numberOfBags === formData.selectedSeats.length && (
                         <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
                           <div className="flex items-center gap-2 text-sm text-green-800">
                             <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            <span>Perfect! Your free bag is included in the ticket price.</span>
+                            <span>Perfect! {formData.selectedSeats.length} free bag{formData.selectedSeats.length > 1 ? 's' : ''} included in the ticket price.</span>
                           </div>
                         </div>
                       )}
 
-                      {formData.numberOfBags >= ((trip?.luggagePolicy?.maxBags || 4) + 1) && (
+                      {formData.numberOfBags >= ((trip?.luggagePolicy?.maxBags || 4) * formData.selectedSeats.length + formData.selectedSeats.length) && (
                         <p className="text-sm text-amber-600 mt-2">
-                          You've reached the maximum number of bags allowed (1 free + {trip?.luggagePolicy?.maxBags || 3} additional).
+                          You've reached the maximum number of bags allowed ({formData.selectedSeats.length} free + {(trip?.luggagePolicy?.maxBags || 3) * formData.selectedSeats.length} additional).
                         </p>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* Step 4: Review & Book */}
-                {currentStep === 4 && (
+                {/* Step 3: Review & Book */}
+                {currentStep === 3 && (
                   <div className="space-y-6">
                     <div className="mb-6">
                       <h3 className="text-lg font-semibold mb-2">Passenger Information</h3>
@@ -638,7 +596,7 @@ export default function BookingPage() {
                         </div>
                         {luggageFee > 0 && (
                           <div className="flex justify-between">
-                            <span>Additional Luggage ({formData.numberOfBags - 1} additional bag{formData.numberOfBags > 2 ? 's' : ''})</span>
+                            <span>Additional Luggage ({formData.numberOfBags - formData.selectedSeats.length} additional bag{formData.numberOfBags - formData.selectedSeats.length > 1 ? 's' : ''})</span>
                             <span>₵{luggageFee.toFixed(2)}</span>
                           </div>
                         )}
@@ -657,22 +615,22 @@ export default function BookingPage() {
                 <div className="flex justify-between pt-6 border-t">
                   <Button
                     variant="outline"
-                    onClick={() => setCurrentStep(Math.max(1, currentStep - 1) as 1 | 2 | 3 | 4)}
+                    onClick={() => setCurrentStep(Math.max(1, currentStep - 1) as 1 | 2 | 3)}
                     disabled={currentStep === 1}
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Previous
                   </Button>
 
-                  {currentStep < 4 ? (
+                  {currentStep < 3 ? (
                     <Button
-                      onClick={() => setCurrentStep(Math.min(4, currentStep + 1) as 1 | 2 | 3 | 4)}
+                      onClick={() => setCurrentStep(Math.min(3, currentStep + 1) as 1 | 2 | 3)}
                       disabled={
                         (currentStep === 1 && !canProceedFromStep1) ||
                         (currentStep === 2 && !canProceedFromStep2) ||
-                        (currentStep === 3 && !canProceedFromStep3)
+                        (currentStep === 3 && !canSubmit)
                       }
-                      className="bg-brand-orange hover:bg-brand-orange/90"
+                      className="bg-brand-orange text-white hover:bg-brand-orange/90"
                     >
                       Next
                       <ArrowRight className="w-4 h-4 ml-2" />
@@ -681,7 +639,7 @@ export default function BookingPage() {
                     <Button
                       onClick={handleSubmit}
                       disabled={!canSubmit || isCreatingPayment}
-                      className="bg-brand-orange hover:bg-brand-orange/90"
+                      className="bg-brand-orange text-white hover:bg-brand-orange/90"
                     >
                       {isCreatingPayment ? (
                         <>

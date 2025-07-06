@@ -54,6 +54,45 @@ export const getDriverCitiesAndStations = query({
 });
 
 /**
+ * Get all available stations for a city (public, no authentication required)
+ * This returns stations from route templates that passengers can choose from
+ */
+export const getPublicStationsForCity = query({
+  args: { cityName: v.string() },
+  handler: async (ctx, args) => {
+    // Get all route template cities with the specified name
+    const routeTemplateCities = await ctx.db
+      .query("routeTemplateCities")
+      .filter((q) => q.eq(q.field("cityName"), args.cityName))
+      .collect();
+
+    // Get all unique stations for this city from route templates
+    const stationMap = new Map();
+    
+    for (const city of routeTemplateCities) {
+      const stations = await ctx.db
+        .query("routeTemplateStations")
+        .withIndex("by_route_city", (q) => q.eq("routeTemplateCityId", city._id))
+        .collect();
+      
+      // Add stations to map to avoid duplicates
+      for (const station of stations) {
+        const key = `${station.stationName}-${station.stationAddress}`;
+        if (!stationMap.has(key)) {
+          stationMap.set(key, {
+            id: station._id,
+            name: station.stationName,
+            address: station.stationAddress,
+          });
+        }
+      }
+    }
+    
+    return Array.from(stationMap.values());
+  },
+});
+
+/**
  * Save cities and stations (creates new or updates existing)
  */
 export const saveCitiesAndStations = mutation({
