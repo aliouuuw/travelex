@@ -1,252 +1,223 @@
-# TravelEx - Comprehensive Travel Management Platform
+# TravelEx Platform - Project Context & Architecture
 
-> **Latest Update:** ✅ **Stripe Payment Integration COMPLETE** - TravelEx now processes real payments for anonymous bookings with comprehensive error handling and professional user experience.
+##  **Project Overview**
 
-## Project Overview
+**TravelEx** is a comprehensive transportation platform that connects professional drivers with passengers for intercity travel. The platform provides a complete solution for route management, vehicle fleet administration, booking processing, and payment handling.
 
-TravelEx is a comprehensive travel management platform designed for intercity transportation in West Africa, starting with Ghana 🇬🇭. The platform connects drivers with passengers through a professional booking system that supports both admin-managed operations and direct passenger bookings.
+** MAJOR MILESTONE:** The platform has been **FULLY MIGRATED** from Supabase to Convex, achieving complete real-time functionality with enhanced performance, security, and user experience.
 
-### Platform Status: **PRODUCTION READY** 🚀
+## 🏗️ **Technical Architecture**
 
-**Core Systems Completed:**
-- ✅ **Admin Dashboard** - Complete user and driver management
-- ✅ **Driver Management** - Comprehensive fleet, route, and trip management
-- ✅ **Route Templates** - Visual route creation with station management
-- ✅ **Trip Scheduling** - Interactive calendar with booking management
-- ✅ **Passenger Search** - Country-aware trip search with segment booking
-- ✅ **Payment Processing** - Anonymous Stripe integration with 30-minute booking windows
-- ✅ **Vehicle Management** - Fleet management with maintenance tracking
-- ✅ **Luggage Policies** - Bag-based pricing with clear passenger communication
+### **Frontend Stack:**
+- **Framework:** React 19 with TypeScript
+- **Styling:** Tailwind CSS v4 with custom design system
+- **UI Components:** Radix UI primitives with custom styling
+- **State Management:** Convex (real-time, no additional state libraries needed)
+- **Routing:** React Router v7
+- **Forms:** React Hook Form with Zod validation
+- **Icons:** Lucide React
+- **Date Handling:** date-fns
 
-## Current Implementation Status
+### **Backend Stack:**
+- **Database & Backend:** Convex (fully migrated from Supabase)
+- **Authentication:** Convex Auth with password provider
+- **Real-time:** Built-in Convex reactivity
+- **File Storage:** Convex file storage
+- **Email Service:** Resend
+- **Payment Processing:** Stripe with webhook integration
 
-### 🎯 **Phase 5: COMPLETED - Payment & Booking System**
+### **Development Tools:**
+- **Package Manager:** Bun
+- **Build Tool:** Vite
+- **Linting:** ESLint with TypeScript
+- **Type Checking:** TypeScript strict mode
+- **Deployment:** Vercel
 
-**Stripe Payment Integration:**
-- Anonymous booking flow without user registration
-- Professional payment UI with countdown timers
-- Robust error handling with fallback mechanisms
-- 30-minute payment windows preventing seat conflicts
-- Automatic cleanup of expired bookings
-- Production-ready security with webhook validation
+## 🎭 **User Roles & Permissions**
 
-**Technical Infrastructure:**
-- Supabase Edge Functions for scalable payment processing
-- Comprehensive database schema with automatic expiration
-- Multi-pathway payment status verification
-- Professional UI with Stripe Elements integration
+### **1. Admin Users**
+- **Platform Management:** User approval, country expansion requests
+- **Driver Management:** Approve driver signups, manage driver accounts
+- **System Oversight:** Monitor platform activity and performance
+- **Access:** Full administrative dashboard with comprehensive controls
 
-### 🎯 **Phase 4: COMPLETED - Advanced Search & Booking**
+### **2. Driver Users**
+- **Fleet Management:** Register and manage multiple vehicles
+- **Route Templates:** Create and manage reusable route configurations
+- **Trip Scheduling:** Schedule trips with calendar interface
+- **Reservation Management:** View and manage passenger bookings
+- **Luggage Policies:** Configure bag-based pricing policies
+- **Access:** Professional driver dashboard with real-time updates
 
-**Country-City System:**
-- Hierarchical country-city structure for scalability
-- Intuitive 2-step search flow (country → city)
-- Admin-controlled country expansion with driver requests
-- Professional search interface with filtering capabilities
+### **3. Passenger Users**
+- **Trip Search:** Find available trips between cities
+- **Booking:** Reserve seats with luggage options
+- **Payment:** Secure payment processing with Stripe
+- **Access:** Public booking interface (no registration required)
 
-**Segment-Based Booking:**
-- Search for partial routes (e.g., "Tamale to Kumasi" on "Tamale→Kumasi→Accra" trips)
-- Anonymous booking forms with comprehensive validation
-- Bag-based luggage selection with clear pricing
-- Professional booking flow with payment integration
+## 🚀 **Core Features**
 
-### 🎯 **Phase 3: COMPLETED - Driver Operations**
+### **Driver Management System**
+- **Multi-step vehicle registration** with comprehensive details
+- **Automatic seat map generation** based on vehicle specifications
+- **Fleet statistics dashboard** with performance metrics
+- **Default vehicle management** with automatic enforcement
 
-**Route Template Management:**
-- Visual route creation with city-station relationships
-- Comprehensive station management with inline editing
-- Segment pricing configuration with auto-calculation
-- Professional interface with drag-and-drop functionality
+### **Route Template System**
+- **Interactive route builder** with city sequence management
+- **Station management** with pickup/dropoff locations
+- **Pricing configuration** with automatic calculations
+- **Reusable templates** for efficient trip scheduling
 
-**Trip Scheduling & Management:**
-- Interactive Microsoft Teams-style calendar
-- Quick scheduling modal with multi-step forms
-- Comprehensive trip CRUD operations
-- Real-time trip analytics and status management
+### **Trip Scheduling & Management**
+- **Calendar interface** with click-to-schedule functionality
+- **Batch scheduling** for recurring trips
+- **Real-time updates** across all components
+- **Status management** (scheduled, in-progress, completed, cancelled)
 
-**Vehicle & Policy Management:**
-- Complete fleet management with maintenance tracking
-- Bag-based luggage policies with clear passenger communication
-- Default policy management with automatic enforcement
-- Professional interfaces with statistics dashboards
+### **Luggage Policy Management**
+- **Bag-based pricing model** (1 free bag + flat fee per additional bag)
+- **Real-time fee calculation** and policy preview
+- **Default policy management** system
+- **Backward compatibility** with weight-based policies
 
-### 🎯 **Phase 2: COMPLETED - Admin Platform**
+### **Payment & Booking System**
+- **Anonymous booking flow** with 30-minute expiry windows
+- **Stripe integration** with secure payment processing
+- **Webhook handling** for payment confirmation
+- **Real-time reservation tracking** for drivers
 
-**Authentication & Access Control:**
-- Role-based authentication (admin, driver)
-- Signup request approval workflow
-- Protected routes with comprehensive security
-- Password reset and invitation systems
+### **Location Management**
+- **Global country-city hierarchy** with controlled expansion
+- **City creation workflow** with country association
+- **Country expansion requests** with admin approval system
+- **Reusable cities and stations** for efficiency
 
-**Admin Dashboard:**
-- Driver management with invitation system
-- Country request approval workflow
-- Comprehensive user management tools
-- Professional admin interface with statistics
+## 🎨 **Design System**
 
-### 🎯 **Phase 1: COMPLETED - Foundation**
+### **Brand Colors:**
+- **Primary Orange:** `#fb8346` (TravelEx Orange)
+- **Primary Blue:** `#0a2137` (TravelEx Dark Blue)
+- **Extended Palette:** 10-step color scales for both primary colors
 
-**Technical Foundation:**
-- React + TypeScript with Vite
-- Supabase backend with comprehensive schema
-- shadcn/ui component library
-- Professional styling with Tailwind CSS
+### **Typography:**
+- **Headings:** DM Sans (Bold, Medium)
+- **Body:** Inter (Regular, Medium, Bold)
+- **Custom Font Classes:** `font-heading` for brand consistency
 
-## Key Technical Achievements
+### **Component Library:**
+- **Custom UI Components:** Built on Radix UI primitives
+- **Premium Styling:** Enhanced with custom design system
+- **Responsive Design:** Mobile-first approach with Tailwind CSS
+- **Accessibility:** WCAG compliant with proper ARIA labels
 
-### **Database Architecture**
-- **Scalable Schema:** 50+ tables with proper relationships and constraints
-- **Security:** Row-level security (RLS) policies throughout
-- **Performance:** Optimized indexes and database functions
-- **Migrations:** Version-controlled schema evolution
+## 🔧 **Technical Implementation**
 
-### **Frontend Architecture**
-- **Component System:** Reusable UI components with consistent design
-- **State Management:** Zustand for global state, React Query for server state
-- **Form Handling:** React Hook Form with Zod validation
-- **Responsive Design:** Mobile-first design with professional UI
+### **Real-time Architecture:**
+- **Convex Reactivity:** Automatic updates across all components
+- **Optimistic Updates:** Immediate UI feedback for better UX
+- **Error Handling:** Comprehensive error boundaries and user feedback
+- **Loading States:** Smooth loading experiences throughout
 
-### **Backend Services**
-- **Supabase Edge Functions:** Scalable serverless payment processing
-- **API Layer:** Comprehensive service layer with TypeScript integration
-- **Authentication:** Secure auth with role-based access control
-- **Real-time:** Real-time subscriptions for live data updates
+### **Type Safety:**
+- **Full TypeScript:** Strict mode with comprehensive type definitions
+- **Convex Integration:** Automatic type generation from schema
+- **Runtime Validation:** Zod schemas for form validation
+- **API Contracts:** Type-safe service layer with proper error handling
 
-## Business Model & Strategy
+### **Performance Optimization:**
+- **Code Splitting:** Route-based lazy loading
+- **Bundle Optimization:** Removed unused dependencies (Supabase, Zustand, TanStack Query)
+- **Caching Strategy:** Convex built-in optimization
+- **Image Optimization:** Optimized assets with proper formats
 
-### **Revenue Streams**
-1. **Booking Fees:** Commission on passenger bookings through platform
-2. **Driver Subscriptions:** Premium features for driver management tools
-3. **Admin Services:** White-label solutions for transportation companies
+## 📊 **Database Schema**
 
-### **Market Position**
-- **Primary Market:** Ghana 🇬🇭 intercity transportation
-- **Expansion Strategy:** Senegal 🇸🇳 and other West African countries
-- **Competitive Advantage:** Comprehensive platform combining driver tools and passenger booking
+### **Core Tables:**
+- **`profiles`** - User profiles with role-based access
+- **`vehicles`** - Driver vehicle fleet with detailed specifications
+- **`routeTemplates`** - Reusable route configurations
+- **`trips`** - Scheduled trips with station assignments
+- **`luggagePolicies`** - Bag-based pricing policies
+- **`countries`** - Global location hierarchy
+- **`cities`** - City management with country association
+- **`stations`** - Pickup/dropoff locations within cities
+- **`payments`** - Stripe payment records
+- **`tempBookings`** - Temporary bookings with expiry
+- **`reservations`** - Confirmed passenger bookings
+- **`bookedSeats`** - Seat assignment tracking
 
-### **User Segments**
-1. **Transportation Companies:** Admin dashboard for fleet management
-2. **Independent Drivers:** Professional tools for route and trip management
-3. **Passengers:** Simple booking system without registration requirements
+### **Relationships:**
+- **Driver → Vehicles:** One-to-many relationship
+- **Route Templates → Cities:** Many-to-many with sequence
+- **Trips → Route Templates:** Many-to-one relationship
+- **Reservations → Trips:** Many-to-one relationship
+- **Booked Seats → Reservations:** One-to-many relationship
 
-## Architecture Highlights
+## 🚀 **Deployment & Infrastructure**
 
-### **Payment Processing**
-```
-Anonymous Booking → Stripe Payment Intent → 30-min Timer → Payment → Confirmation
-```
+### **Production Environment:**
+- **Frontend:** Vercel with automatic deployments
+- **Backend:** Convex cloud with global edge deployment
+- **Database:** Convex with automatic scaling
+- **CDN:** Vercel Edge Network for global performance
 
-### **Search Architecture**
-```
-Country Selection → City Search → Trip Results → Segment Booking → Payment
-```
-
-### **Driver Workflow**
-```
-Route Templates → Vehicle Setup → Trip Scheduling → Passenger Management → Analytics
-```
-
-## Production Deployment
-
-### **Infrastructure**
-- **Frontend:** Vercel deployment with automatic CI/CD
-- **Backend:** Supabase with Edge Functions for scalability
-- **Payments:** Stripe integration with webhook processing
-- **Domain:** Professional domain with SSL certificates
-
-### **Environment Setup**
-- **Development:** Local development with test data
-- **Staging:** Staging environment for testing
-- **Production:** Live environment with real payment processing
-
-### **Monitoring & Analytics**
+### **Development Workflow:**
+- **Local Development:** Convex dev environment
+- **Type Safety:** Real-time TypeScript validation
+- **Hot Reloading:** Instant feedback during development
 - **Error Tracking:** Comprehensive error monitoring
-- **Performance:** Real-time performance metrics
-- **Business Analytics:** Revenue and usage tracking
 
-## Future Roadmap
+## 🎯 **Business Model**
 
-### **Immediate Enhancements (Next 30 days)**
-- **Email Confirmations:** Booking receipts and trip notifications
-- **Driver Analytics:** Revenue tracking and performance metrics
-- **Mobile Optimization:** Enhanced mobile experience
+### **Revenue Streams:**
+- **Commission-based:** Percentage of each booking
+- **Premium Features:** Advanced driver tools and analytics
+- **Platform Fees:** Transaction processing fees
 
-### **Short-term Features (Next 90 days)**
-- **Customer Support:** Help desk integration
-- **Multi-language:** French support for West African markets
-- **Refund System:** Automated refund processing
+### **Target Markets:**
+- **Primary:** Intercity transportation in Canada
+- **Secondary:** Regional transportation networks
+- **Future:** International expansion with localized features
 
-### **Long-term Vision (Next 12 months)**
-- **Mobile Apps:** Native iOS and Android applications
-- **Cross-border Trips:** International route support
-- **API Platform:** Third-party integrations and white-label solutions
+##  **Key Achievements**
 
-## Success Metrics
+### **Technical Milestones:**
+- ✅ **Complete Platform Migration:** Successfully migrated from Supabase to Convex
+- ✅ **Real-time Functionality:** All features now have live updates
+- ✅ **Payment Integration:** End-to-end Stripe payment processing
+- ✅ **Mobile Responsive:** Optimized for all device sizes
+- ✅ **Type Safety:** Comprehensive TypeScript implementation
+- ✅ **Performance Optimization:** Removed unused dependencies and optimized bundle
 
-### **Technical Metrics**
-- **Uptime:** 99.9% availability target
-- **Performance:** Sub-2 second page load times
-- **Security:** Zero security incidents
-- **Scalability:** Support for 10,000+ concurrent users
+### **User Experience:**
+- ✅ **Seamless Booking Flow:** Anonymous booking with payment processing
+- ✅ **Driver Dashboard:** Comprehensive management interface
+- ✅ **Real-time Updates:** Instant feedback across all features
+- ✅ **Professional UI:** Modern, accessible design system
 
-### **Business Metrics**
-- **Booking Conversion:** 15%+ booking completion rate
-- **Revenue Growth:** 25%+ month-over-month growth
-- **User Satisfaction:** 90%+ customer satisfaction score
-- **Market Penetration:** 50+ active drivers in Ghana
+### **Scalability:**
+- ✅ **Convex Architecture:** Built for automatic scaling
+- ✅ **Modular Design:** Easy feature additions and modifications
+- ✅ **Performance Optimized:** Efficient queries and caching
+- ✅ **Future-ready:** Foundation for advanced features
 
-## Technology Stack
+## 🚀 **Future Roadmap**
 
-### **Frontend Stack**
-- **Framework:** React 18 with TypeScript
-- **Build Tool:** Vite for fast development
-- **Styling:** Tailwind CSS with shadcn/ui components
-- **State Management:** Zustand + React Query
-- **Form Handling:** React Hook Form + Zod validation
+### **Short-term Goals:**
+- **Enhanced Analytics:** Driver performance metrics and insights
+- **Mobile App:** Native iOS and Android applications
+- **Advanced Scheduling:** AI-powered trip optimization
+- **Multi-language Support:** Internationalization for global expansion
 
-### **Backend Stack**
-- **Database:** PostgreSQL with Supabase
-- **Authentication:** Supabase Auth with RLS
-- **API:** Supabase REST API with Edge Functions
-- **Payments:** Stripe with webhook processing
-- **Real-time:** Supabase real-time subscriptions
-
-### **DevOps & Deployment**
-- **Hosting:** Vercel for frontend, Supabase for backend
-- **CI/CD:** GitHub Actions with automated deployments
-- **Monitoring:** Supabase analytics + custom monitoring
-- **Version Control:** Git with feature branch workflow
+### **Long-term Vision:**
+- **AI Integration:** Predictive analytics and route optimization
+- **Partner Network:** Integration with other transportation services
+- **Sustainability Features:** Carbon footprint tracking and offset options
+- **Advanced Security:** Biometric authentication and fraud prevention
 
 ---
 
-## Quick Start Guide
-
-### **For Developers**
-1. Clone repository and install dependencies
-2. Set up Supabase project and run migrations
-3. Configure environment variables
-4. Start development server
-
-### **For Admins**
-1. Access admin dashboard at `/admin`
-2. Create driver accounts and manage users
-3. Review country expansion requests
-4. Monitor platform analytics
-
-### **For Drivers**
-1. Set up vehicle fleet and luggage policies
-2. Create route templates with stations
-3. Schedule trips using interactive calendar
-4. Manage bookings and passenger communications
-
-### **For Passengers**
-1. Search for trips by country and city
-2. Select journey segments and seats
-3. Complete anonymous booking with payment
-4. Receive booking confirmation and trip details
-
----
-
-**TravelEx** represents a complete transformation of West African intercity transportation through technology, providing professional tools for operators and seamless booking experiences for passengers.
+**TravelEx** represents a modern, scalable approach to transportation technology, leveraging the latest web technologies to create a seamless experience for both drivers and passengers. The platform's architecture ensures reliability, performance, and future growth potential.
 
 

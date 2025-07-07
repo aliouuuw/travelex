@@ -16,11 +16,10 @@ import {
   Users
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  getDriverVehicles,
-  deleteVehicle,
-  setDefaultVehicle,
+  useDriverVehicles,
+  useDeleteVehicle,
+  useSetDefaultVehicle,
   formatVehicleName,
   getVehicleTypeLabel,
   getFuelTypeLabel,
@@ -29,11 +28,10 @@ import {
   isInsuranceExpiring,
   isRegistrationExpiring,
   type Vehicle
-} from "@/services/vehicles";
+} from "@/services/convex/vehicles";
 import { toast } from "sonner";
 
 const VehicleCard = ({ vehicle }: { vehicle: Vehicle }) => {
-  const queryClient = useQueryClient();
   const statusInfo = getStatusInfo(vehicle.status);
   
   const maintenanceDue = isMaintenanceDue(vehicle);
@@ -42,36 +40,29 @@ const VehicleCard = ({ vehicle }: { vehicle: Vehicle }) => {
   
   const hasWarnings = maintenanceDue || insuranceExpiring || registrationExpiring;
 
-  const { mutate: deleteVehicleMutation, isPending: isDeleting } = useMutation({
-    mutationFn: deleteVehicle,
-    onSuccess: () => {
-      toast.success("Vehicle deleted successfully!");
-      queryClient.invalidateQueries({ queryKey: ['driver-vehicles'] });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to delete vehicle");
-    },
-  });
+  const deleteVehicleMutation = useDeleteVehicle();
+  const setDefaultMutation = useSetDefaultVehicle();
 
-  const { mutate: setDefaultMutation, isPending: isSettingDefault } = useMutation({
-    mutationFn: setDefaultVehicle,
-    onSuccess: () => {
-      toast.success("Default vehicle updated!");
-      queryClient.invalidateQueries({ queryKey: ['driver-vehicles'] });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to set default vehicle");
-    },
-  });
-
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (confirm(`Are you sure you want to delete ${formatVehicleName(vehicle)}?`)) {
-      deleteVehicleMutation(vehicle.id);
+      try {
+        await deleteVehicleMutation({ vehicleId: vehicle._id });
+        toast.success("Vehicle deleted successfully!");
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "Failed to delete vehicle";
+        toast.error(errorMessage);
+      }
     }
   };
 
-  const handleSetDefault = () => {
-    setDefaultMutation(vehicle.id);
+  const handleSetDefault = async () => {
+    try {
+      await setDefaultMutation({ vehicleId: vehicle._id });
+      toast.success("Default vehicle updated!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to set default vehicle";
+      toast.error(errorMessage);
+    }
   };
 
   return (
@@ -89,12 +80,12 @@ const VehicleCard = ({ vehicle }: { vehicle: Vehicle }) => {
                   <h3 className="font-heading text-lg font-semibold text-foreground">
                     {formatVehicleName(vehicle)}
                   </h3>
-                  {vehicle.is_default && (
+                  {vehicle.isDefault && (
                     <Star className="w-4 h-4 text-yellow-500 fill-current" />
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {vehicle.license_plate}
+                  {vehicle.licensePlate}
                 </p>
               </div>
             </div>
@@ -117,7 +108,7 @@ const VehicleCard = ({ vehicle }: { vehicle: Vehicle }) => {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Type</p>
-                <p className="text-sm font-medium">{getVehicleTypeLabel(vehicle.vehicle_type)}</p>
+                <p className="text-sm font-medium">{getVehicleTypeLabel(vehicle.type || '')}</p>
               </div>
             </div>
             
@@ -127,7 +118,7 @@ const VehicleCard = ({ vehicle }: { vehicle: Vehicle }) => {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Fuel</p>
-                <p className="text-sm font-medium">{getFuelTypeLabel(vehicle.fuel_type)}</p>
+                <p className="text-sm font-medium">{getFuelTypeLabel(vehicle.fuelType || '')}</p>
               </div>
             </div>
             
@@ -147,7 +138,7 @@ const VehicleCard = ({ vehicle }: { vehicle: Vehicle }) => {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Mileage</p>
-                <p className="text-sm font-medium">{vehicle.mileage.toLocaleString()} km</p>
+                <p className="text-sm font-medium">{vehicle.mileage?.toLocaleString() || 0} km</p>
               </div>
             </div>
           </div>
@@ -192,19 +183,18 @@ const VehicleCard = ({ vehicle }: { vehicle: Vehicle }) => {
 
           {/* Actions */}
           <div className="flex items-center gap-2 pt-2">
-            <Link to={`/driver/vehicles/edit/${vehicle.id}`} className="flex-1">
+            <Link to={`/driver/vehicles/edit/${vehicle._id}`} className="flex-1">
               <Button variant="outline" size="sm" className="w-full">
                 <Edit className="w-4 h-4 mr-2" />
                 Edit
               </Button>
             </Link>
             
-            {!vehicle.is_default && (
+            {!vehicle.isDefault && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleSetDefault}
-                disabled={isSettingDefault}
                 className="flex-1"
               >
                 <Star className="w-4 h-4 mr-2" />
@@ -216,7 +206,6 @@ const VehicleCard = ({ vehicle }: { vehicle: Vehicle }) => {
               variant="outline"
               size="sm"
               onClick={handleDelete}
-              disabled={isDeleting}
               className="text-destructive hover:text-destructive hover:bg-destructive/10"
             >
               <Trash2 className="w-4 h-4" />
@@ -231,41 +220,25 @@ const VehicleCard = ({ vehicle }: { vehicle: Vehicle }) => {
 export default function VehiclesPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { data: vehicles = [], isLoading, error } = useQuery({
-    queryKey: ['driver-vehicles'],
-    queryFn: getDriverVehicles,
-  });
+  const vehicles = useDriverVehicles();
+  const isLoading = vehicles === undefined;
 
   // Filter vehicles based on search term
-  const filteredVehicles = vehicles.filter(vehicle =>
+  const filteredVehicles = (vehicles || []).filter(vehicle =>
     formatVehicleName(vehicle).toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vehicle.license_plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    getVehicleTypeLabel(vehicle.vehicle_type).toLowerCase().includes(searchTerm.toLowerCase())
+    (vehicle.licensePlate || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    getVehicleTypeLabel(vehicle.type || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const stats = {
-    total: vehicles.length,
-    active: vehicles.filter(v => v.status === 'active').length,
-    needsAttention: vehicles.filter(v => 
+    total: vehicles?.length || 0,
+    active: vehicles?.filter(v => v.status === 'active').length || 0,
+    needsAttention: vehicles?.filter(v => 
       isMaintenanceDue(v) || isInsuranceExpiring(v) || isRegistrationExpiring(v)
-    ).length,
+    ).length || 0,
   };
 
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div className="text-center py-12">
-          <Car className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="font-heading text-lg font-semibold text-foreground mb-2">
-            Failed to load vehicles
-          </h3>
-          <p className="text-muted-foreground">
-            {error instanceof Error ? error.message : 'Something went wrong'}
-          </p>
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="space-y-6">
@@ -367,7 +340,7 @@ export default function VehiclesPage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredVehicles.map((vehicle) => (
-            <VehicleCard key={vehicle.id} vehicle={vehicle} />
+            <VehicleCard key={vehicle._id} vehicle={vehicle} />
           ))}
         </div>
       )}

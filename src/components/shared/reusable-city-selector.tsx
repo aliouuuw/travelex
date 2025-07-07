@@ -15,7 +15,7 @@ import {
   Building2 
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { getDriverCitiesAndStations, type ReusableCity, type ReusableStation } from "@/services/reusable-cities-stations";
+import { getDriverCitiesAndStations, type ReusableCity, type ReusableStation } from "@/services/convex/citiesStations";
 
 interface ReusableCitySelectorProps {
   selectedCityName?: string;
@@ -280,7 +280,7 @@ export const ReusableCitySelector = ({
                           <div className="text-xs font-medium text-gray-600 mb-2 px-1">
                             Select Stations:
                           </div>
-                          {city.stations.map((station) => {
+                          {city.stations.map((station: ReusableStation) => {
                             const isSelected = selectedStations.some(s => s.name === station.name);
                             return (
                               <button

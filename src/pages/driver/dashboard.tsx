@@ -1,17 +1,8 @@
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
-import { updateUserPassword } from "@/services/auth";
-import { useMutation } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
 import { 
-  Loader2, 
   Car, 
   Calendar, 
-  Lock, 
   TrendingUp,
   Clock,
   MapPin,
@@ -20,70 +11,6 @@ import {
 import { Link } from "react-router-dom";
 
 
-
-const UpdatePasswordForm = () => {
-    const form = useForm({
-        defaultValues: {
-            password: "",
-        },
-    });
-
-    const { mutate: updatePassword, isPending } = useMutation({
-        mutationFn: updateUserPassword,
-        onSuccess: () => {
-            toast.success("Password updated successfully!");
-            form.reset();
-        },
-        onError: (error) => {
-            toast.error(error.message);
-        },
-    });
-
-    const onSubmit = (data: { password: string; }) => {
-        updatePassword(data.password);
-    }
-
-    return (
-        <Card className="bg-white">
-            <CardHeader className="pb-4">
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-50">
-                        <Lock className="w-5 h-5 text-gray-600" />
-                    </div>
-                    <div>
-                        <CardTitle className="font-heading text-lg text-foreground">Update Password</CardTitle>
-                        <p className="text-sm text-muted-foreground">Secure your account</p>
-                    </div>
-                </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="password" className="text-sm font-medium">New Password</Label>
-                        <Input 
-                            {...form.register("password")} 
-                            id="password" 
-                            type="password" 
-                            placeholder="Enter your new password"
-                            className="h-11"
-                        />
-                        {form.formState.errors.password && (
-                            <p className="text-xs text-destructive">{form.formState.errors.password.message}</p>
-                        )}
-                    </div>
-                    <Button 
-                        type="submit" 
-                        disabled={isPending}
-                        className="bg-brand-orange hover:bg-brand-orange-600 text-white"
-                    >
-                        {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Update Password
-                    </Button>
-                </form>
-            </CardContent>
-        </Card>
-    )
-}
 
 export default function DriverDashboard() {
   const { user } = useAuth();
@@ -94,7 +21,7 @@ export default function DriverDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
           <h1 className="font-heading text-2xl font-bold text-foreground">
-            Welcome back, {user?.profile?.full_name?.split(' ')[0] || 'Driver'}!
+            Welcome back, {user?.profile?.fullName?.split(' ')[0] || 'Driver'}!
           </h1>
           <p className="text-muted-foreground">
             Here's your driver dashboard overview and recent activity
@@ -291,7 +218,6 @@ export default function DriverDashboard() {
           <h2 className="font-heading text-xl font-semibold text-foreground">
             Account Settings
           </h2>
-          <UpdatePasswordForm />
         </div>
       </div>
     </div>

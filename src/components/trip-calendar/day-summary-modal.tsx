@@ -10,7 +10,7 @@ import {
   DollarSign
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { getStatusColor, type Trip } from "@/services/trips";
+import { getStatusColor, type Trip } from "@/services/convex/trips";
 import TripCard from "./trip-card";
 
 interface CalendarTrip extends Trip {
@@ -130,7 +130,7 @@ export default function DaySummaryModal({
                 {Object.entries(statusCounts).map(([status, count]) => (
                   <Badge 
                     key={status} 
-                    className={getStatusColor(status as "scheduled" | "in_progress" | "completed" | "cancelled")}
+                    className={getStatusColor(status as "scheduled" | "in-progress" | "completed" | "cancelled")}
                     style={{ fontSize: '10px' }}
                   >
                     {count} {status.replace('_', ' ')}

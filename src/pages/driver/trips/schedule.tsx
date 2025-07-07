@@ -22,12 +22,12 @@ import {
   Users
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getDriverRouteTemplates, type RouteTemplate } from "@/services/route-templates";
-import { getDriverVehicles } from "@/services/vehicles";
-import { getDriverLuggagePolicies } from "@/services/luggage-policies";
-import { createTrip, type TripFormData } from "@/services/trips";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useDriverVehicles } from "@/services/convex/vehicles";
+import { useDriverLuggagePolicies } from "@/services/convex/luggage-policies";
+import { createTrip, type TripFormData } from "@/services/convex/trips";
 import { toast } from "sonner";
+import { useDriverRouteTemplates, type RouteTemplate } from "@/services/convex/routeTemplates";
 
 // Form validation schema
 const tripFormSchema = z.object({
@@ -142,22 +142,16 @@ export default function ScheduleTripPage() {
   });
 
   // Fetch route templates
-  const { data: routeTemplates = [], isLoading: loadingRoutes } = useQuery({
-    queryKey: ['driver-route-templates'],
-    queryFn: getDriverRouteTemplates,
-  });
+  const routeTemplates = useDriverRouteTemplates();
+  const loadingRoutes = routeTemplates === undefined;
 
   // Fetch vehicles
-  const { data: vehicles = [], isLoading: loadingVehicles } = useQuery({
-    queryKey: ['driver-vehicles'],
-    queryFn: getDriverVehicles,
-  });
+  const vehicles = useDriverVehicles();
+  const loadingVehicles = vehicles === undefined;
 
   // Fetch luggage policies
-  const { data: luggagePolicies = [], isLoading: loadingPolicies } = useQuery({
-    queryKey: ['driver-luggage-policies'],
-    queryFn: getDriverLuggagePolicies,
-  });
+  const luggagePolicies = useDriverLuggagePolicies();
+  const loadingPolicies = luggagePolicies === undefined;
 
   // Watch form values for reactivity
   const routeTemplateId = form.watch('routeTemplateId');
@@ -179,12 +173,12 @@ export default function ScheduleTripPage() {
   });
 
   const selectedRouteTemplate = useMemo(() => 
-    routeTemplates.find((route) => route.id === routeTemplateId),
+    (routeTemplates || []).find((route) => route.id === routeTemplateId),
     [routeTemplates, routeTemplateId]
   );
 
   const selectedVehicle = useMemo(() => 
-    vehicles.find((vehicle) => vehicle.id === vehicleId),
+    vehicles?.find((vehicle) => vehicle._id === vehicleId),
     [vehicles, vehicleId]
   );
 
@@ -227,7 +221,8 @@ export default function ScheduleTripPage() {
         const station = city.stations?.find(s => s.id === stationId);
         if (station) {
           return {
-            stationId: station.id,
+            routeTemplateCityId: city.id || city.cityName, // Use city ID if available, fallback to city name
+            routeTemplateStationId: station.id,
             cityName: city.cityName,
             sequenceOrder: city.sequenceOrder,
             isPickupPoint: true,
@@ -236,7 +231,7 @@ export default function ScheduleTripPage() {
         }
       }
       return null;
-    }).filter(Boolean) as TripFormData['selectedStations'];
+    }).filter(Boolean) as unknown as TripFormData['selectedStations'];
 
     const tripData: TripFormData = {
       routeTemplateId: data.routeTemplateId,
@@ -322,7 +317,7 @@ export default function ScheduleTripPage() {
                       <SelectValue placeholder="Select a route template..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {routeTemplates.map((route) => (
+                      {(routeTemplates || []).map((route) => (
                         <SelectItem key={route.id} value={route.id}>
                           {route.name} ({route.cities.map(c => c.cityName).join(' → ')})
                         </SelectItem>
@@ -379,7 +374,7 @@ export default function ScheduleTripPage() {
                         {vehicles
                           .filter(v => v.status === 'active')
                           .map((vehicle) => (
-                          <SelectItem key={vehicle.id} value={vehicle.id}>
+                          <SelectItem key={vehicle._id} value={vehicle._id}>
                             {vehicle.make} {vehicle.model} ({vehicle.year}) - {vehicle.capacity} seats
                           </SelectItem>
                         ))}
@@ -421,7 +416,7 @@ export default function ScheduleTripPage() {
                       <SelectContent>
                         <SelectItem value="none">No specific policy</SelectItem>
                         {luggagePolicies.map((policy) => (
-                          <SelectItem key={policy.id} value={policy.id}>
+                          <SelectItem key={policy._id} value={policy._id}>
                             {policy.name}
                           </SelectItem>
                         ))}

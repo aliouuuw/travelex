@@ -16,11 +16,10 @@ import {
   Clock,
   MapPin
 } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getDriverRouteTemplates, type RouteTemplate } from "@/services/route-templates";
-import { getDriverVehicles } from "@/services/vehicles";
-import { getDriverLuggagePolicies } from "@/services/luggage-policies";
-import { createTrip, type TripFormData } from "@/services/trips";
+import { useDriverRouteTemplates, type RouteTemplate } from "@/services/convex/routeTemplates";
+import { useDriverVehicles } from "@/services/convex/vehicles";
+import { useDriverLuggagePolicies } from "@/services/convex/luggage-policies";
+import { createTrip, type TripFormData } from "@/services/convex/trips";
 import { toast } from "sonner";
 
 // Quick schedule form schema
@@ -101,9 +100,9 @@ const StationSelector = ({
 };
 
 export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: QuickScheduleModalProps) {
-  const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState<'details' | 'stations'>('details');
   const [selectedStations, setSelectedStations] = useState<Set<string>>(new Set());
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<QuickScheduleFormData>({
     resolver: zodResolver(quickScheduleSchema),
@@ -116,21 +115,10 @@ export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: Qu
     },
   });
 
-  // Fetch data for dropdowns
-  const { data: routeTemplates = [] } = useQuery({
-    queryKey: ['driver-route-templates'],
-    queryFn: getDriverRouteTemplates,
-  });
-
-  const { data: vehicles = [] } = useQuery({
-    queryKey: ['driver-vehicles'],
-    queryFn: getDriverVehicles,
-  });
-
-  const { data: luggagePolicies = [] } = useQuery({
-    queryKey: ['driver-luggage-policies'],
-    queryFn: getDriverLuggagePolicies,
-  });
+  // Fetch data for dropdowns using Convex hooks
+  const routeTemplates = useDriverRouteTemplates() || [];
+  const vehicles = useDriverVehicles() || [];
+  const luggagePolicies = useDriverLuggagePolicies() || [];
 
   // Watch form values for reactivity
   const routeTemplateId = form.watch('routeTemplateId');
@@ -154,19 +142,7 @@ export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: Qu
            arrivalTime.trim() !== '';
   }, [routeTemplateId, vehicleId, departureTime, arrivalTime]);
 
-  // Create trip mutation
-  const createTripMutation = useMutation({
-    mutationFn: createTrip,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['driver-trips'] });
-      toast.success('Trip scheduled successfully!');
-      onClose();
-      form.reset();
-    },
-    onError: (error) => {
-      toast.error(`Failed to schedule trip: ${error.message}`);
-    },
-  });
+  // Create trip function using Convex
 
   const handleStationToggle = (stationId: string) => {
     const newSelectedStations = new Set(selectedStations);
@@ -178,7 +154,7 @@ export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: Qu
     setSelectedStations(newSelectedStations);
   };
 
-  const onSubmit = (data: QuickScheduleFormData) => {
+  const onSubmit = async (data: QuickScheduleFormData) => {
     if (selectedStations.size === 0) {
       toast.error('Please select at least one station for the trip');
       return;
@@ -189,34 +165,47 @@ export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: Qu
       return;
     }
 
-    // Build selected stations data
-    const selectedStationsData = Array.from(selectedStations).map((stationId) => {
-      // Find station and its city
-      for (const city of selectedRouteTemplate.cities) {
-        const station = city.stations?.find(s => s.id === stationId);
-        if (station) {
-          return {
-            stationId: station.id,
-            cityName: city.cityName,
-            sequenceOrder: city.sequenceOrder,
-            isPickupPoint: true,
-            isDropoffPoint: true,
-          };
+    setIsSubmitting(true);
+
+    try {
+      // Build selected stations data with correct mapping
+      const selectedStationsData = Array.from(selectedStations).map((stationId) => {
+        // Find station and its city
+        for (const city of selectedRouteTemplate.cities) {
+          const station = city.stations?.find(s => s.id === stationId);
+          if (station) {
+            return {
+              routeTemplateCityId: city.id!, // City ID from route template
+              routeTemplateStationId: station.id!, // Station ID from route template
+              cityName: city.cityName,
+              sequenceOrder: city.sequenceOrder || 0,
+              isPickupPoint: true,
+              isDropoffPoint: true,
+            };
+          }
         }
-      }
-      return null;
-    }).filter(Boolean) as TripFormData['selectedStations'];
+        return null;
+      }).filter(Boolean) as TripFormData['selectedStations'];
 
-    const tripData: TripFormData = {
-      routeTemplateId: data.routeTemplateId,
-      vehicleId: data.vehicleId,
-      luggagePolicyId: data.luggagePolicyId || null,
-      departureTime: data.departureTime,
-      arrivalTime: data.arrivalTime,
-      selectedStations: selectedStationsData,
-    };
+      const tripData: TripFormData = {
+        routeTemplateId: data.routeTemplateId,
+        vehicleId: data.vehicleId,
+        luggagePolicyId: data.luggagePolicyId || null,
+        departureTime: data.departureTime,
+        arrivalTime: data.arrivalTime,
+        selectedStations: selectedStationsData,
+      };
 
-    createTripMutation.mutate(tripData);
+      await createTrip(tripData);
+      toast.success('Trip scheduled successfully!');
+      onClose();
+      form.reset();
+      setSelectedStations(new Set());
+    } catch (error) {
+      toast.error(`Failed to schedule trip: ${(error as Error).message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Set default times based on selected date
@@ -320,7 +309,7 @@ export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: Qu
                     {vehicles
                       .filter(v => v.status === 'active')
                       .map((vehicle) => (
-                      <SelectItem key={vehicle.id} value={vehicle.id}>
+                      <SelectItem key={vehicle._id} value={vehicle._id}>
                         {vehicle.make} {vehicle.model} ({vehicle.capacity} seats)
                       </SelectItem>
                     ))}
@@ -343,7 +332,7 @@ export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: Qu
                   <SelectContent>
                     <SelectItem value="none">Default policy</SelectItem>
                     {luggagePolicies.map((policy) => (
-                      <SelectItem key={policy.id} value={policy.id}>
+                      <SelectItem key={policy._id} value={policy._id}>
                         {policy.name}
                       </SelectItem>
                     ))}
@@ -439,10 +428,10 @@ export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: Qu
                   </Button>
                   <Button 
                     type="submit"
-                    disabled={createTripMutation.isPending || selectedStations.size === 0}
+                    disabled={isSubmitting || selectedStations.size === 0}
                     className="bg-brand-orange hover:bg-brand-orange-600 text-white"
                   >
-                    {createTripMutation.isPending ? (
+                    {isSubmitting ? (
                       <>
                         <CalendarIcon className="w-4 h-4 mr-2 animate-spin" />
                         Scheduling...

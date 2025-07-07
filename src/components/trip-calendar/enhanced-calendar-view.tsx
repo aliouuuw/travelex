@@ -8,9 +8,10 @@ import {
   Calendar as CalendarIcon,
   Plus,
   CalendarDays,
-  Grid3X3
+  Grid3X3,
+  Repeat
 } from "lucide-react";
-import { type Trip } from "@/services/trips";
+import { type Trip } from "@/services/convex/trips";
 import CalendarTile from "./droppable-calendar-tile";
 import QuickScheduleModal from "./quick-schedule-modal";
 import DaySummaryModal from "./day-summary-modal";
@@ -213,6 +214,14 @@ export default function EnhancedCalendarView({
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" className="bg-brand-dark-blue hover:bg-brand-dark-blue-600 text-white" onClick={handleTodayClick}>
                 Today
+              </Button>
+              <Button 
+                variant="outline"
+                size="sm" 
+                onClick={() => window.location.href = '/driver/trips/batch-schedule'}
+              >
+                <Repeat className="w-4 h-4" />
+                <span className="hidden sm:inline ml-1">Batch</span>
               </Button>
               <Button 
                 size="sm" 

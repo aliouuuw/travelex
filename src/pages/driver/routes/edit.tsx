@@ -18,19 +18,19 @@ import {
 } from "lucide-react";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useMutation, useQuery } from "@tanstack/react-query";
 import { 
-  createRouteTemplate, 
-  updateRouteTemplate, 
-  getRouteTemplateById,
+  useCreateRouteTemplate, 
+  useUpdateRouteTemplate, 
+  useRouteTemplateById,
   type RouteTemplateFormData,
   type Station,
   type CityWithStations,
   type InterCityFare
-} from "@/services/route-templates";
-import { getAvailableCountries, type Country } from "@/services/countries";
+} from "@/services/convex/routeTemplates";
+import { useAvailableCountries } from "@/services/convex/countries";
 import { EnhancedCitySelector } from "@/components/shared/enhanced-city-selector";
 import { toast } from "sonner";
+import type { Id } from "convex/_generated/dataModel";
 
 // Reusable Station Manager Component
 const StationManager = ({ 
@@ -400,7 +400,7 @@ const InterCityFareManager = ({
         {cities.length >= 2 && (
           <p className="text-sm text-muted-foreground">
             Auto-calculate will set {cities[0]?.cityName || "Origin"} → {cities[cities.length - 1]?.cityName || "Destination"} 
-            fare by summing all segment prices (Total: ₵{calculateTotalFare()})
+            {" "}fare by summing all segment prices (Total: ₵{calculateTotalFare()})
           </p>
         )}
       </CardHeader>
@@ -523,17 +523,10 @@ export default function RouteEditor() {
   const isEditing = !!id;
 
   // Load existing route data for editing
-  const { data: existingRoute } = useQuery({
-    queryKey: ['route-template', id],
-    queryFn: () => getRouteTemplateById(id!),
-    enabled: isEditing,
-  });
+  const existingRoute = useRouteTemplateById(isEditing ? (id as Id<"routeTemplates">) : undefined);
 
   // Fetch countries for proper country information handling
-  const { data: countries = [] } = useQuery<Country[]>({
-    queryKey: ['available-countries'],
-    queryFn: getAvailableCountries,
-  });
+  const countries = useAvailableCountries() || [];
 
   const { control, handleSubmit, watch, setValue, trigger, reset, formState: { errors } } = useForm<RouteTemplateFormData>({
     defaultValues: {
@@ -563,30 +556,9 @@ export default function RouteEditor() {
     }
   }, [existingRoute, reset]);
 
-  // Create route mutation
-  const createRouteMutation = useMutation({
-    mutationFn: createRouteTemplate,
-    onSuccess: () => {
-      toast.success("Route template created successfully!");
-      navigate("/driver/routes");
-    },
-    onError: (error: Error) => {
-      toast.error(`Failed to create route template: ${error.message}`);
-    }
-  });
-
-  // Update route mutation
-  const updateRouteMutation = useMutation({
-    mutationFn: ({ id, routeData }: { id: string; routeData: RouteTemplateFormData }) => 
-      updateRouteTemplate(id, routeData),
-    onSuccess: () => {
-      toast.success("Route template updated successfully!");
-      navigate("/driver/routes");
-    },
-    onError: (error: Error) => {
-      toast.error(`Failed to update route template: ${error.message}`);
-    }
-  });
+  // Create and update route mutations
+  const createRouteMutation = useCreateRouteTemplate();
+  const updateRouteMutation = useUpdateRouteTemplate();
 
   const { append: appendCity, remove: removeCity, move: moveCity } = useFieldArray({
     control,
@@ -596,11 +568,18 @@ export default function RouteEditor() {
   const watchedCities = watch("cities");
   const watchedFares = watch("intercityFares");
 
-  const onSubmit = (data: RouteTemplateFormData) => {
-    if (isEditing) {
-      updateRouteMutation.mutate({ id: id!, routeData: data });
-    } else {
-      createRouteMutation.mutate(data);
+  const onSubmit = async (data: RouteTemplateFormData) => {
+    try {
+      if (isEditing) {
+        await updateRouteMutation({ routeTemplateId: id as Id<"routeTemplates">, ...data });
+        toast.success("Route template updated successfully!");
+      } else {
+        await createRouteMutation(data);
+        toast.success("Route template created successfully!");
+      }
+      navigate("/driver/routes");
+    } catch (error) {
+      toast.error(`Failed to ${isEditing ? 'update' : 'create'} route template: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 

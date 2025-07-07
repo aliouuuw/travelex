@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -15,10 +15,22 @@ import {
   Users,
   Package,
 } from "lucide-react";
-import { toast } from "sonner";
-import { getStripe, getTempBooking, checkPaymentStatus, type TempBooking } from "@/services/payments";
-import { getTripForBooking } from "@/services/trip-search";
 import { format } from "date-fns";
+import { toast } from "sonner";
+import { 
+  useTempBooking, 
+  usePaymentStatus, 
+  type TempBooking 
+} from "@/services/convex/payments";
+import { useTripForBooking } from "@/services/convex/tripSearch";
+import type { Id } from "../../convex/_generated/dataModel";
+
+// Initialize Stripe
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+
+const getStripe = async () => {
+  return await stripePromise;
+};
 
 // Payment Form Component (inside Elements provider)
 const PaymentForm = ({ 
@@ -32,6 +44,9 @@ const PaymentForm = ({
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  // Use the Convex hook for payment status
+  const paymentStatus = usePaymentStatus(tempBooking._id);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -47,7 +62,7 @@ const PaymentForm = ({
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: `${window.location.origin}/booking-success/${tempBooking.id}`,
+          return_url: `${window.location.origin}/booking-success/${tempBooking._id}`,
         },
         redirect: 'if_required',
       });
@@ -66,13 +81,12 @@ const PaymentForm = ({
 
         const pollForCompletion = async () => {
           try {
-            const status = await checkPaymentStatus(tempBooking.id);
-            
-            if (status.status === 'succeeded' && status.bookingReference) {
-              onPaymentSuccess(status.bookingReference);
+            // The paymentStatus will be updated by the Convex query
+            if (paymentStatus?.status === 'succeeded' && paymentStatus.bookingReference) {
+              onPaymentSuccess(paymentStatus.bookingReference);
               return;
-            } else if (status.status === 'failed') {
-              setPaymentError(status.error || 'Booking processing failed');
+            } else if (paymentStatus?.status === 'failed') {
+              setPaymentError(paymentStatus.error || 'Booking processing failed');
               return;
             }
 
@@ -130,7 +144,7 @@ const PaymentForm = ({
       <Button
         type="submit"
         disabled={!stripe || isProcessing}
-        className="w-full bg-brand-orange hover:bg-brand-orange/90 text-white py-3"
+        className="w-full bg-brand-orange text-white hover:bg-brand-orange/90 text-white py-3"
         size="lg"
       >
         {isProcessing ? (
@@ -162,20 +176,12 @@ export default function PaymentPage() {
 
   const [timeLeft, setTimeLeft] = useState<number>(0);
 
-  // Fetch temporary booking details
-  const { data: tempBooking, isLoading: isLoadingBooking, error: bookingError } = useQuery({
-    queryKey: ['temp-booking', bookingId],
-    queryFn: () => getTempBooking(bookingId!),
-    enabled: !!bookingId,
-    refetchInterval: false,
-  });
+  // Use Convex hooks instead of React Query
+  const tempBooking = useTempBooking(bookingId as Id<"tempBookings"> | null);
+  const trip = useTripForBooking(tempBooking?.tripId || "");
 
-  // Fetch trip details for display
-  const { data: trip, isLoading: isLoadingTrip } = useQuery({
-    queryKey: ['trip-payment', tempBooking?.tripId],
-    queryFn: () => getTripForBooking(tempBooking!.tripId),
-    enabled: !!tempBooking?.tripId,
-  });
+  const isLoadingBooking = tempBooking === undefined;
+  const isLoadingTrip = trip === undefined && !!tempBooking?.tripId;
 
   // Calculate time remaining
   useEffect(() => {
@@ -183,7 +189,7 @@ export default function PaymentPage() {
 
     const updateTimeLeft = () => {
       const now = new Date().getTime();
-      const expiry = new Date(tempBooking.expiresAt).getTime();
+      const expiry = tempBooking.expiresAt;
       const remaining = expiry - now;
       
       if (remaining <= 0) {
@@ -225,7 +231,7 @@ export default function PaymentPage() {
   }
 
   // Error states
-  if (bookingError || !tempBooking || !clientSecret) {
+  if (!tempBooking || !clientSecret) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -235,7 +241,7 @@ export default function PaymentPage() {
             <p className="text-muted-foreground mb-4">
               The payment session could not be found or has expired. Please start your booking again.
             </p>
-            <Button onClick={() => navigate('/search')} className="bg-brand-orange hover:bg-brand-orange/90">
+            <Button onClick={() => navigate('/search')} className="bg-brand-orange text-white hover:bg-brand-orange/90">
               Back to Search
             </Button>
           </CardContent>

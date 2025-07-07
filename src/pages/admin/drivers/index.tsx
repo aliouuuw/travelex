@@ -1,8 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { getDrivers, type Driver } from "@/services/users";
 import {
   Table,
   TableBody,
@@ -13,26 +11,23 @@ import {
 } from "@/components/ui/table";
 import { Loader2, Mail, Plus, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { resetPassword } from "@/services/auth";
 import { toast } from "sonner";
+import { useGetAllDrivers, useSendDriverPasswordReset, type Driver } from "@/services/convex/users";
 
 const DriverRow = ({ driver }: { driver: Driver }) => {
   const createdAt = driver.created_at
     ? new Date(driver.created_at).toLocaleDateString()
     : "Unknown";
 
-  const { mutate: sendResetPassword, isPending: isSendingReset } = useMutation({
-    mutationFn: resetPassword,
-    onSuccess: () => {
-      toast.success(`Password reset email sent to ${driver.email}`);
-    },
-    onError: (error) => {
-      toast.error(`Failed to send reset email: ${error.message}`);
-    },
-  });
+  const sendPasswordReset = useSendDriverPasswordReset();
 
-  const handleResetPassword = () => {
-    sendResetPassword(driver.email);
+  const handleResetPassword = async () => {
+    try {
+      await sendPasswordReset({ email: driver.email });
+      toast.success(`Password reset email sent to ${driver.email}`);
+    } catch (error) {
+      toast.error(`Failed to send reset email: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   return (
@@ -50,14 +45,9 @@ const DriverRow = ({ driver }: { driver: Driver }) => {
           variant="outline"
           size="sm"
           onClick={handleResetPassword}
-          disabled={isSendingReset}
           className="flex items-center gap-2 hover:bg-brand-orange/10 hover:border-brand-orange hover:text-brand-orange transition-all"
         >
-          {isSendingReset ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Mail className="h-4 w-4" />
-          )}
+          <Mail className="h-4 w-4" />
           <span>Reset Password</span>
         </Button>
       </TableCell>
@@ -66,10 +56,9 @@ const DriverRow = ({ driver }: { driver: Driver }) => {
 };
 
 export default function DriversPage() {
-  const { data: drivers, isLoading, isError, error } = useQuery({
-    queryKey: ["drivers"],
-    queryFn: getDrivers,
-  });
+  const drivers = useGetAllDrivers();
+  const isLoading = drivers === undefined;
+  const isError = drivers === null;
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -163,7 +152,9 @@ export default function DriversPage() {
           {isError && (
             <div className="p-12 text-center">
               <div className="text-destructive mb-2">Error loading drivers</div>
-              <div className="text-sm text-muted-foreground">{error.message}</div>
+              <div className="text-sm text-muted-foreground">
+                Failed to load drivers. Please try again.
+              </div>
             </div>
           )}
           
@@ -195,7 +186,7 @@ export default function DriversPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {drivers.map((driver) => (
+                  {drivers.map((driver: Driver) => (
                     <DriverRow key={driver.id} driver={driver} />
                   ))}
                 </TableBody>

@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getCountryRequests, approveCountryRequest, rejectCountryRequest, type CountryRequest } from "@/services/countries";
+import { useCountryRequests, useApproveCountryRequest, useRejectCountryRequest } from "@/services/convex/countries";
+import type { Id } from "convex/_generated/dataModel";
 import {
   Table,
   TableBody,
@@ -29,46 +29,30 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 
-const CountryRequestRow = ({ request }: { request: CountryRequest }) => {
-  const queryClient = useQueryClient();
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const CountryRequestRow = ({ request }: { request: any }) => {
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [flagEmoji, setFlagEmoji] = useState("");
 
-  const { mutate: approveRequest, isPending: isApproving } = useMutation({
-    mutationFn: ({ id, flagEmoji }: { id: string; flagEmoji?: string }) =>
-      approveCountryRequest(id, flagEmoji),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["country-requests"] });
-      setShowApproveDialog(false);
-      setFlagEmoji("");
-      toast.success(`${request.countryName} has been approved and added to the system!`);
-    },
-    onError: (error) => {
-      toast.error(`Failed to approve request: ${error.message}`);
-    },
-  });
-
-  const { mutate: rejectRequest, isPending: isRejecting } = useMutation({
-    mutationFn: (id: string) => rejectCountryRequest(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["country-requests"] });
-      toast.success(`Request for ${request.countryName} has been rejected.`);
-    },
-    onError: (error) => {
-      toast.error(`Failed to reject request: ${error.message}`);
-    },
-  });
+  const approveRequest = useApproveCountryRequest();
+  const rejectRequest = useRejectCountryRequest();
+  const isApproving = false;
+  const isRejecting = false;
 
   const handleApprove = () => {
     setShowApproveDialog(true);
   };
 
   const handleReject = () => {
-    rejectRequest(request.id);
+    rejectRequest({ requestId: request.id as Id<"countryRequests"> });
+    toast.success(`Request for ${request.countryName} has been rejected.`);
   };
 
   const handleConfirmApprove = () => {
-    approveRequest({ id: request.id, flagEmoji: flagEmoji || undefined });
+    approveRequest({ requestId: request.id as Id<"countryRequests">, flagEmoji: flagEmoji || undefined });
+    toast.success(`${request.countryName} has been approved and added to the system!`);
+    setShowApproveDialog(false);
+    setFlagEmoji("");
   };
 
   const getStatusBadge = () => {
@@ -124,7 +108,7 @@ const CountryRequestRow = ({ request }: { request: CountryRequest }) => {
           <div className="flex items-start gap-2">
             <MessageSquare className="w-4 h-4 text-muted-foreground mt-0.5" />
             <div className="text-sm">
-              <p className="line-clamp-2">{request.reason}</p>
+              <p className="line-clamp-2">{request.businessJustification}</p>
             </div>
           </div>
         </TableCell>
@@ -246,14 +230,13 @@ const CountryRequestRow = ({ request }: { request: CountryRequest }) => {
 };
 
 export default function CountryRequestsPage() {
-  const { data: requests, isLoading, isError, error } = useQuery({
-    queryKey: ["country-requests"],
-    queryFn: () => getCountryRequests(),
-  });
+  const requests = useCountryRequests();
+  const isLoading = requests === undefined;
+  const isError = false;
 
-  const pendingCount = requests?.filter(r => r.status === 'pending').length || 0;
-  const approvedCount = requests?.filter(r => r.status === 'approved').length || 0;
-  const rejectedCount = requests?.filter(r => r.status === 'rejected').length || 0;
+  const pendingCount = requests?.filter((r) => r.status === 'pending').length || 0;
+  const approvedCount = requests?.filter((r) => r.status === 'approved').length || 0;
+  const rejectedCount = requests?.filter((r) => r.status === 'rejected').length || 0;
 
   if (isError) {
     return (
@@ -262,7 +245,7 @@ export default function CountryRequestsPage() {
           <AlertCircle className="w-5 h-5 text-red-600" />
           <div>
             <h3 className="font-medium text-red-800">Error loading country requests</h3>
-            <p className="text-sm text-red-600">{error?.message}</p>
+            <p className="text-sm text-red-600">Please try again later</p>
           </div>
         </div>
       </div>

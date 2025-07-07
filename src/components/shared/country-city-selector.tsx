@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, MapPin, Clock, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { getAvailableCountries, getAvailableCitiesByCountry, type Country, type CityWithCountry } from "@/services/countries";
+import { getAvailableCountries, getAvailableCitiesByCountry, type Country, type CityWithCountry } from "@/services/convex/countries";
 import { CountryRequestModal } from "./country-request-modal";
 
 interface CountryCitySelectorProps {

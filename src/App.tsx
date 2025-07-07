@@ -6,6 +6,7 @@ import {
   useNavigate,
 } from "react-router-dom";
 import Auth from "./pages/auth";
+import InvitationPage from "./pages/invitation";
 import { Toaster, toast } from "sonner";
 import Dashboard from "./pages/dashboard";
 import { ProtectedRoute } from "./components/protected-route";
@@ -30,6 +31,7 @@ import NewVehiclePage from "./pages/driver/vehicles/new";
 import EditVehiclePage from "./pages/driver/vehicles/edit";
 import DriverTripsPage from "./pages/driver/trips";
 import ScheduleTripPage from "./pages/driver/trips/schedule";
+import BatchSchedulePage from "./pages/driver/trips/batch-schedule";
 import EditTripPage from "./pages/driver/trips/edit";
 import ReservationsPage from "./pages/driver/reservations";
 import ReservationDetailPage from "./pages/driver/reservations/[id]";
@@ -132,16 +134,16 @@ const Header = () => {
                 <Button variant="ghost" className="relative h-10 w-auto rounded-full px-3 py-1">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
-                      {user.profile?.avatar_url && (
-                        <AvatarImage src={user.profile.avatar_url} alt={user.profile?.full_name || 'User'} />
+                      {user.profile?.avatarUrl && (
+                        <AvatarImage src={user.profile.avatarUrl} alt={user.profile?.fullName || 'User'} />
                       )}
                       <AvatarFallback className="bg-brand-orange/10 text-brand-orange font-medium">
-                        {getUserInitials(user.profile?.full_name || 'User')}
+                        {getUserInitials(user.profile?.fullName || 'User')}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col items-start">
                       <span className="text-sm font-medium text-foreground">
-                        {user.profile?.full_name || 'User'}
+                        {user.profile?.fullName || 'User'}
                       </span>
                       <span className="text-xs text-muted-foreground capitalize">
                         {user.profile?.role || 'user'}
@@ -294,6 +296,10 @@ const router = createBrowserRouter([
         element: <Auth />,
       },
       {
+        path: "/invitation",
+        element: <InvitationPage />,
+      },
+      {
         element: <ProtectedRoute />,
         children: [
           {
@@ -372,6 +378,10 @@ const router = createBrowserRouter([
               {
                 path: "trips/schedule",
                 element: <ScheduleTripPage />,
+              },
+              {
+                path: "trips/batch-schedule",
+                element: <BatchSchedulePage />,
               },
               {
                 path: "trips/:id/edit",

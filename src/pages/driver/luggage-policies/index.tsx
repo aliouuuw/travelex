@@ -1,16 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  getDriverLuggagePolicies,
-  deleteLuggagePolicy,
-  setDefaultLuggagePolicy,
+  useDriverLuggagePolicies,
+  useDeleteLuggagePolicy,
+  useSetDefaultLuggagePolicy,
   formatLuggagePolicy,
   type LuggagePolicy
-} from "@/services/luggage-policies";
+} from "@/services/convex/luggage-policies";
 import {
   Table,
   TableBody,
@@ -31,6 +30,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import LuggagePolicyForm from "./form.tsx";
+import type { Id } from '../../../../convex/_generated/dataModel';
 
 const LuggagePolicyRow = ({ 
   policy, 
@@ -38,8 +38,8 @@ const LuggagePolicyRow = ({
   onSetDefault 
 }: { 
   policy: LuggagePolicy; 
-  onDelete: (id: string) => void;
-  onSetDefault: (id: string) => void;
+  onDelete: (id: Id<"luggagePolicies">) => void;
+  onSetDefault: (id: Id<"luggagePolicies">) => void;
 }) => {
   const [showForm, setShowForm] = useState(false);
 
@@ -79,9 +79,9 @@ const LuggagePolicyRow = ({
                 {policy.freeWeightKg}kg free
               </Badge>
             )}
-            {policy.feePerExcessKg && policy.feePerExcessKg > 0 && (
+            {policy.excessFeePerKg && policy.excessFeePerKg > 0 && (
               <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                ${policy.feePerExcessKg}/kg
+                ${policy.excessFeePerKg}/bag
               </Badge>
             )}
           </div>
@@ -100,7 +100,7 @@ const LuggagePolicyRow = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onSetDefault(policy.id)}
+                onClick={() => onSetDefault(policy._id)}
                 className="text-yellow-500 hover:bg-yellow-50 hover:border-yellow-200 hover:text-yellow-700"
                 title="Set as default"
               >
@@ -110,7 +110,7 @@ const LuggagePolicyRow = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onDelete(policy.id)}
+              onClick={() => onDelete(policy._id)}
               className="text-red-500 hover:bg-red-50 hover:border-red-200 hover:text-red-700"
             >
               <Trash2 className="w-4 h-4" />
@@ -140,76 +140,53 @@ const LuggagePolicyRow = ({
 export default function LuggagePoliciesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const queryClient = useQueryClient();
 
   // Fetch luggage policies
-  const { 
-    data: policies = [], 
-    isLoading, 
-    error 
-  } = useQuery<LuggagePolicy[], Error>({
-    queryKey: ['driver-luggage-policies'],
-    queryFn: getDriverLuggagePolicies,
-    retry: 1
-  });
+  const policies = useDriverLuggagePolicies();
+  const isLoading = policies === undefined;
 
   // Delete policy mutation
-  const deletePolicyMutation = useMutation({
-    mutationFn: deleteLuggagePolicy,
-    onSuccess: () => {
-      toast.success('Luggage policy deleted successfully');
-      queryClient.invalidateQueries({ queryKey: ['driver-luggage-policies'] });
-    },
-    onError: (error) => {
-      toast.error(`Failed to delete policy: ${error.message}`);
-    }
-  });
+  const deletePolicyMutation = useDeleteLuggagePolicy();
 
   // Set default policy mutation
-  const setDefaultMutation = useMutation({
-    mutationFn: setDefaultLuggagePolicy,
-    onSuccess: () => {
-      toast.success('Default policy updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['driver-luggage-policies'] });
-    },
-    onError: (error) => {
-      toast.error(`Failed to update default policy: ${error.message}`);
-    }
-  });
-
-  // Show error toast when error occurs
-  useEffect(() => {
-    if (error) {
-      toast.error(`Failed to load luggage policies: ${error.message}`);
-    }
-  }, [error]);
+  const setDefaultMutation = useSetDefaultLuggagePolicy();
 
   // Filter policies based on search term
-  const filteredPolicies = policies.filter((policy) =>
+  const filteredPolicies = (policies || []).filter((policy) =>
     policy.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (policy.description && policy.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   // Calculate stats
   const stats = {
-    total: policies.length,
-    default: policies.filter(p => p.isDefault).length,
-    avgFreeWeight: policies.length > 0 
+    total: policies?.length || 0,
+    default: policies?.filter(p => p.isDefault).length || 0,
+    avgFreeWeight: policies && policies.length > 0 
       ? Math.round(policies.reduce((acc, p) => acc + (p.freeWeightKg || 0), 0) / policies.length * 10) / 10
       : 0,
-    avgFee: policies.length > 0 
-      ? Math.round(policies.reduce((acc, p) => acc + (p.feePerExcessKg || 0), 0) / policies.length * 100) / 100
-      : 0
+        avgFee: policies && policies.length > 0 
+        ? Math.round(policies.reduce((acc, p) => acc + (p.excessFeePerKg || 0), 0) / policies.length * 100) / 100
+        : 0
   };
 
-  const handleDeletePolicy = (policyId: string) => {
+  const handleDeletePolicy = async (policyId: Id<"luggagePolicies">) => {
     if (window.confirm('Are you sure you want to delete this luggage policy? This action cannot be undone.')) {
-      deletePolicyMutation.mutate(policyId);
+      try {
+        await deletePolicyMutation({ policyId });
+        toast.success('Luggage policy deleted successfully');
+      } catch (error) {
+        toast.error(`Failed to delete policy: ${error instanceof Error ? error.message : "An unknown error occurred"}`);
+      }
     }
   };
 
-  const handleSetDefault = (policyId: string) => {
-    setDefaultMutation.mutate(policyId);
+  const handleSetDefault = async (policyId: Id<"luggagePolicies">) => {
+    try {
+      await setDefaultMutation({ policyId });
+      toast.success('Default policy updated successfully');
+    } catch (error) {
+      toast.error(`Failed to update default policy: ${error instanceof Error ? error.message : "An unknown error occurred"}`);
+    }
   };
 
   // Loading state
@@ -263,7 +240,7 @@ export default function LuggagePoliciesPage() {
             <div className="text-sm text-muted-foreground mt-1">Avg Free Weight</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-foreground">${stats.avgFee}/kg</div>
+            <div className="text-2xl font-bold text-foreground">${stats.avgFee}/bag</div>
             <div className="text-sm text-muted-foreground mt-1">Avg Fee Rate</div>
           </div>
         </div>
@@ -313,15 +290,15 @@ export default function LuggagePoliciesPage() {
             <div className="text-center py-12">
               <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="font-heading text-lg font-semibold text-foreground mb-2">
-                {policies.length === 0 ? 'No luggage policies yet' : 'No policies found'}
+                {policies?.length === 0 ? 'No luggage policies yet' : 'No policies found'}
               </h3>
               <p className="text-muted-foreground mb-6">
-                {policies.length === 0 
+                {policies?.length === 0 
                   ? 'Create your first luggage policy to define allowances and pricing rules for your trips'
                   : 'Try adjusting your search terms'
                 }
               </p>
-              {policies.length === 0 && (
+              {policies?.length === 0 && (
                 <Button 
                   onClick={() => setShowCreateForm(true)}
                   className="bg-brand-orange hover:bg-brand-orange-600 text-white"
@@ -345,8 +322,8 @@ export default function LuggagePoliciesPage() {
                 <TableBody>
                   {filteredPolicies.map((policy) => (
                     <LuggagePolicyRow 
-                      key={policy.id} 
-                      policy={policy} 
+                      key={policy._id} 
+                      policy={policy as unknown as LuggagePolicy} 
                       onDelete={handleDeletePolicy}
                       onSetDefault={handleSetDefault}
                     />

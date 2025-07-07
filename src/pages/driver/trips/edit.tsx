@@ -22,21 +22,20 @@ import {
   Save
 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
-  getTripById,
+  useTripById,
   updateTrip,
   type TripFormData 
-} from "@/services/trips";
-import { getDriverRouteTemplates, type RouteTemplate } from "@/services/route-templates";
-import { getDriverVehicles } from "@/services/vehicles";
-import { getDriverLuggagePolicies } from "@/services/luggage-policies";
+} from "@/services/convex/trips";
+import { useDriverRouteTemplates, type RouteTemplate } from "@/services/convex/routeTemplates";
+import { useDriverVehicles } from "@/services/convex/vehicles";
+import { useDriverLuggagePolicies } from "@/services/convex/luggage-policies";
 import { toast } from "sonner";
 
 const tripFormSchema = z.object({
   routeTemplateId: z.string().min(1, "Route template is required"),
   vehicleId: z.string().min(1, "Vehicle is required"),
-  luggagePolicyId: z.string().optional(),
+  luggagePolicyId: z.string().optional().nullable(),
   departureTime: z.string().min(1, "Departure time is required"),
   arrivalTime: z.string().min(1, "Arrival time is required"),
 }).refine((data) => {
@@ -117,16 +116,19 @@ const StationSelector = ({
 export default function EditTripPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState<'details' | 'stations'>('details');
   const [selectedStations, setSelectedStations] = useState<Set<string>>(new Set());
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [formInitialized, setFormInitialized] = useState(false);
 
   const form = useForm<TripFormFields>({
     resolver: zodResolver(tripFormSchema),
+    mode: 'onChange',
     defaultValues: {
       routeTemplateId: '',
       vehicleId: '',
-      luggagePolicyId: '',
+      luggagePolicyId: undefined,
       departureTime: '',
       arrivalTime: '',
     },
@@ -138,45 +140,15 @@ export default function EditTripPage() {
   const departureTime = form.watch('departureTime');
   const arrivalTime = form.watch('arrivalTime');
 
-  // Fetch trip data
-  const { data: trip, isLoading: loadingTrip } = useQuery({
-    queryKey: ['trip', id],
-    queryFn: () => getTripById(id!),
-    enabled: !!id,
-  });
+  // Fetch data using Convex hooks
+  const trip = useTripById(id!);
+  const rawRouteTemplates = useDriverRouteTemplates();
+  const routeTemplates = useMemo(() => rawRouteTemplates || [], [rawRouteTemplates]);
+  const rawVehicles = useDriverVehicles();
+  const vehicles = useMemo(() => rawVehicles || [], [rawVehicles]);
+  const rawLuggagePolicies = useDriverLuggagePolicies();
+  const luggagePolicies = useMemo(() => rawLuggagePolicies || [], [rawLuggagePolicies]);
 
-  // Fetch route templates
-  const { data: routeTemplates = [], isLoading: loadingRoutes } = useQuery({
-    queryKey: ['driver-route-templates'],
-    queryFn: getDriverRouteTemplates,
-  });
-
-  // Fetch vehicles
-  const { data: vehicles = [], isLoading: loadingVehicles } = useQuery({
-    queryKey: ['driver-vehicles'],
-    queryFn: getDriverVehicles,
-  });
-
-  // Fetch luggage policies
-  const { data: luggagePolicies = [], isLoading: loadingPolicies } = useQuery({
-    queryKey: ['driver-luggage-policies'],
-    queryFn: getDriverLuggagePolicies,
-  });
-
-  // Update trip mutation
-  const updateTripMutation = useMutation({
-    mutationFn: ({ tripId, data }: { tripId: string; data: TripFormData }) => 
-      updateTrip(tripId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['driver-trips'] });
-      queryClient.invalidateQueries({ queryKey: ['trip', id] });
-      toast.success('Trip updated successfully!');
-      navigate('/driver/trips');
-    },
-    onError: (error) => {
-      toast.error(`Failed to update trip: ${error.message}`);
-    },
-  });
 
   const selectedRouteTemplate = useMemo(() => 
     routeTemplates.find((route) => route.id === routeTemplateId),
@@ -184,7 +156,7 @@ export default function EditTripPage() {
   );
 
   const selectedVehicle = useMemo(() => 
-    vehicles.find((vehicle) => vehicle.id === vehicleId),
+    vehicles.find((vehicle) => vehicle._id === vehicleId),
     [vehicles, vehicleId]
   );
 
@@ -201,22 +173,44 @@ export default function EditTripPage() {
 
   // Populate form with trip data when loaded
   useEffect(() => {
-    if (trip) {
-      form.reset({
-        routeTemplateId: trip.routeTemplateId,
-        vehicleId: trip.vehicleId || '',
-        luggagePolicyId: trip.luggagePolicyId || '',
-        departureTime: new Date(trip.departureTime).toISOString().slice(0, 16),
-        arrivalTime: new Date(trip.arrivalTime).toISOString().slice(0, 16),
-      });
+    if (trip && trip.departureTime && trip.arrivalTime && routeTemplates.length > 0 && vehicles.length > 0 && !formInitialized) {
+
+      // Validate that the trip's route template exists in the available options
+      const validRouteTemplate = routeTemplates.find(rt => rt.id === trip.routeTemplateId);
+      const validVehicle = vehicles.find(v => v._id === trip.vehicleId);
+      const validLuggagePolicy = trip.luggagePolicyId ? luggagePolicies.find(lp => lp._id === trip.luggagePolicyId) : null;
+
+      
+
+
+
+      // Use multiple setValue calls which seem to work better than reset
+      
+      if (validRouteTemplate) {
+        form.setValue('routeTemplateId', trip.routeTemplateId, { shouldValidate: true });
+      }
+      
+      if (validVehicle) {
+        form.setValue('vehicleId', trip.vehicleId, { shouldValidate: true });
+      }
+      
+      if (validLuggagePolicy) {
+        form.setValue('luggagePolicyId', trip.luggagePolicyId, { shouldValidate: true });
+      }
+      
+      form.setValue('departureTime', new Date(trip.departureTime).toISOString().slice(0, 16), { shouldValidate: true });
+      form.setValue('arrivalTime', new Date(trip.arrivalTime).toISOString().slice(0, 16), { shouldValidate: true });
 
       // Set selected stations
-      if (trip.tripStations) {
+      if (trip.tripStations && trip.tripStations.length > 0) {
         const stationIds = trip.tripStations.map(ts => ts.stationId);
         setSelectedStations(new Set(stationIds));
       }
+
+      // Mark form as initialized
+      setFormInitialized(true);
     }
-  }, [trip, form]);
+  }, [trip, form, routeTemplates, vehicles, luggagePolicies, formInitialized]);
 
   const handleStationToggle = (stationId: string) => {
     const newSelectedStations = new Set(selectedStations);
@@ -228,7 +222,7 @@ export default function EditTripPage() {
     setSelectedStations(newSelectedStations);
   };
 
-  const onSubmit = (data: TripFormFields) => {
+  const onSubmit = async (data: TripFormFields) => {
     if (!id) {
       toast.error('Trip ID is missing');
       return;
@@ -244,39 +238,52 @@ export default function EditTripPage() {
       return;
     }
 
-    // Build selected stations data
-    const selectedStationsData = Array.from(selectedStations).map((stationId) => {
-      // Find station and its city
-      for (const city of selectedRouteTemplate.cities) {
-        const station = city.stations?.find(s => s.id === stationId);
-        if (station) {
-          return {
-            stationId: station.id,
-            cityName: city.cityName,
-            sequenceOrder: city.sequenceOrder,
-            isPickupPoint: true,
-            isDropoffPoint: true,
-          };
+    setIsSubmitting(true);
+
+    try {
+      // Build selected stations data with correct mapping
+      const selectedStationsData = Array.from(selectedStations).map((stationId) => {
+        // Find station and its city
+        for (const city of selectedRouteTemplate.cities) {
+          const station = city.stations?.find(s => s.id === stationId);
+          if (station) {
+            return {
+              routeTemplateCityId: city.id!,
+              routeTemplateStationId: station.id!,
+              cityName: city.cityName,
+              sequenceOrder: city.sequenceOrder || 0,
+              isPickupPoint: true,
+              isDropoffPoint: true,
+            };
+          }
         }
-      }
-      return null;
-    }).filter(Boolean) as TripFormData['selectedStations'];
+        return null;
+      }).filter(Boolean) as TripFormData['selectedStations'];
 
-    const tripData: TripFormData = {
-      routeTemplateId: data.routeTemplateId,
-      vehicleId: data.vehicleId,
-      luggagePolicyId: data.luggagePolicyId || null,
-      departureTime: data.departureTime,
-      arrivalTime: data.arrivalTime,
-      selectedStations: selectedStationsData,
-    };
+      const tripData: TripFormData = {
+        routeTemplateId: data.routeTemplateId,
+        vehicleId: data.vehicleId,
+        luggagePolicyId: data.luggagePolicyId || null,
+        departureTime: data.departureTime,
+        arrivalTime: data.arrivalTime,
+        selectedStations: selectedStationsData,
+      };
 
-    updateTripMutation.mutate({ tripId: id, data: tripData });
+      await updateTrip(id, tripData);
+      toast.success('Trip updated successfully!');
+      navigate('/driver/trips');
+    } catch (error) {
+      toast.error(`Failed to update trip: ${(error as Error).message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const isLoading = loadingTrip || loadingRoutes || loadingVehicles || loadingPolicies;
+  const isLoading = trip === undefined && !!id;
+  const hasLoadedData = trip && trip.departureTime && trip.arrivalTime;
+  const dataReady = hasLoadedData && routeTemplates.length > 0 && vehicles.length > 0 && formInitialized;
 
-  if (isLoading) {
+  if (isLoading || !dataReady) {
     return (
       <div className="p-6 space-y-6 max-w-4xl mx-auto">
         <div className="flex items-center justify-center py-12">
@@ -368,7 +375,7 @@ export default function EditTripPage() {
           </TabsTrigger>
         </TabsList>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form key={trip?.id} onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <TabsContent value="details" className="space-y-6">
             {/* Route Template Selection */}
             <Card className="premium-card">
@@ -382,8 +389,11 @@ export default function EditTripPage() {
                 <div className="space-y-2">
                   <Label htmlFor="routeTemplateId">Route Template</Label>
                   <Select
-                    value={form.watch('routeTemplateId')}
-                    onValueChange={(value) => form.setValue('routeTemplateId', value)}
+                    key={`route-${trip?.id}`}
+                    value={form.watch('routeTemplateId') || ''}
+                    onValueChange={(value) => {
+                      form.setValue('routeTemplateId', value, { shouldValidate: true });
+                    }}
                   >
                     <SelectTrigger className="w-full h-12 px-3 bg-background">
                       <SelectValue placeholder="Select a route template..." />
@@ -436,8 +446,11 @@ export default function EditTripPage() {
                   <div className="space-y-2">
                     <Label htmlFor="vehicleId">Vehicle</Label>
                     <Select
-                      value={form.watch('vehicleId')}
-                      onValueChange={(value) => form.setValue('vehicleId', value)}
+                      key={`vehicle-${trip?.id}`}
+                      value={form.watch('vehicleId') || ''}
+                      onValueChange={(value) => {
+                        form.setValue('vehicleId', value, { shouldValidate: true });
+                      }}
                     >
                       <SelectTrigger className="w-full h-12 px-3 bg-background">
                         <SelectValue placeholder="Select a vehicle..." />
@@ -446,7 +459,7 @@ export default function EditTripPage() {
                         {vehicles
                           .filter(v => v.status === 'active')
                           .map((vehicle) => (
-                          <SelectItem key={vehicle.id} value={vehicle.id}>
+                          <SelectItem key={vehicle._id} value={vehicle._id}>
                             {vehicle.make} {vehicle.model} ({vehicle.year}) - {vehicle.capacity} seats
                           </SelectItem>
                         ))}
@@ -479,8 +492,11 @@ export default function EditTripPage() {
                   <div className="space-y-2">
                     <Label htmlFor="luggagePolicyId">Luggage Policy (Optional)</Label>
                     <Select
-                      value={form.watch('luggagePolicyId') || undefined}
-                      onValueChange={(value) => form.setValue('luggagePolicyId', value === 'none' ? undefined : value)}
+                      key={`luggage-${trip?.id}`}
+                      value={form.watch('luggagePolicyId') || 'none'}
+                      onValueChange={(value) => {
+                        form.setValue('luggagePolicyId', value === 'none' ? undefined : value, { shouldValidate: true });
+                      }}
                     >
                       <SelectTrigger className="w-full h-12 px-3 bg-background">
                         <SelectValue placeholder="No specific policy" />
@@ -488,7 +504,7 @@ export default function EditTripPage() {
                       <SelectContent>
                         <SelectItem value="none">No specific policy</SelectItem>
                         {luggagePolicies.map((policy) => (
-                          <SelectItem key={policy.id} value={policy.id}>
+                          <SelectItem key={policy._id} value={policy._id}>
                             {policy.name}
                           </SelectItem>
                         ))}
@@ -587,10 +603,10 @@ export default function EditTripPage() {
               </Button>
               <Button 
                 type="submit"
-                disabled={updateTripMutation.isPending || selectedStations.size === 0}
+                disabled={isSubmitting || selectedStations.size === 0}
                 className="bg-brand-orange hover:bg-brand-orange-600 text-white"
               >
-                {updateTripMutation.isPending ? (
+                {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Updating Trip...

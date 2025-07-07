@@ -1,5 +1,5 @@
+import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,9 +23,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
-  getReservationById, 
-  updateReservationStatus,
-} from "@/services/reservations";
+  useReservationById, 
+  useUpdateReservationStatus,
+} from "@/services/convex/reservations";
+import type { Id } from "convex/_generated/dataModel";
 
 // Status badge colors
 const getStatusColor = (status: string) => {
@@ -46,32 +47,28 @@ const getStatusColor = (status: string) => {
 export default function ReservationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
 
   // Fetch reservation details
-  const { data: reservation, isLoading, error } = useQuery({
-    queryKey: ['reservation', id],
-    queryFn: () => getReservationById(id!),
-    enabled: !!id,
-  });
+  const reservation = useReservationById(id as Id<"reservations">);
+  const updateReservationStatus = useUpdateReservationStatus();
 
-  // Update reservation status mutation
-  const updateStatusMutation = useMutation({
-    mutationFn: ({ status }: { status: 'confirmed' | 'cancelled' | 'completed' }) =>
-      updateReservationStatus(id!, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reservation', id] });
-      queryClient.invalidateQueries({ queryKey: ['driver-reservations'] });
-      queryClient.invalidateQueries({ queryKey: ['driver-reservation-stats'] });
+  const isLoading = reservation === undefined;
+  const error = reservation === null;
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleStatusUpdate = async (status: 'confirmed' | 'cancelled' | 'completed') => {
+    setIsUpdating(true);
+    try {
+      await updateReservationStatus({ 
+        reservationId: id as Id<"reservations">, 
+        status 
+      });
       toast.success('Reservation status updated successfully!');
-    },
-    onError: (error) => {
-      toast.error(`Failed to update reservation: ${error.message}`);
-    },
-  });
-
-  const handleStatusUpdate = (status: 'confirmed' | 'cancelled' | 'completed') => {
-    updateStatusMutation.mutate({ status });
+    } catch (error) {
+      toast.error(`Failed to update reservation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const copyBookingReference = () => {
@@ -125,7 +122,7 @@ export default function ReservationDetailPage() {
   }
 
   const departureDate = new Date(reservation.tripDepartureTime);
-  const arrivalDate = new Date(reservation.tripArrivalTime);
+  const arrivalDate = reservation.tripArrivalTime ? new Date(reservation.tripArrivalTime) : null;
   const createdDate = new Date(reservation.createdAt);
   const updatedDate = new Date(reservation.updatedAt);
 
@@ -149,7 +146,7 @@ export default function ReservationDetailPage() {
               <Button
                 onClick={() => handleStatusUpdate('confirmed')}
                 className="bg-green-600 hover:bg-green-700 text-white"
-                disabled={updateStatusMutation.isPending}
+                disabled={isUpdating}
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
                 Confirm Reservation
@@ -158,7 +155,7 @@ export default function ReservationDetailPage() {
                 variant="outline"
                 onClick={() => handleStatusUpdate('cancelled')}
                 className="text-red-600 border-red-200 hover:bg-red-50"
-                disabled={updateStatusMutation.isPending}
+                disabled={isUpdating}
               >
                 <XCircle className="w-4 h-4 mr-2" />
                 Cancel
@@ -169,7 +166,7 @@ export default function ReservationDetailPage() {
             <Button
               onClick={() => handleStatusUpdate('completed')}
               className="bg-blue-600 hover:bg-blue-700 text-white"
-              disabled={updateStatusMutation.isPending}
+              disabled={isUpdating}
             >
               <CheckCircle className="w-4 h-4 mr-2" />
               Mark Complete
@@ -279,10 +276,10 @@ export default function ReservationDetailPage() {
                 <div className="p-3 bg-gray-50 rounded-lg">
                   <p className="text-xs text-muted-foreground">Expected Arrival</p>
                   <p className="font-medium">
-                    {arrivalDate.toLocaleDateString()}
+                    {arrivalDate ? arrivalDate.toLocaleDateString() : 'TBD'}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {arrivalDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {arrivalDate ? arrivalDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
                   </p>
                 </div>
               </div>
