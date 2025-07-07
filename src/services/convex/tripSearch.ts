@@ -39,6 +39,20 @@ export interface TripSearchResult {
     type?: string;
     capacity: number;
     features?: string[];
+    seatMap?: {
+      rows: number;
+      columns: number;
+      layout: Array<{
+        row: number;
+        seats: Array<{
+          id: string;
+          row: number;
+          column: number;
+          type: 'regular' | 'disabled' | 'empty';
+          available: boolean;
+        }>;
+      }>;
+    };
   };
   departureTime: string;
   arrivalTime?: string;
@@ -95,7 +109,20 @@ export interface TripBookingDetails {
     type?: string;
     capacity: number;
     features?: string[];
-    seatMap?: any;
+    seatMap?: {
+      rows: number;
+      columns: number;
+      layout: Array<{
+        row: number;
+        seats: Array<{
+          id: string;
+          row: number;
+          column: number;
+          type: 'regular' | 'disabled' | 'empty';
+          available: boolean;
+        }>;
+      }>;
+    };
   };
   departureTime: string;
   arrivalTime?: string;

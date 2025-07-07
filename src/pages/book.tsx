@@ -62,21 +62,28 @@ const SeatSelectionGrid = ({
     return 'available';
   };
 
-  const getSeatClassName = (status: string) => {
+  const getSeatClassName = (status: string, seatType?: string) => {
+    const baseClasses = "w-10 h-10 border-2 rounded text-xs font-bold flex items-center justify-center transition-all duration-200";
+    
+    // If seat is disabled or empty, show as unavailable
+    if (seatType === 'disabled' || seatType === 'empty') {
+      return `${baseClasses} bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed opacity-50`;
+    }
+
     switch (status) {
       case 'occupied':
-        return 'bg-red-100 border-red-300 text-red-700 cursor-not-allowed';
+        return `${baseClasses} bg-red-100 border-red-300 text-red-700 cursor-not-allowed`;
       case 'selected':
-        return 'bg-brand-orange border-brand-orange text-white cursor-pointer';
+        return `${baseClasses} bg-brand-orange border-brand-orange text-white cursor-pointer`;
       case 'available':
-        return 'bg-green-100 border-green-300 text-green-700 cursor-pointer hover:bg-green-200';
+        return `${baseClasses} bg-green-100 border-green-300 text-green-700 cursor-pointer hover:bg-green-200`;
       default:
-        return 'bg-gray-100 border-gray-300 text-gray-500';
+        return `${baseClasses} bg-gray-100 border-gray-300 text-gray-500`;
     }
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 flex flex-col justify-center items-center">
       {/* Vehicle Front Indicator */}
       <div className="flex justify-center mb-6">
         <div className="px-4 py-2 bg-gray-100 rounded-lg text-sm font-medium text-gray-600">
@@ -87,23 +94,21 @@ const SeatSelectionGrid = ({
       {/* Seat Grid */}
       <div className="space-y-2 max-w-md mx-auto">
         {seatMap.layout.map((row: SeatMap['layout'][number]) => (
-          <div key={row.row} className="flex justify-center gap-2">
+          <div key={row.row} className="flex gap-2">
             {row.seats.map((seat: SeatMap['layout'][number]['seats'][number]) => {
               const status = getSeatStatus(seat.id);
-              const isClickable = status !== 'occupied';
+              const isClickable = status !== 'occupied' && seat.type !== 'disabled' && seat.type !== 'empty';
               
               return (
-                <div key={seat.id} className="relative">
+                <div key={seat.id} className={`relative ${seat.type === 'empty' ? 'invisible' : ''}`}>
                   <button
                     type="button"
                     onClick={() => isClickable && onSeatSelect(seat.id)}
-                    disabled={status === 'occupied'}
-                    className={`
-                      w-10 h-10 border-2 rounded text-xs font-bold flex items-center justify-center
-                      transition-all duration-200 ${getSeatClassName(status)}
-                    `}
+                    disabled={!isClickable}
+                    className={getSeatClassName(status, seat.type)}
+                    title={seat.type === 'disabled' ? 'Not Available' : seat.type === 'empty' ? 'Empty Space' : 'Regular Seat'}
                   >
-                    {seat.id}
+                    {seat.type === 'empty' ? '·' : seat.id}
                   </button>
                 </div>
               );
@@ -113,7 +118,7 @@ const SeatSelectionGrid = ({
       </div>
 
       {/* Legend */}
-      <div className="flex justify-center gap-6 pt-4 border-t">
+      <div className="flex justify-center gap-4 pt-4 border-t flex-wrap">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 bg-green-100 border-2 border-green-300 rounded"></div>
           <span className="text-sm text-muted-foreground">Available</span>
@@ -163,45 +168,132 @@ export default function BookingPage() {
   const isLoading = trip === undefined && !!tripId;
   const error = null; // Convex handles errors differently
 
+  // Find the actual station objects for display
+  const pickupStation = useMemo(() => {
+    if (!trip || !fromStationId || !searchFromCity) return null;
+    
+    // Try multiple matching strategies
+    let station = trip.tripStations.find(s => 
+      s.stationName === fromStationId && s.cityName === searchFromCity
+    );
+    
+    // If not found, try case-insensitive matching
+    if (!station) {
+      station = trip.tripStations.find(s => 
+        s.stationName.toLowerCase() === fromStationId.toLowerCase() && 
+        s.cityName.toLowerCase() === searchFromCity.toLowerCase()
+      );
+    }
+    
+    // If still not found, try matching just by city name
+    if (!station) {
+      station = trip.tripStations.find(s => 
+        s.cityName.toLowerCase() === searchFromCity.toLowerCase() && s.isPickupPoint
+      );
+    }
+    
+    console.log('Pickup station search:', { 
+      fromStationId, 
+      searchFromCity, 
+      found: !!station, 
+      stationFound: station,
+      allStations: trip.tripStations.map(s => ({ 
+        id: s.id, 
+        name: s.stationName, 
+        city: s.cityName, 
+        isPickup: s.isPickupPoint,
+        isDropoff: s.isDropoffPoint 
+      }))
+    });
+    return station;
+  }, [trip, fromStationId, searchFromCity]);
+
+  const dropoffStation = useMemo(() => {
+    if (!trip || !toStationId || !searchToCity) return null;
+    
+    // Try multiple matching strategies
+    let station = trip.tripStations.find(s => 
+      s.stationName === toStationId && s.cityName === searchToCity
+    );
+    
+    // If not found, try case-insensitive matching
+    if (!station) {
+      station = trip.tripStations.find(s => 
+        s.stationName.toLowerCase() === toStationId.toLowerCase() && 
+        s.cityName.toLowerCase() === searchToCity.toLowerCase()
+      );
+    }
+    
+    // If still not found, try matching just by city name
+    if (!station) {
+      station = trip.tripStations.find(s => 
+        s.cityName.toLowerCase() === searchToCity.toLowerCase() && s.isDropoffPoint
+      );
+    }
+    
+    console.log('Dropoff station search:', { 
+      toStationId, 
+      searchToCity, 
+      found: !!station, 
+      stationFound: station,
+      allStations: trip.tripStations.map(s => ({ 
+        id: s.id, 
+        name: s.stationName, 
+        city: s.cityName, 
+        isPickup: s.isPickupPoint,
+        isDropoff: s.isDropoffPoint 
+      }))
+    });
+    return station;
+  }, [trip, toStationId, searchToCity]);
+
   // Map station names to IDs when trip data is available
   useMemo(() => {
-    if (trip && fromStationId && toStationId) {
-      const pickupStation = trip.tripStations.find(s => 
-        s.stationName === fromStationId && s.cityName === searchFromCity
-      );
-      const dropoffStation = trip.tripStations.find(s => 
-        s.stationName === toStationId && s.cityName === searchToCity
-      );
-      
-      if (pickupStation && dropoffStation) {
-        setFormData(prev => ({
-          ...prev,
-          pickupStationId: pickupStation.id,
-          dropoffStationId: dropoffStation.id,
-        }));
-      }
+    if (pickupStation && dropoffStation) {
+      setFormData(prev => ({
+        ...prev,
+        pickupStationId: pickupStation.id,
+        dropoffStationId: dropoffStation.id,
+      }));
     }
-  }, [trip, fromStationId, toStationId, searchFromCity, searchToCity]);
+  }, [pickupStation, dropoffStation]);
 
   // Calculate pricing based on city names from search context
   const segmentPrice = useMemo(() => {
     if (!trip || !searchFromCity || !searchToCity) return 0;
     
-    // Find pricing segment based on city names
-    const pricingSegment = trip.pricing.find(p => 
-      p.fromCity === searchFromCity && p.toCity === searchToCity
+    // First try to find exact match in pricing array
+    let pricingSegment = trip.pricing.find(p => 
+      p.fromCity.toLowerCase() === searchFromCity.toLowerCase() && 
+      p.toCity.toLowerCase() === searchToCity.toLowerCase()
     );
+    
+    // If no exact match, try case-insensitive partial match
+    if (!pricingSegment) {
+      pricingSegment = trip.pricing.find(p => 
+        p.fromCity.toLowerCase().includes(searchFromCity.toLowerCase()) && 
+        p.toCity.toLowerCase().includes(searchToCity.toLowerCase())
+      );
+    }
+    
+
     
     return pricingSegment?.price || 50; // fallback price
   }, [trip, searchFromCity, searchToCity]);
 
   const luggageFee = useMemo(() => {
-    if (!trip?.luggagePolicy || formData.numberOfBags <= formData.selectedSeats.length) {
-      return 0; // No fee if bags <= number of passengers (each gets 1 free bag)
+    if (!trip?.luggagePolicy) {
+      return 0;
     }
+    
+    // If no seats are selected, no luggage fee should apply
+    if (formData.selectedSeats.length === 0) {
+      return 0;
+    }
+    
     // Calculate fee for additional bags beyond the free allowance
     const totalFreeBags = formData.selectedSeats.length; // 1 free bag per passenger
-    const additionalBags = formData.numberOfBags - totalFreeBags;
+    const additionalBags = Math.max(0, formData.numberOfBags - totalFreeBags);
     const feePerBag = trip.luggagePolicy.excessFeePerKg || 0; // This now represents fee per bag
     return additionalBags * feePerBag;
   }, [trip, formData.numberOfBags, formData.selectedSeats.length]);
@@ -219,15 +311,15 @@ export default function BookingPage() {
       const newSelectedSeats = formData.selectedSeats.filter(id => id !== seatId);
       updateFormData({
         selectedSeats: newSelectedSeats,
-        // Update numberOfBags to match the new number of passengers (free bags)
-        numberOfBags: Math.max(newSelectedSeats.length, formData.numberOfBags)
+        // Reset numberOfBags to 1 if no seats selected, otherwise use the new count
+        numberOfBags: newSelectedSeats.length === 0 ? 1 : newSelectedSeats.length
       });
     } else {
       const newSelectedSeats = [...formData.selectedSeats, seatId];
       updateFormData({
         selectedSeats: newSelectedSeats,
         // Update numberOfBags to match the new number of passengers (free bags)
-        numberOfBags: Math.max(newSelectedSeats.length, formData.numberOfBags)
+        numberOfBags: newSelectedSeats.length
       });
     }
   };
@@ -369,10 +461,30 @@ export default function BookingPage() {
                       <CheckCircle className="w-4 h-4" />
                       <span className="font-medium">Stations Selected</span>
                     </div>
-                    <p className="text-sm text-green-700">
-                      Your journey: {searchFromCity} → {searchToCity}
-                    </p>
-                    <p className="text-lg font-bold text-green-800 mt-2">₵{segmentPrice} per passenger</p>
+                    {pickupStation && dropoffStation ? (
+                      <div className="space-y-2 text-sm text-green-700">
+                        <div className="flex items-start gap-2">
+                          <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <div>
+                            <p className="font-medium">Pickup: {pickupStation?.stationName}</p>
+                            <p className="text-xs opacity-80">{pickupStation?.stationAddress}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <div>
+                            <p className="font-medium">Dropoff: {dropoffStation?.stationName}</p>
+                            <p className="text-xs opacity-80">{dropoffStation?.stationAddress}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-green-700">
+                        <p>Your journey: {searchFromCity} → {searchToCity}</p>
+                        <p className="text-xs opacity-80">Loading station details...</p>
+                      </div>
+                    )}
+                    <p className="text-lg font-bold text-green-800 mt-3">₵{segmentPrice} per seat</p>
                   </div>
                 )}
 
@@ -387,7 +499,7 @@ export default function BookingPage() {
                     </div>
 
                     <SeatSelectionGrid
-                      seatMap={trip.vehicleInfo?.seatMap as unknown as SeatMap || {
+                      seatMap={trip.vehicleInfo?.seatMap || {
                         rows: 0,
                         columns: 0,
                         layout: [] as Array<{
@@ -396,7 +508,7 @@ export default function BookingPage() {
                             id: string;
                             row: number;
                             column: number;
-                            type: 'regular' | 'premium' | 'disabled' | 'empty';
+                            type: 'regular' | 'disabled' | 'empty';
                             available: boolean;
                           }>;
                         }>,
@@ -591,7 +703,11 @@ export default function BookingPage() {
                       <h4 className="font-semibold mb-4">Booking Summary</h4>
                       <div className="space-y-3 text-sm">
                         <div className="flex justify-between">
-                          <span>Segment Price ({formData.selectedSeats.length} seat{formData.selectedSeats.length > 1 ? 's' : ''})</span>
+                          <span>Price per seat</span>
+                          <span>₵{segmentPrice}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Seats selected ({formData.selectedSeats.length})</span>
                           <span>₵{segmentPrice * formData.selectedSeats.length}</span>
                         </div>
                         {luggageFee > 0 && (
@@ -737,7 +853,7 @@ export default function BookingPage() {
                     </div>
                     {formData.selectedSeats.length > 0 && (
                       <p className="text-sm text-muted-foreground mt-1">
-                        For {formData.selectedSeats.length} passenger{formData.selectedSeats.length > 1 ? 's' : ''}
+                        ₵{segmentPrice} per seat × {formData.selectedSeats.length} passenger{formData.selectedSeats.length > 1 ? 's' : ''}
                       </p>
                     )}
                   </div>

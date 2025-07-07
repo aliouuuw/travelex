@@ -31,6 +31,20 @@ export interface TripSearchResult {
     type?: string;
     capacity: number;
     features?: string[];
+    seatMap?: {
+      rows: number;
+      columns: number;
+      layout: Array<{
+        row: number;
+        seats: Array<{
+          id: string;
+          row: number;
+          column: number;
+          type: 'regular' | 'disabled' | 'empty';
+          available: boolean;
+        }>;
+      }>;
+    };
   };
   departureTime: string;
   arrivalTime?: string;
@@ -87,7 +101,20 @@ export interface TripBookingDetails {
     type?: string;
     capacity: number;
     features?: string[];
-    seatMap?: Record<string, string>;
+    seatMap?: {
+      rows: number;
+      columns: number;
+      layout: Array<{
+        row: number;
+        seats: Array<{
+          id: string;
+          row: number;
+          column: number;
+          type: 'regular' | 'disabled' | 'empty';
+          available: boolean;
+        }>;
+      }>;
+    };
   };
   departureTime: string;
   arrivalTime?: string;
@@ -377,6 +404,7 @@ export const searchTripsBySegment = query({
           type: vehicle.type,
           capacity: vehicle.capacity,
           features: vehicle.features,
+          seatMap: vehicle.seatMap,
         },
         departureTime: new Date(trip.departureTime).toISOString(),
         arrivalTime: trip.arrivalTime ? new Date(trip.arrivalTime).toISOString() : undefined,

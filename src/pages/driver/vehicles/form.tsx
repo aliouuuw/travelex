@@ -20,6 +20,10 @@ import {
   AlertCircle,
   CheckCircle,
   Users,
+  Grid3X3,
+  Trash2,
+  Plus,
+  RotateCcw,
 } from "lucide-react";
 import {
   useDriverVehicles,
@@ -30,6 +34,8 @@ import {
   FUEL_TYPES,
   VEHICLE_STATUS,
   VEHICLE_FEATURES,
+  type SeatMap,
+  type Seat,
 } from "@/services/convex/vehicles";
 import { toast } from "sonner";
 import type { Id } from "convex/_generated/dataModel";
@@ -97,6 +103,431 @@ const SeatMapPreview = ({ capacity, vehicleType }: { capacity: number; vehicleTy
   );
 };
 
+// Seat Layout Editor Component
+const SeatLayoutEditor = ({ 
+  seatMap, 
+  onSeatMapChange,
+  capacity,
+  vehicleType 
+}: { 
+  seatMap: SeatMap; 
+  onSeatMapChange: (seatMap: SeatMap) => void;
+  capacity: number;
+  vehicleType: string;
+}) => {
+  const [editingSeatMap, setEditingSeatMap] = useState<SeatMap>(seatMap);
+  const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState<'click' | 'drag'>('click');
+
+  // Update editing seat map when prop changes
+  useEffect(() => {
+    setEditingSeatMap(seatMap);
+  }, [seatMap]);
+
+  const handleSeatClick = (seatId: string) => {
+    if (selectedSeat === seatId) {
+      setSelectedSeat(null);
+    } else {
+      setSelectedSeat(seatId);
+    }
+  };
+
+  const handleSeatTypeChange = (seatId: string, newType: Seat['type']) => {
+    const newSeatMap = {
+      ...editingSeatMap,
+      layout: editingSeatMap.layout.map(row => ({
+        ...row,
+        seats: row.seats.map(seat => 
+          seat.id === seatId 
+            ? { ...seat, type: newType }
+            : seat
+        )
+      }))
+    };
+    setEditingSeatMap(newSeatMap);
+    onSeatMapChange(newSeatMap);
+  };
+
+  const handleAddSeat = (rowIndex: number, position: 'start' | 'end') => {
+    const newSeatMap = { ...editingSeatMap };
+    const row = newSeatMap.layout[rowIndex];
+    
+    if (!row) return;
+
+    const newColumn = position === 'start' ? 0 : row.seats.length + 1;
+    const newSeat: Seat = {
+      id: `${row.row}-${newColumn}`,
+      row: row.row,
+      column: newColumn,
+      type: 'regular',
+      available: true,
+    };
+
+    if (position === 'start') {
+      row.seats.unshift(newSeat);
+      // Update column numbers for existing seats
+      row.seats.forEach((seat, index) => {
+        seat.column = index + 1;
+        seat.id = `${row.row}-${index + 1}`;
+      });
+    } else {
+      row.seats.push(newSeat);
+    }
+
+    setEditingSeatMap(newSeatMap);
+    onSeatMapChange(newSeatMap);
+  };
+
+  const handleRemoveSeat = (seatId: string) => {
+    const newSeatMap = {
+      ...editingSeatMap,
+      layout: editingSeatMap.layout.map(row => ({
+        ...row,
+        seats: row.seats.filter(seat => seat.id !== seatId)
+      })).filter(row => row.seats.length > 0)
+    };
+    setEditingSeatMap(newSeatMap);
+    onSeatMapChange(newSeatMap);
+    setSelectedSeat(null);
+  };
+
+  const handleAddRow = () => {
+    const newRowNumber = editingSeatMap.layout.length + 1;
+    const newRow = {
+      row: newRowNumber,
+      seats: []
+    };
+    
+    const newSeatMap = {
+      ...editingSeatMap,
+      rows: editingSeatMap.rows + 1,
+      layout: [...editingSeatMap.layout, newRow]
+    };
+    
+    setEditingSeatMap(newSeatMap);
+    onSeatMapChange(newSeatMap);
+  };
+
+  const handleRemoveRow = (rowIndex: number) => {
+    const newSeatMap = {
+      ...editingSeatMap,
+      rows: editingSeatMap.rows - 1,
+      layout: editingSeatMap.layout.filter((_, index) => index !== rowIndex)
+    };
+    setEditingSeatMap(newSeatMap);
+    onSeatMapChange(newSeatMap);
+  };
+
+  const handleResetLayout = () => {
+    const basicLayout = generateBasicSeatMap(capacity, vehicleType);
+    setEditingSeatMap(basicLayout);
+    onSeatMapChange(basicLayout);
+    setSelectedSeat(null);
+  };
+
+  const getSeatClassName = (seat: Seat | string) => {
+    const baseClasses = "w-10 h-10 border-2 rounded text-xs font-bold flex items-center justify-center transition-all duration-200 cursor-pointer";
+    
+    const seatType = typeof seat === 'string' ? seat : seat.type;
+    const seatId = typeof seat === 'string' ? '' : seat.id;
+    
+    if (selectedSeat === seatId) {
+      return `${baseClasses} bg-brand-orange border-brand-orange text-white shadow-lg scale-110`;
+    }
+
+    switch (seatType) {
+      case 'disabled':
+        return `${baseClasses} bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed opacity-50`;
+      case 'empty':
+        return `${baseClasses} bg-transparent border-dashed border-gray-300 text-gray-400`;
+      default:
+        return `${baseClasses} bg-blue-100 border-blue-300 text-blue-700 hover:bg-blue-200`;
+    }
+  };
+
+  const getSeatTypeColor = (type: Seat['type']) => {
+    switch (type) {
+      case 'disabled': return 'bg-gray-500';
+      case 'empty': return 'bg-transparent border border-gray-300';
+      default: return 'bg-blue-500';
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Grid3X3 className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-medium">Customize Seat Layout</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+            <Button
+              type="button"
+              variant={editMode === 'click' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setEditMode('click')}
+              className="text-xs"
+            >
+              Click
+            </Button>
+            <Button
+              type="button"
+              variant={editMode === 'drag' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setEditMode('drag')}
+              className="text-xs"
+            >
+              Drag & Drop
+            </Button>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleResetLayout}
+            className="text-xs"
+          >
+            <RotateCcw className="w-3 h-3 mr-1" />
+            Reset
+          </Button>
+        </div>
+      </div>
+
+      {/* Vehicle Front Indicator */}
+      <div className="flex justify-center">
+        <div className="px-4 py-2 bg-gray-100 rounded-lg text-sm font-medium text-gray-600">
+          Front of Vehicle
+        </div>
+      </div>
+
+      {/* Seat Grid */}
+      <div className="border border-border/40 rounded-lg p-6 bg-muted/20">
+        {editMode === 'click' ? (
+          <div className="space-y-4">
+            {editingSeatMap.layout.map((row, rowIndex) => (
+              <div key={row.row} className="flex items-center gap-2">
+                {/* Row Controls */}
+                <div className="flex flex-col gap-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAddSeat(rowIndex, 'start')}
+                    className="w-6 h-6 p-0 text-xs"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRemoveRow(rowIndex)}
+                    className="w-6 h-6 p-0 text-xs text-red-600 hover:text-red-700"
+                    disabled={editingSeatMap.layout.length <= 1}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                </div>
+
+                {/* Seats */}
+                <div className="flex gap-2">
+                  {row.seats.map((seat) => (
+                    <div key={seat.id} className="relative group">
+                      <button
+                        type="button"
+                        onClick={() => handleSeatClick(seat.id)}
+                        className={getSeatClassName(seat)}
+                      >
+                        {seat.type === 'empty' ? '·' : seat.id}
+                      </button>
+                      
+                      {/* Seat Type Menu */}
+                      {selectedSeat === seat.id && (
+                        <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-10 p-2 min-w-[120px]">
+                          <div className="text-xs font-medium mb-2 text-gray-700">Seat Type</div>
+                          <div className="space-y-1">
+                            {(['regular', 'disabled', 'empty'] as const).map((type) => (
+                              <button
+                                key={type}
+                                type="button"
+                                onClick={() => handleSeatTypeChange(seat.id, type)}
+                                className={`w-full text-left px-2 py-1 rounded text-xs flex items-center gap-2 hover:bg-gray-100 ${
+                                  seat.type === type ? 'bg-gray-100' : ''
+                                }`}
+                              >
+                                <div className={`w-3 h-3 rounded ${getSeatTypeColor(type)}`}></div>
+                                <span className="capitalize">{type}</span>
+                              </button>
+                            ))}
+                          </div>
+                          <div className="border-t mt-2 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSeat(seat.id)}
+                              className="w-full text-left px-2 py-1 rounded text-xs text-red-600 hover:bg-red-50"
+                            >
+                              Remove Seat
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  
+                  {/* Add seat to end of row */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAddSeat(rowIndex, 'end')}
+                    className="w-10 h-10 p-0 text-xs"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            
+            {/* Add new row */}
+            <div className="flex justify-center pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddRow}
+                className="text-xs"
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                Add Row
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="text-center text-sm text-muted-foreground mb-4">
+              Drag & Drop mode - Click on grid cells to toggle seat types
+            </div>
+            
+            {/* Simple Grid-based Editor */}
+            <div className="flex justify-center">
+              <div className="grid gap-2" style={{ 
+                gridTemplateColumns: `repeat(${Math.max(editingSeatMap.columns, 4)}, 1fr)` 
+              }}>
+                {Array.from({ length: editingSeatMap.rows * Math.max(editingSeatMap.columns, 4) }, (_, index) => {
+                  const row = Math.floor(index / Math.max(editingSeatMap.columns, 4)) + 1;
+                  const col = (index % Math.max(editingSeatMap.columns, 4)) + 1;
+                  const seatId = `${row}-${col}`;
+                  const existingSeat = editingSeatMap.layout
+                    .find(r => r.row === row)?.seats
+                    .find(s => s.column === col);
+                  
+                  const seatType = existingSeat?.type || 'empty';
+                  
+                  return (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => {
+                        if (existingSeat) {
+                          // Cycle through seat types
+                          const types: Seat['type'][] = ['regular', 'disabled', 'empty'];
+                          const currentIndex = types.indexOf(seatType);
+                          const nextType = types[(currentIndex + 1) % types.length];
+                          handleSeatTypeChange(seatId, nextType);
+                        } else {
+                          // Add new seat
+                          const newSeat: Seat = {
+                            id: seatId,
+                            row,
+                            column: col,
+                            type: 'regular',
+                            available: true,
+                          };
+                          
+                          const newSeatMap = { ...editingSeatMap };
+                          let targetRow = newSeatMap.layout.find(r => r.row === row);
+                          
+                          if (!targetRow) {
+                            targetRow = { row, seats: [] };
+                            newSeatMap.layout.push(targetRow);
+                            newSeatMap.rows = Math.max(newSeatMap.rows, row);
+                          }
+                          
+                          targetRow.seats.push(newSeat);
+                          targetRow.seats.sort((a, b) => a.column - b.column);
+                          
+                          setEditingSeatMap(newSeatMap);
+                          onSeatMapChange(newSeatMap);
+                        }
+                      }}
+                      className={`
+                        w-10 h-10 border-2 rounded text-xs font-bold flex items-center justify-center
+                        transition-all duration-200 cursor-pointer
+                        ${getSeatClassName(seatType)}
+                      `}
+                      title={`Row ${row}, Column ${col} - ${seatType}`}
+                    >
+                      {seatType === 'empty' ? '·' : seatId}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            
+            <div className="text-center text-xs text-muted-foreground">
+              Grid: {editingSeatMap.rows} rows × {Math.max(editingSeatMap.columns, 4)} columns
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Legend */}
+      <div className="flex justify-center gap-6 pt-4 border-t">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 bg-blue-100 border-2 border-blue-300 rounded"></div>
+          <span className="text-sm text-muted-foreground">Regular</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 bg-gray-100 border-2 border-gray-300 rounded opacity-50"></div>
+          <span className="text-sm text-muted-foreground">Disabled</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 bg-transparent border-2 border-dashed border-gray-300 rounded"></div>
+          <span className="text-sm text-muted-foreground">Empty</span>
+        </div>
+      </div>
+
+      {/* Instructions */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <h4 className="font-medium text-blue-900 mb-1">How to customize your seat layout</h4>
+            {editMode === 'click' ? (
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li>• Click on any seat to change its type (Regular, Disabled, Empty)</li>
+                <li>• Use the + buttons to add seats to rows</li>
+                <li>• Use the trash icon to remove rows</li>
+                <li>• Disabled seats are not available for booking</li>
+                <li>• Empty spaces create gaps in the layout</li>
+              </ul>
+            ) : (
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li>• Click on any grid cell to cycle through seat types</li>
+                <li>• Regular → Disabled → Empty → Regular</li>
+                <li>• Disabled seats are not available for booking</li>
+                <li>• Empty spaces create gaps in the layout</li>
+                <li>• Switch to "Click" mode for more advanced editing</li>
+              </ul>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function VehicleForm() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -104,6 +535,7 @@ export default function VehicleForm() {
   const [isLoading, setIsLoading] = useState(false);
   
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
+  const [customSeatMap, setCustomSeatMap] = useState<SeatMap | null>(null);
 
   const vehicles = useDriverVehicles();
   const createVehicle = useCreateVehicle();
@@ -153,6 +585,7 @@ export default function VehicleForm() {
         description: currentVehicle.description || "",
       });
       setSelectedFeatures(currentVehicle.features || []);
+      setCustomSeatMap(currentVehicle.seatMap || null);
     }
   }, [currentVehicle, form]);
 
@@ -169,7 +602,7 @@ export default function VehicleForm() {
         color: data.color,
         capacity: data.capacity,
         features: selectedFeatures,
-        seatMap: generateBasicSeatMap(data.capacity, data.vehicle_type),
+        seatMap: customSeatMap || generateBasicSeatMap(data.capacity, data.vehicle_type),
         // Convert empty strings to undefined for optional date fields
         insuranceExpiry: data.insurance_expiry || undefined,
         registrationExpiry: data.registration_expiry || undefined,
@@ -273,9 +706,10 @@ export default function VehicleForm() {
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Tabs defaultValue="basic" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
             <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="seatLayout">Seat Layout</TabsTrigger>
             <TabsTrigger value="features">Features</TabsTrigger>
             <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
           </TabsList>
@@ -494,6 +928,76 @@ export default function VehicleForm() {
 
               <div className="space-y-6">
                 <SeatMapPreview capacity={watchedCapacity} vehicleType={watchedVehicleType} />
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Seat Layout */}
+          <TabsContent value="seatLayout" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                <Card className="premium-card">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-100">
+                        <Grid3X3 className="w-5 h-5 text-indigo-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="font-heading text-lg">Seat Layout Configuration</CardTitle>
+                        <p className="text-sm text-muted-foreground">Customize your vehicle's seat arrangement</p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <SeatLayoutEditor
+                      seatMap={customSeatMap || generateBasicSeatMap(watchedCapacity, watchedVehicleType)}
+                      onSeatMapChange={setCustomSeatMap}
+                      capacity={watchedCapacity}
+                      vehicleType={watchedVehicleType}
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="space-y-6">
+                <SeatMapPreview capacity={watchedCapacity} vehicleType={watchedVehicleType} />
+                
+                {/* Current Layout Summary */}
+                <Card>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-sm font-medium">Current Layout</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span>Total Seats:</span>
+                      <span className="font-medium">
+                        {customSeatMap 
+                          ? customSeatMap.layout.reduce((total, row) => total + row.seats.filter(s => s.type !== 'empty').length, 0)
+                          : watchedCapacity
+                        }
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Regular Seats:</span>
+                      <span className="font-medium">
+                        {customSeatMap 
+                          ? customSeatMap.layout.reduce((total, row) => total + row.seats.filter(s => s.type === 'regular').length, 0)
+                          : watchedCapacity
+                        }
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between text-sm">
+                      <span>Disabled Seats:</span>
+                      <span className="font-medium">
+                        {customSeatMap 
+                          ? customSeatMap.layout.reduce((total, row) => total + row.seats.filter(s => s.type === 'disabled').length, 0)
+                          : 0
+                        }
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </TabsContent>

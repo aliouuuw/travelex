@@ -40,7 +40,7 @@ export interface Seat {
   id: string;
   row: number;
   column: number;
-  type: 'regular' | 'premium' | 'disabled' | 'empty';
+  type: 'regular' | 'disabled' | 'empty';
   available: boolean;
 }
 
