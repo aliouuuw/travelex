@@ -266,6 +266,7 @@ export default defineSchema({
   signupRequests: defineTable({
     email: v.string(),
     fullName: v.string(),
+    message: v.optional(v.string()),
     phone: v.optional(v.string()),
     status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
     reviewedBy: v.optional(v.id("profiles")),
