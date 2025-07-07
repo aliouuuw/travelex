@@ -26,7 +26,7 @@ export const sendInvitationEmail = internalAction({
     const { Resend } = await import("resend");
     const resend = new Resend(process.env.RESEND_API_KEY);
 
-    const invitationUrl = `${process.env.SITE_URL || 'http://localhost:5173'}/auth?mode=invitation&token=${args.token}`;
+    const invitationUrl = `https://traveleride.ca/auth?mode=invitation&token=${args.token}`;
 
     try {
       const { data, error } = await resend.emails.send({
