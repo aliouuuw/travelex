@@ -1,5 +1,6 @@
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 
 // =============================================
 // TYPE DEFINITIONS
@@ -201,7 +202,7 @@ export const useSearchTrips = (
 export const useTripForBooking = (tripId: string) => {
   return useQuery(
     api.tripSearch.getTripForBooking,
-    tripId ? { tripId: tripId as any } : "skip"
+    tripId ? { tripId: tripId as Id<"trips"> } : "skip"
   );
 };
 
@@ -212,20 +213,15 @@ export const useTripForBooking = (tripId: string) => {
 /**
  * Search for trips based on segment (for backward compatibility)
  */
-export const searchTripsBySegment = async (
-  query: TripSearchQuery
-): Promise<TripSearchResult[]> => {
+export const searchTripsBySegment = async (): Promise<TripSearchResult[]> => {
   // This is a placeholder - in practice, you'd use the useSearchTrips hook
-  // or call the Convex function directly in a server context
   throw new Error("Use useSearchTrips hook instead");
 };
 
 /**
  * Search for trips with country filtering (for backward compatibility)
  */
-export const searchTripsBySegmentWithCountry = async (
-  query: TripSearchQueryWithCountry
-): Promise<TripSearchResult[]> => {
+export const searchTripsBySegmentWithCountry = async (): Promise<TripSearchResult[]> => {
   // This is a placeholder - in practice, you'd use the useSearchTrips hook
   // The country filtering is handled by the city selection
   throw new Error("Use useSearchTrips hook instead");
@@ -234,7 +230,7 @@ export const searchTripsBySegmentWithCountry = async (
 /**
  * Get detailed trip information for booking (for backward compatibility)
  */
-export const getTripForBooking = async (tripId: string): Promise<TripBookingDetails | null> => {
+export const getTripForBooking = async (): Promise<TripBookingDetails | null> => {
   // This is a placeholder - in practice, you'd use the useTripForBooking hook
   throw new Error("Use useTripForBooking hook instead");
 };

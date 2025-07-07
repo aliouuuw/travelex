@@ -21,18 +21,18 @@ export interface CityWithCountry {
 export interface CountryRequest {
   id: string;
   countryName: string;
-  countryCode: string;
+  countryCode?: string;
   requestedBy: string;
   requesterName: string;
   requesterEmail: string;
-  reason: string;
+  businessJustification?: string;
   status: 'pending' | 'approved' | 'rejected';
   adminNotes?: string;
   reviewedBy?: string;
   reviewerName?: string;
-  reviewedAt?: string;
-  createdAt: string;
-  updatedAt: string;
+  reviewedAt?: number;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface MyCountryRequest {

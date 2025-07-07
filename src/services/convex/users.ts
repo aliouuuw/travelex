@@ -68,7 +68,7 @@ export const getDrivers = async (): Promise<Driver[]> => {
 };
 
 // Function to send password reset (for backward compatibility)
-export const resetPassword = async (email: string): Promise<void> => {
+export const resetPassword = async (): Promise<void> => {
   throw new Error('Use useSendDriverPasswordReset hook instead');
 };
 

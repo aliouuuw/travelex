@@ -3,7 +3,7 @@ import { action, mutation, query, internalMutation, internalQuery } from "./_gen
 import { internal } from "./_generated/api";
 import { ConvexError } from "convex/values";
 import Stripe from "stripe";
-import { Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
 
 // Types
 export interface PaymentIntentData {

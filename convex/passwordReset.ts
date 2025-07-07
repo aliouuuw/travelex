@@ -20,7 +20,7 @@ export const sendPasswordResetEmail = internalAction({
     fullName: v.string(),
     token: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     // Import Resend dynamically
     const { Resend } = await import("resend");
     const resend = new Resend(process.env.RESEND_API_KEY);

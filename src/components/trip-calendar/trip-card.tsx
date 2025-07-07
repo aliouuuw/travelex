@@ -77,7 +77,7 @@ export default function TripCard({ trip, onTripSelect, compact = false }: TripCa
         `}
         style={{ 
           borderLeftColor: trip.status === 'completed' ? '#10b981' : 
-                           trip.status === 'in_progress' ? '#f59e0b' : 
+                           trip.status === 'in-progress' ? '#f59e0b' : 
                            trip.status === 'cancelled' ? '#ef4444' : '#3b82f6'
         }}
         onClick={() => onTripSelect(trip)}

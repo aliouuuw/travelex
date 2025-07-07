@@ -27,6 +27,7 @@ import {
   type CountryRequest
 } from "@/services/convex/countries";
 import { toast } from "sonner";
+import type { Id } from "convex/_generated/dataModel";
 
 const CountryCard = ({ country }: { country: Country }) => {
   return (
@@ -71,18 +72,20 @@ const CountryRequestCard = ({ request }: { request: CountryRequest }) => {
 
   const handleApprove = async () => {
     try {
-      await approveMutation({ requestId: request.id as any });
+      await approveMutation({ requestId: request.id as Id<"countryRequests"> });
       toast.success("Country request approved!");
     } catch (error) {
+      console.error(error);
       toast.error("Failed to approve country request");
     }
   };
 
   const handleReject = async () => {
     try {
-      await rejectMutation({ requestId: request.id as any });
+      await rejectMutation({ requestId: request.id as Id<"countryRequests"> });
       toast.success("Country request rejected");
     } catch (error) {
+      console.error(error);
       toast.error("Failed to reject country request");
     }
   };
@@ -105,7 +108,7 @@ const CountryRequestCard = ({ request }: { request: CountryRequest }) => {
         </div>
         
         <div className="mb-3">
-          <p className="text-sm text-gray-600 italic">"{request.reason}"</p>
+          <p className="text-sm text-gray-600 italic">"{request.businessJustification}"</p>
         </div>
         
         <div className="flex gap-2">
@@ -162,6 +165,7 @@ const AddCountryForm = ({ onAdd }: { onAdd: (country: Country) => void }) => {
         tripCount: 0
       });
     } catch (error) {
+      console.error(error);
       toast.error("Failed to add country");
     }
   };

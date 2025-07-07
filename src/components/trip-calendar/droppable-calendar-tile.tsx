@@ -95,7 +95,7 @@ export default function CalendarTile({
             
             {/* Status dot */}
             <div className="flex justify-center mt-1">
-              {trips.some(trip => trip.status === 'in_progress') ? (
+              {trips.some(trip => trip.status === 'in-progress') ? (
                 <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></div>
               ) : trips.some(trip => trip.status === 'scheduled') ? (
                 <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>

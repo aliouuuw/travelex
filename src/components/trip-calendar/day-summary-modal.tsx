@@ -130,7 +130,7 @@ export default function DaySummaryModal({
                 {Object.entries(statusCounts).map(([status, count]) => (
                   <Badge 
                     key={status} 
-                    className={getStatusColor(status as "scheduled" | "in_progress" | "completed" | "cancelled")}
+                    className={getStatusColor(status as "scheduled" | "in-progress" | "completed" | "cancelled")}
                     style={{ fontSize: '10px' }}
                   >
                     {count} {status.replace('_', ' ')}

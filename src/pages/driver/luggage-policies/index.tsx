@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import LuggagePolicyForm from "./form.tsx";
+import type { Id } from '../../../../convex/_generated/dataModel';
 
 const LuggagePolicyRow = ({ 
   policy, 
@@ -37,8 +38,8 @@ const LuggagePolicyRow = ({
   onSetDefault 
 }: { 
   policy: LuggagePolicy; 
-  onDelete: (id: string) => void;
-  onSetDefault: (id: string) => void;
+  onDelete: (id: Id<"luggagePolicies">) => void;
+  onSetDefault: (id: Id<"luggagePolicies">) => void;
 }) => {
   const [showForm, setShowForm] = useState(false);
 
@@ -143,7 +144,6 @@ export default function LuggagePoliciesPage() {
   // Fetch luggage policies
   const policies = useDriverLuggagePolicies();
   const isLoading = policies === undefined;
-  const error = null; // Convex handles errors differently
 
   // Delete policy mutation
   const deletePolicyMutation = useDeleteLuggagePolicy();
@@ -169,23 +169,23 @@ export default function LuggagePoliciesPage() {
         : 0
   };
 
-  const handleDeletePolicy = async (policyId: string) => {
+  const handleDeletePolicy = async (policyId: Id<"luggagePolicies">) => {
     if (window.confirm('Are you sure you want to delete this luggage policy? This action cannot be undone.')) {
       try {
         await deletePolicyMutation({ policyId });
         toast.success('Luggage policy deleted successfully');
-      } catch (error: any) {
-        toast.error(`Failed to delete policy: ${error.message}`);
+      } catch (error) {
+        toast.error(`Failed to delete policy: ${error instanceof Error ? error.message : "An unknown error occurred"}`);
       }
     }
   };
 
-  const handleSetDefault = async (policyId: string) => {
+  const handleSetDefault = async (policyId: Id<"luggagePolicies">) => {
     try {
       await setDefaultMutation({ policyId });
       toast.success('Default policy updated successfully');
-    } catch (error: any) {
-      toast.error(`Failed to update default policy: ${error.message}`);
+    } catch (error) {
+      toast.error(`Failed to update default policy: ${error instanceof Error ? error.message : "An unknown error occurred"}`);
     }
   };
 
@@ -323,7 +323,7 @@ export default function LuggagePoliciesPage() {
                   {filteredPolicies.map((policy) => (
                     <LuggagePolicyRow 
                       key={policy._id} 
-                      policy={policy} 
+                      policy={policy as unknown as LuggagePolicy} 
                       onDelete={handleDeletePolicy}
                       onSetDefault={handleSetDefault}
                     />

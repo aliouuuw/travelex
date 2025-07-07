@@ -16,9 +16,9 @@ export interface LuggagePolicy {
   _creationTime: number;
   
   // Computed properties for backward compatibility
-  weightPerBag: number;
-  feePerAdditionalBag: number;
-  maxAdditionalBags: number;
+  weightPerBag?: number;
+  feePerAdditionalBag?: number;
+  maxAdditionalBags?: number;
 }
 
 export interface CreateLuggagePolicyInput {
