@@ -187,7 +187,6 @@ export default function AuthPage() {
         defaultValues: {
             full_name: "",
             email: "",
-            password: "",
             message: "",
         },
     });
@@ -257,6 +256,7 @@ export default function AuthPage() {
                 return await createSignupRequestMutation({
                     fullName: data.full_name,
                     email: data.email,
+                    message: data.message,
                 });
             }
         },

@@ -24,6 +24,7 @@ export const createSignupRequest = mutation({
     const signupRequestId = await ctx.db.insert("signupRequests", {
       email: args.email,
       fullName: args.fullName,
+      message: args.message,
       status: "pending",
     });
 
