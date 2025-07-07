@@ -239,7 +239,8 @@ const getRouteTemplatePricing = async (ctx: QueryCtx, routeTemplateId: Id<"route
 const calculateSegmentPrice = (
   pricing: Array<{ fromCity: string; toCity: string; price: number }>,
   fromCity: string,
-  toCity: string
+  toCity: string,
+  routeCities: string[]
 ) => {
   // Find direct pricing first
   const directPricing = pricing.find(
@@ -250,8 +251,31 @@ const calculateSegmentPrice = (
     return directPricing.price;
   }
   
-  // If no direct pricing, return 0 (will need to implement segment calculation)
-  return 0;
+  // If no direct pricing, calculate by summing segments
+  const fromIndex = routeCities.indexOf(fromCity);
+  const toIndex = routeCities.indexOf(toCity);
+
+  if (fromIndex === -1 || toIndex === -1 || fromIndex >= toIndex) {
+    return 0; // Should not happen with prior checks
+  }
+
+  let totalPrice = 0;
+  for (let i = fromIndex; i < toIndex; i++) {
+    const segmentFrom = routeCities[i];
+    const segmentTo = routeCities[i + 1];
+    const segmentPriceInfo = pricing.find(
+      (p) => p.fromCity === segmentFrom && p.toCity === segmentTo
+    );
+
+    if (!segmentPriceInfo) {
+      // If any intermediate segment price is missing, we cannot calculate the total.
+      // Depending on requirements, you might want to throw an error or handle this differently.
+      return 0;
+    }
+    totalPrice += segmentPriceInfo.price;
+  }
+
+  return totalPrice;
 };
 
 const getBookedSeatsForTrip = async (ctx: QueryCtx, tripId: Id<"trips">) => {
@@ -359,7 +383,7 @@ export const searchTripsBySegment = query({
       }
       
       // Calculate segment price
-      const segmentPrice = calculateSegmentPrice(pricing, fromCity, toCity);
+      const segmentPrice = calculateSegmentPrice(pricing, fromCity, toCity, routeCities);
       
       // Filter by max price if specified
       if (maxPrice && segmentPrice > maxPrice) {
@@ -368,7 +392,7 @@ export const searchTripsBySegment = query({
       
       // Calculate full route price (first to last city)
       const fullRoutePrice = routeCities.length > 1 
-        ? calculateSegmentPrice(pricing, routeCities[0], routeCities[routeCities.length - 1])
+        ? calculateSegmentPrice(pricing, routeCities[0], routeCities[routeCities.length - 1], routeCities)
         : segmentPrice;
       
       // Get pickup and dropoff stations

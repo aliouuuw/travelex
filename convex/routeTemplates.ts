@@ -13,6 +13,7 @@ const StationSchema = v.object({
 });
 
 const CityWithStationsSchema = v.object({
+  id: v.optional(v.id("routeTemplateCities")),
   cityName: v.string(),
   countryCode: v.optional(v.string()),
   countryName: v.optional(v.string()),
