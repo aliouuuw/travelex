@@ -30,7 +30,7 @@ export const sendInvitationEmail = internalAction({
 
     try {
       const { data, error } = await resend.emails.send({
-        from: "TravelEx <onboarding@resend.dev>", // Using Resend's default domain for testing
+        from: "TravelEx <travelex@aliou.online>", // Using Resend's default domain for testing
         to: [args.email],
         subject: `Welcome to TravelEx - You're invited to join as a ${args.role}`,
         html: `
