@@ -31,6 +31,7 @@ import NewVehiclePage from "./pages/driver/vehicles/new";
 import EditVehiclePage from "./pages/driver/vehicles/edit";
 import DriverTripsPage from "./pages/driver/trips";
 import ScheduleTripPage from "./pages/driver/trips/schedule";
+import BatchSchedulePage from "./pages/driver/trips/batch-schedule";
 import EditTripPage from "./pages/driver/trips/edit";
 import ReservationsPage from "./pages/driver/reservations";
 import ReservationDetailPage from "./pages/driver/reservations/[id]";
@@ -377,6 +378,10 @@ const router = createBrowserRouter([
               {
                 path: "trips/schedule",
                 element: <ScheduleTripPage />,
+              },
+              {
+                path: "trips/batch-schedule",
+                element: <BatchSchedulePage />,
               },
               {
                 path: "trips/:id/edit",

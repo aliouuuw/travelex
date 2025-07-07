@@ -733,6 +733,114 @@ export const createTrip = mutation({
 });
 
 /**
+ * Create multiple trips in batch with recurring rules
+ */
+export const createBatchTrips = mutation({
+  args: {
+    trips: v.array(v.object({
+      routeTemplateId: v.id("routeTemplates"),
+      vehicleId: v.id("vehicles"),
+      luggagePolicyId: v.optional(v.id("luggagePolicies")),
+      departureTime: v.number(),
+      arrivalTime: v.optional(v.number()),
+      stationSelections: v.array(v.object({
+        routeTemplateCityId: v.id("routeTemplateCities"),
+        stationId: v.id("routeTemplateStations"),
+        isPickupPoint: v.boolean(),
+        isDropoffPoint: v.boolean(),
+        estimatedTime: v.optional(v.number()),
+      })),
+    })),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new ConvexError("Not authenticated");
+    }
+    
+    const currentUser = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+    
+    if (!currentUser) {
+      throw new ConvexError("User profile not found");
+    }
+    
+    if (currentUser.role !== "driver" && currentUser.role !== "admin") {
+      throw new ConvexError("Only drivers can create trips");
+    }
+    
+    const createdTripIds: Id<"trips">[] = [];
+    
+    for (const tripData of args.trips) {
+      // Verify the route template belongs to the driver
+      const routeTemplate = await ctx.db.get(tripData.routeTemplateId);
+      if (!routeTemplate || routeTemplate.driverId !== currentUser._id) {
+        throw new ConvexError("Route template not found or access denied");
+      }
+      
+      // Verify the vehicle belongs to the driver
+      const vehicle = await ctx.db.get(tripData.vehicleId);
+      if (!vehicle || vehicle.driverId !== currentUser._id) {
+        throw new ConvexError("Vehicle not found or access denied");
+      }
+      
+      // Verify the luggage policy belongs to the driver (if provided)
+      if (tripData.luggagePolicyId) {
+        const luggagePolicy = await ctx.db.get(tripData.luggagePolicyId);
+        if (!luggagePolicy || luggagePolicy.driverId !== currentUser._id) {
+          throw new ConvexError("Luggage policy not found or access denied");
+        }
+      }
+      
+      // Create the trip
+      const tripId = await ctx.db.insert("trips", {
+        routeTemplateId: tripData.routeTemplateId,
+        driverId: currentUser._id,
+        vehicleId: tripData.vehicleId,
+        luggagePolicyId: tripData.luggagePolicyId!,
+        departureTime: tripData.departureTime,
+        arrivalTime: tripData.arrivalTime,
+        status: "scheduled",
+        availableSeats: vehicle.capacity,
+      });
+      
+      // Create trip stations
+      for (const station of tripData.stationSelections) {
+        // Get city information
+        const city = await ctx.db.get(station.routeTemplateCityId);
+        if (!city) {
+          throw new ConvexError("City not found");
+        }
+        
+        const country = await ctx.db.get(city.countryId);
+        if (!country) {
+          throw new ConvexError("Country not found");
+        }
+        
+        await ctx.db.insert("tripStations", {
+          tripId,
+          routeTemplateCityId: station.routeTemplateCityId,
+          stationId: station.stationId,
+          cityName: city.cityName,
+          countryId: city.countryId,
+          countryCode: country.code,
+          sequenceOrder: city.sequenceOrder,
+          isPickupPoint: station.isPickupPoint,
+          isDropoffPoint: station.isDropoffPoint,
+          estimatedTime: station.estimatedTime,
+        });
+      }
+      
+      createdTripIds.push(tripId);
+    }
+    
+    return createdTripIds;
+  },
+});
+
+/**
  * Update trip status
  */
 export const updateTripStatus = mutation({

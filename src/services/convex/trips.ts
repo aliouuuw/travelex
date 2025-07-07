@@ -95,6 +95,13 @@ export const useCreateTrip = () => {
 };
 
 /**
+ * Hook to create multiple trips in batch
+ */
+export const useCreateBatchTrips = () => {
+  return useMutation(api.trips.createBatchTrips);
+};
+
+/**
  * Hook to update a trip
  */
 export const useUpdateTrip = () => {
@@ -152,6 +159,17 @@ export const createTrip = async (tripData: TripFormData): Promise<string> => {
   const convexData = await transformTripDataToConvex(tripData);
   
   const result = await convex.mutation(api.trips.createTrip, convexData);
+  return result;
+};
+
+/**
+ * Create multiple trips in batch
+ */
+export const createBatchTrips = async (tripsData: TripFormData[]): Promise<string[]> => {
+  // Transform the data to match convex expectations
+  const convexData = await Promise.all(tripsData.map(tripData => transformTripDataToConvex(tripData)));
+  
+  const result = await convex.mutation(api.trips.createBatchTrips, { trips: convexData });
   return result;
 };
 

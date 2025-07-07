@@ -446,15 +446,26 @@ export default function DriverTripsPage() {
             Manage your scheduled trips and track your journey performance
           </p>
         </div>
-        <Button 
-          asChild 
-          className="bg-brand-orange hover:bg-brand-orange-600 text-white"
-        >
-          <Link to="/driver/trips/schedule" className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Schedule Trip
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            asChild 
+          >
+            <Link to="/driver/trips/batch-schedule" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Batch Schedule
+            </Link>
+          </Button>
+          <Button 
+            asChild 
+            className="bg-brand-orange hover:bg-brand-orange-600 text-white"
+          >
+            <Link to="/driver/trips/schedule" className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Schedule Trip
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
