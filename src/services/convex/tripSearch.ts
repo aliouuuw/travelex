@@ -338,7 +338,6 @@ export const formatTripDuration = (departureTime: string, arrivalTime?: string):
 export const getRoutePathString = (cities: string[]): string => {
   if (cities.length === 0) return "";
   if (cities.length === 1) return cities[0];
-  if (cities.length === 2) return `${cities[0]} → ${cities[1]}`;
   
-  return `${cities[0]} → ... → ${cities[cities.length - 1]}`;
+  return cities.join(' → ');
 }; 

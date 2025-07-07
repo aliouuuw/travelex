@@ -196,7 +196,6 @@ export default function TravelExBookingFlow({
                         <SelectItem key={city.cityName} value={city.cityName}>
                           <div className="flex flex-col items-start">
                             <span className="font-medium">{city.cityName}</span>
-                            <span className="text-xs text-muted-foreground">{city.countryName}</span>
                           </div>
                         </SelectItem>
                       ))}
@@ -253,7 +252,6 @@ export default function TravelExBookingFlow({
                         <SelectItem key={city.cityName} value={city.cityName}>
                           <div className="flex flex-col items-start">
                             <span className="font-medium">{city.cityName}</span>
-                            <span className="text-xs text-muted-foreground">{city.countryName}</span>
                           </div>
                         </SelectItem>
                       ))}
