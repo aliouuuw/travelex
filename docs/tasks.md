@@ -190,6 +190,12 @@
 ##  **NEXT PHASE PRIORITIES**
 
 ### **Short-term Goals:**
+- [ ] **Round Trip Booking** - Enable one-way and round trip ticket options with driver-controlled trip linking
+  - [ ] Database schema updates for trip linking
+  - [ ] Driver interface for linking return trips
+  - [ ] Passenger search with trip type selection
+  - [ ] Enhanced booking flow for dual trip selection
+  - [ ] Payment processing for combined bookings
 - [ ] Enhanced analytics dashboard for drivers
 - [ ] Mobile app development (React Native)
 - [ ] Advanced trip optimization features

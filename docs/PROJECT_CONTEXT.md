@@ -205,6 +205,7 @@
 ## 🚀 **Future Roadmap**
 
 ### **Short-term Goals:**
+- **Round Trip Booking:** Enable one-way and round trip ticket options with driver-controlled trip linking
 - **Enhanced Analytics:** Driver performance metrics and insights
 - **Mobile App:** Native iOS and Android applications
 - **Advanced Scheduling:** AI-powered trip optimization

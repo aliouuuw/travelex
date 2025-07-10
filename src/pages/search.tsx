@@ -61,7 +61,7 @@ export const TripResultCard = ({
   const buildBookingUrl = () => {
     const baseUrl = `/book/${trip.tripId}`;
     const params = new URLSearchParams();
-    
+      
     if (searchFromCity) params.append('fromCity', searchFromCity);
     if (searchToCity) params.append('toCity', searchToCity);
     if (searchFromStation) params.append('fromStation', searchFromStation);
