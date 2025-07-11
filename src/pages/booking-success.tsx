@@ -355,7 +355,7 @@ export default function BookingSuccessPage() {
                   <div>
                     <p className="text-sm text-muted-foreground">Total Paid</p>
                     <p className="text-xl font-bold text-green-800">
-                      ₵{bookingData.totalPrice || "0"}
+                      ${bookingData.totalPrice || "0"}
                     </p>
                   </div>
                 </div>

@@ -145,7 +145,7 @@ const TripDetailsPanel = ({ trip }: { trip: CalendarTrip | null }) => {
           {trip.totalEarnings && trip.totalEarnings > 0 && (
             <div className="flex items-center gap-2 text-brand-orange">
               <DollarSign className="w-4 h-4" />
-              <span>₵{trip.totalEarnings}</span>
+              <span>${trip.totalEarnings}</span>
             </div>
           )}
         </div>

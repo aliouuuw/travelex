@@ -289,7 +289,7 @@ export default function AccountSettings() {
     { value: 'USD', label: 'US Dollar ($)' },
     { value: 'EUR', label: 'Euro (€)' },
     { value: 'GBP', label: 'British Pound (£)' },
-    { value: 'GHS', label: 'Ghanaian Cedi (₵)' },
+    { value: 'GHS', label: 'Ghanaian Cedi ($)' },
     { value: 'NGN', label: 'Nigerian Naira (₦)' },
     { value: 'CAD', label: 'Canadian Dollar (C$)' },
   ];

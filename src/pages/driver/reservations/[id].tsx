@@ -218,7 +218,7 @@ export default function ReservationDetailPage() {
                   <p className="text-sm text-muted-foreground">Total Price</p>
                   <p className="font-medium flex items-center gap-1">
                     <DollarSign className="w-4 h-4" />
-                    ₵{reservation.totalPrice}
+                    ${reservation.totalPrice}
                   </p>
                 </div>
                 <div>

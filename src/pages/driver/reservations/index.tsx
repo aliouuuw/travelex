@@ -83,7 +83,7 @@ const ReservationCard = ({
                 </div>
                 <div className="flex items-center gap-1">
                   <DollarSign className="w-4 h-4" />
-                  <span>₵{reservation.totalPrice}</span>
+                  <span>${reservation.totalPrice}</span>
                 </div>
               </div>
             </div>
@@ -311,7 +311,7 @@ export default function ReservationsPage() {
               <div className="text-sm text-muted-foreground mt-1">Total Passengers</div>
             </div>
             <div className="text-center md:col-span-3 lg:col-span-1">
-              <div className="text-2xl font-bold text-foreground">₵{stats.totalRevenue}</div>
+              <div className="text-2xl font-bold text-foreground">${stats.totalRevenue}</div>
               <div className="text-sm text-muted-foreground mt-1">Total Revenue</div>
             </div>
           </div>

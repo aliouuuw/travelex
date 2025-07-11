@@ -171,7 +171,7 @@ const TripCard = ({ trip }: { trip: Trip }) => {
                 {trip.totalEarnings && trip.totalEarnings > 0 && (
                   <div className="flex items-center gap-1">
                     <DollarSign className="w-4 h-4" />
-                    <span>₵{trip.totalEarnings}</span>
+                    <span>${trip.totalEarnings}</span>
                   </div>
                 )}
               </div>
@@ -495,7 +495,7 @@ const TripDetailsPanel = ({ trip }: { trip: CalendarTrip | null }) => {
           {trip.totalEarnings && trip.totalEarnings > 0 && (
             <div className="flex items-center gap-2 text-brand-orange">
               <DollarSign className="w-4 h-4" />
-              <span>₵{trip.totalEarnings}</span>
+              <span>${trip.totalEarnings}</span>
             </div>
           )}
         </div>
@@ -689,7 +689,7 @@ export default function DriverTripsPage() {
           </div>
           <div className="text-center md:col-span-3 lg:col-span-1">
             <div className="text-2xl font-bold text-foreground">
-              ₵{stats.totalEarnings}
+              ${stats.totalEarnings}
             </div>
             <div className="text-sm text-muted-foreground mt-1">
               Total Earnings

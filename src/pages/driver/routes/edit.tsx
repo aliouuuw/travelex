@@ -373,7 +373,7 @@ const InterCityFareManager = ({
     }
 
     updateFare(originCity, destinationCity, totalFare);
-    toast.success(`Auto-calculated ${originCity} → ${destinationCity}: ₵${totalFare}`);
+    toast.success(`Auto-calculated ${originCity} → ${destinationCity}: $${totalFare}`);
   };
 
   return (
@@ -400,7 +400,7 @@ const InterCityFareManager = ({
         {cities.length >= 2 && (
           <p className="text-sm text-muted-foreground">
             Auto-calculate will set {cities[0]?.cityName || "Origin"} → {cities[cities.length - 1]?.cityName || "Destination"} 
-            {" "}fare by summing all segment prices (Total: ₵{calculateTotalFare()})
+            {" "}fare by summing all segment prices (Total: ${calculateTotalFare()})
           </p>
         )}
       </CardHeader>
@@ -436,7 +436,7 @@ const InterCityFareManager = ({
               )}
             </div>
             <div className="flex items-center gap-2">
-              <span className={`text-sm ${isTotal ? 'text-brand-dark-blue font-medium' : ''}`}>₵</span>
+              <span className={`text-sm ${isTotal ? 'text-brand-dark-blue font-medium' : ''}`}>$</span>
               <Input
                 type="number"
                 value={getFare(from, to)}
@@ -688,7 +688,7 @@ export default function RouteEditor() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="basePrice">Base Price (₵)</Label>
+              <Label htmlFor="basePrice">Base Price ($)</Label>
               <Controller
                 name="basePrice"
                 control={control}

@@ -125,7 +125,7 @@ const RouteFlowChart = ({ route }: { route: RouteTemplate }) => {
                   );
                   return fare ? (
                     <div className="mt-2 px-2 py-1 bg-white border border-gray-300 rounded-md shadow-sm">
-                      <span className="text-xs font-medium text-gray-700">₵{fare.fare}</span>
+                      <span className="text-xs font-medium text-gray-700">${fare.fare}</span>
                     </div>
                   ) : null;
                 })()}
@@ -142,7 +142,7 @@ const RouteFlowChart = ({ route }: { route: RouteTemplate }) => {
             <h4 className="text-sm font-medium text-gray-700">Route Pricing</h4>
             <div className="flex items-center gap-1 text-brand-dark-blue font-semibold">
               <DollarSign className="w-4 h-4" />
-              <span>Total: ₵{calculateTotalRouteFare(route)}</span>
+              <span>Total: ${calculateTotalRouteFare(route)}</span>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -189,7 +189,7 @@ const RouteFlowChart = ({ route }: { route: RouteTemplate }) => {
                       <span>{fare.fromCity} → {fare.toCity}</span>
                       {isTotal && <span className="text-[10px] opacity-75">(Total)</span>}
                     </div>
-                    <span className="font-medium">₵{fare.fare}</span>
+                    <span className="font-medium">${fare.fare}</span>
                   </div>
                 );
               })}
@@ -247,7 +247,7 @@ const DriverRouteCard = ({ route }: { route: RouteTemplate }) => {
                 </div>
                 <div className="flex items-center gap-1">
                   <DollarSign className="w-4 h-4" />
-                  <span>₵{totalRouteFare}</span>
+                  <span>{totalRouteFare}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Users className="w-4 h-4" />
@@ -293,7 +293,7 @@ const DriverRouteCard = ({ route }: { route: RouteTemplate }) => {
               <p className="text-xs text-muted-foreground">Scheduled Trips</p>
             </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-brand-orange">₵{route.totalEarnings}</p>
+            <p className="text-2xl font-bold text-brand-orange">${route.totalEarnings}</p>
             <p className="text-xs text-muted-foreground">Total Earnings</p>
           </div>
         </div>
@@ -408,7 +408,7 @@ export default function DriverRoutesPage() {
             <div className="text-sm text-muted-foreground mt-1">Scheduled Trips</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-foreground">₵{stats.totalEarnings}</div>
+            <div className="text-2xl font-bold text-foreground">${stats.totalEarnings}</div>
             <div className="text-sm text-muted-foreground mt-1">Total Earnings</div>
           </div>
           <div className="text-center">

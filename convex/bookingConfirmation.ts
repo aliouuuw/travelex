@@ -195,7 +195,7 @@ export const sendBookingConfirmationEmail = internalAction({
                       </div>
                       <div>
                         <p style="color: #64748b; margin: 0 0 5px 0; font-size: 14px; font-weight: 600;">TOTAL PAID</p>
-                        <p style="color: #16a34a; margin: 0; font-size: 18px; font-weight: bold;">₵${args.bookingDetails.totalPrice}</p>
+                        <p style="color: #16a34a; margin: 0; font-size: 18px; font-weight: bold;">$${args.bookingDetails.totalPrice}</p>
                       </div>
                     </div>
                   </div>
@@ -263,7 +263,7 @@ Passenger Information:
 ${args.bookingDetails.passengerPhone ? `- Phone: ${args.bookingDetails.passengerPhone}` : ''}
 - Seats: ${args.bookingDetails.selectedSeats.join(', ')}
 - Luggage: ${args.bookingDetails.numberOfBags} bag${args.bookingDetails.numberOfBags > 1 ? 's' : ''}
-- Total Paid: ₵${args.bookingDetails.totalPrice}
+- Total Paid: $${args.bookingDetails.totalPrice}
 
 Important Reminders:
 - Arrive 15 minutes before departure

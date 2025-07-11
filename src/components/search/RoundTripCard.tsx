@@ -94,17 +94,17 @@ export function RoundTripCard({
               <p className="text-sm text-muted-foreground">Total Price</p>
               {discountAmount > 0 && (
                 <p className="text-xs text-muted-foreground line-through">
-                  ₵{(totalPrice + discountAmount).toFixed(2)}
+                  ${(totalPrice + discountAmount).toFixed(2)}
                 </p>
               )}
               <p className="text-2xl font-bold text-brand-orange">
-                ₵{totalPrice.toFixed(2)}
+                ${totalPrice.toFixed(2)}
               </p>
             </div>
             {discountAmount > 0 && (
               <Badge className="bg-green-100 text-green-800">
                 <Tag className="w-3 h-3 mr-1" />
-                Save {discountPercentage}% (₵{discountAmount.toFixed(2)})
+                Save {discountPercentage}% (${discountAmount.toFixed(2)})
               </Badge>
             )}
           </div>
@@ -169,7 +169,7 @@ export function RoundTripCard({
                 Route: {trip.routeTemplateName}
               </p>
               <p className="text-sm font-medium">
-                Price: ₵{trip.segmentPrice} per passenger
+                Price: ${trip.segmentPrice} per passenger
               </p>
             </div>
           </TabsContent>
@@ -216,7 +216,7 @@ export function RoundTripCard({
                 Route: {trip.returnTripDetails.routeTemplateName}
               </p>
               <p className="text-sm font-medium">
-                Price: ₵{trip.returnTripDetails.price} per passenger
+                Price: ${trip.returnTripDetails.price} per passenger
               </p>
             </div>
           </TabsContent>

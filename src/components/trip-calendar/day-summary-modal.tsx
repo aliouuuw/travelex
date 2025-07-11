@@ -117,7 +117,7 @@ export default function DaySummaryModal({
                   <DollarSign className="w-4 h-4 text-orange-600" />
                   <span className="text-sm font-medium text-orange-900">Earnings</span>
                 </div>
-                <p className="text-2xl font-bold text-orange-600">₵{totalEarnings}</p>
+                <p className="text-2xl font-bold text-orange-600">${totalEarnings}</p>
               </div>
             )}
             

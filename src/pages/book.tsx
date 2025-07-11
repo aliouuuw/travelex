@@ -98,7 +98,7 @@ const LuggageSelector = ({
                     <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                     <span className="text-gray-700">Additional bags</span>
                   </div>
-                  <p className="text-green-800 ml-4">₵{(policy.excessFeePerKg || 5).toFixed(2)} per additional bag</p>
+                  <p className="text-green-800 ml-4">${(policy.excessFeePerKg || 5).toFixed(2)} per additional bag</p>
                 </div>
               </div>
             </div>
@@ -147,7 +147,7 @@ const LuggageSelector = ({
           <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm">
             <div className="flex justify-between items-center">
               <span>Additional luggage fee ({additionalBags} bag{additionalBags > 1 ? 's' : ''})</span>
-              <span className="font-semibold text-brand-orange">₵{luggageFee.toFixed(2)}</span>
+              <span className="font-semibold text-brand-orange">${luggageFee.toFixed(2)}</span>
             </div>
           </div>
         )}
@@ -743,7 +743,7 @@ export default function BookingPage() {
                           ) : (
                             <p className="text-sm text-blue-700">Loading station details...</p>
                           )}
-                          <p className="text-sm font-bold text-blue-800 mt-2">₵{segmentPrice} per seat</p>
+                          <p className="text-sm font-bold text-blue-800 mt-2">${segmentPrice} per seat</p>
                         </div>
                         
                         {/* Return */}
@@ -771,7 +771,7 @@ export default function BookingPage() {
                           ) : (
                             <p className="text-sm text-green-700">Loading station details...</p>
                           )}
-                          <p className="text-sm font-bold text-green-800 mt-2">₵{returnSegmentPrice} per seat</p>
+                          <p className="text-sm font-bold text-green-800 mt-2">${returnSegmentPrice} per seat</p>
                         </div>
                       </div>
                     ) : (
@@ -800,7 +800,7 @@ export default function BookingPage() {
                             <p className="text-xs opacity-80">Loading station details...</p>
                           </div>
                         )}
-                        <p className="text-lg font-bold text-green-800 mt-3">₵{segmentPrice} per seat</p>
+                        <p className="text-lg font-bold text-green-800 mt-3">${segmentPrice} per seat</p>
                       </div>
                     )}
                   </div>
@@ -918,16 +918,16 @@ export default function BookingPage() {
                       <div className="text-sm text-blue-800">
                         {isRoundTrip ? (
                           <div className="space-y-1">
-                            <p>Outbound: {formData.selectedSeats.length} × ₵{segmentPrice} = ₵{segmentPrice * formData.selectedSeats.length}</p>
-                            <p>Return: {formData.returnTrip?.selectedSeats.length || 0} × ₵{returnSegmentPrice} = ₵{returnSegmentPrice * (formData.returnTrip?.selectedSeats.length || 0)}</p>
+                            <p>Outbound: {formData.selectedSeats.length} × ${segmentPrice} = ${segmentPrice * formData.selectedSeats.length}</p>
+                            <p>Return: {formData.returnTrip?.selectedSeats.length || 0} × ${returnSegmentPrice} = ${returnSegmentPrice * (formData.returnTrip?.selectedSeats.length || 0)}</p>
                             <div className="border-t pt-1 mt-2">
-                              <p className="font-medium">Total Base Fare: ₵{(segmentPrice * formData.selectedSeats.length) + (returnSegmentPrice * (formData.returnTrip?.selectedSeats.length || 0))}</p>
+                              <p className="font-medium">Total Base Fare: ${(segmentPrice * formData.selectedSeats.length) + (returnSegmentPrice * (formData.returnTrip?.selectedSeats.length || 0))}</p>
                             </div>
                           </div>
                         ) : (
                           <div>
-                        <p>Base fare: ₵{segmentPrice} per passenger</p>
-                        <p>Selected seats: {formData.selectedSeats.length} × ₵{segmentPrice} = ₵{segmentPrice * formData.selectedSeats.length}</p>
+                        <p>Base fare: ${segmentPrice} per passenger</p>
+                        <p>Selected seats: {formData.selectedSeats.length} × ${segmentPrice} = ${segmentPrice * formData.selectedSeats.length}</p>
                               </div>
                             )}
                           </div>
@@ -1026,21 +1026,21 @@ export default function BookingPage() {
                               <div className="space-y-1 text-xs">
                                 <div className="flex justify-between">
                                   <span>Price per seat</span>
-                                  <span>₵{segmentPrice}</span>
+                                  <span>${segmentPrice}</span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span>Seats ({formData.selectedSeats.length})</span>
-                                  <span>₵{segmentPrice * formData.selectedSeats.length}</span>
+                                  <span>${segmentPrice * formData.selectedSeats.length}</span>
                                 </div>
                                 {luggageFee > 0 && (
                                   <div className="flex justify-between">
                                     <span>Additional luggage</span>
-                                    <span>₵{luggageFee.toFixed(2)}</span>
+                                    <span>${luggageFee.toFixed(2)}</span>
                                   </div>
                                 )}
                                 <div className="flex justify-between font-medium border-t pt-1">
                                   <span>Outbound Subtotal</span>
-                                  <span>₵{segmentPrice * formData.selectedSeats.length + luggageFee}</span>
+                                  <span>${segmentPrice * formData.selectedSeats.length + luggageFee}</span>
                                 </div>
                               </div>
                             </div>
@@ -1053,21 +1053,21 @@ export default function BookingPage() {
                               <div className="space-y-1 text-xs">
                                 <div className="flex justify-between">
                                   <span>Price per seat</span>
-                                  <span>₵{returnSegmentPrice}</span>
+                                  <span>${returnSegmentPrice}</span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span>Seats ({formData.returnTrip?.selectedSeats.length || 0})</span>
-                                  <span>₵{returnSegmentPrice * (formData.returnTrip?.selectedSeats.length || 0)}</span>
+                                  <span>${returnSegmentPrice * (formData.returnTrip?.selectedSeats.length || 0)}</span>
                                 </div>
                                 {returnLuggageFee > 0 && (
                                   <div className="flex justify-between">
                                     <span>Additional luggage</span>
-                                    <span>₵{returnLuggageFee.toFixed(2)}</span>
+                                    <span>${returnLuggageFee.toFixed(2)}</span>
                                   </div>
                                 )}
                                 <div className="flex justify-between font-medium border-t pt-1">
                                   <span>Return Subtotal</span>
-                                  <span>₵{returnSegmentPrice * (formData.returnTrip?.selectedSeats.length || 0) + returnLuggageFee}</span>
+                                  <span>${returnSegmentPrice * (formData.returnTrip?.selectedSeats.length || 0) + returnLuggageFee}</span>
                                 </div>
                               </div>
                             </div>
@@ -1077,16 +1077,16 @@ export default function BookingPage() {
                           <div>
                         <div className="flex justify-between">
                           <span>Price per seat</span>
-                          <span>₵{segmentPrice}</span>
+                          <span>${segmentPrice}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>Seats selected ({formData.selectedSeats.length})</span>
-                          <span>₵{segmentPrice * formData.selectedSeats.length}</span>
+                          <span>${segmentPrice * formData.selectedSeats.length}</span>
                         </div>
                         {luggageFee > 0 && (
                           <div className="flex justify-between">
                             <span>Additional Luggage ({formData.numberOfBags - formData.selectedSeats.length} additional bag{formData.numberOfBags - formData.selectedSeats.length > 1 ? 's' : ''})</span>
-                            <span>₵{luggageFee.toFixed(2)}</span>
+                            <span>${luggageFee.toFixed(2)}</span>
                           </div>
                         )}
                           </div>
@@ -1095,7 +1095,7 @@ export default function BookingPage() {
                         <div className="border-t pt-3">
                           <div className="flex justify-between font-bold text-lg">
                             <span>Total Amount</span>
-                            <span className="text-brand-orange">₵{totalPrice}</span>
+                            <span className="text-brand-orange">${totalPrice}</span>
                           </div>
                         </div>
                       </div>
@@ -1225,17 +1225,17 @@ export default function BookingPage() {
                   <div className="pt-4 border-t">
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-bold">Total</span>
-                      <span className="text-2xl font-bold text-brand-orange">₵{totalPrice}</span>
+                      <span className="text-2xl font-bold text-brand-orange">${totalPrice}</span>
                     </div>
                     {isRoundTrip ? (
                       <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                        <p>Outbound: {formData.selectedSeats.length} seat{formData.selectedSeats.length !== 1 ? 's' : ''} × ₵{segmentPrice}</p>
-                        <p>Return: {formData.returnTrip?.selectedSeats.length || 0} seat{(formData.returnTrip?.selectedSeats.length || 0) !== 1 ? 's' : ''} × ₵{returnSegmentPrice}</p>
+                        <p>Outbound: {formData.selectedSeats.length} seat{formData.selectedSeats.length !== 1 ? 's' : ''} × ${segmentPrice}</p>
+                        <p>Return: {formData.returnTrip?.selectedSeats.length || 0} seat{(formData.returnTrip?.selectedSeats.length || 0) !== 1 ? 's' : ''} × ${returnSegmentPrice}</p>
                       </div>
                     ) : (
                       formData.selectedSeats.length > 0 && (
                       <p className="text-sm text-muted-foreground mt-1">
-                        ₵{segmentPrice} per seat × {formData.selectedSeats.length} passenger{formData.selectedSeats.length > 1 ? 's' : ''}
+                        ${segmentPrice} per seat × {formData.selectedSeats.length} passenger{formData.selectedSeats.length > 1 ? 's' : ''}
                       </p>
                       )
                     )}

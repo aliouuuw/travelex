@@ -114,7 +114,7 @@ const PaymentForm = ({
         ) : (
           <>
             <CreditCard className="w-4 h-4 mr-2" />
-            Pay ₵{totalPrice}
+            Pay ${totalPrice}
           </>
         )}
       </Button>
@@ -379,13 +379,13 @@ export default function PaymentPage() {
                 <div className="pt-4 border-t">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-bold">Total</span>
-                    <span className="text-2xl font-bold text-brand-orange">₵{bookingData.totalPrice}</span>
+                    <span className="text-2xl font-bold text-brand-orange">${bookingData.totalPrice}</span>
                   </div>
                   {bookingData.isRoundTrip && (
                     <div className="mt-2 text-sm text-muted-foreground">
                       <div className="flex justify-between">
-                        <span>Outbound: ₵{bookingData.outboundBooking?.totalPrice}</span>
-                        <span>Return: ₵{bookingData.returnBooking?.totalPrice}</span>
+                        <span>Outbound: ${bookingData.outboundBooking?.totalPrice}</span>
+                        <span>Return: ${bookingData.returnBooking?.totalPrice}</span>
                       </div>
                     </div>
                   )}
