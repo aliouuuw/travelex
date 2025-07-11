@@ -122,7 +122,11 @@ const TripCard = ({ trip }: { trip: Trip }) => {
   const isUpcoming = isUpcomingTrip(trip.departureTime);
 
   const canLinkReturnTrip =
-    trip.status === "scheduled" && !trip.isRoundTrip && isUpcoming;
+    trip.status === "scheduled" &&
+    !trip.isRoundTrip &&
+    !trip.returnTripId &&
+    !trip.outboundTripId &&
+    isUpcoming;
 
   // Generate route path display
   const routePath = trip.routeCities.map((city) => city.cityName).join(" → ");
@@ -182,6 +186,17 @@ const TripCard = ({ trip }: { trip: Trip }) => {
               >
                 <Link2 className="w-4 h-4 mr-1" />
                 Link Return
+              </Button>
+            )}
+            {trip.isRoundTrip && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                className="text-blue-600 border-blue-200 bg-blue-50"
+              >
+                <Link2 className="w-4 h-4 mr-1" />
+                Linked
               </Button>
             )}
             {trip.isRoundTrip && (
@@ -533,6 +548,12 @@ export default function DriverTripsPage() {
         tripStations: trip.tripStations || [],
         reservationsCount: trip.reservationsCount || 0,
         totalEarnings: trip.totalEarnings || 0,
+        // Round trip fields
+        returnTripId: trip.returnTripId,
+        outboundTripId: trip.outboundTripId,
+        roundTripDiscount: trip.roundTripDiscount,
+        isRoundTrip: trip.isRoundTrip || false,
+        linkedTripInfo: trip.linkedTripInfo,
         date: startDate,
         start: startDate,
         end: endDate,

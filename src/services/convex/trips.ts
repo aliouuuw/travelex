@@ -299,6 +299,12 @@ function transformTripFromConvex(convexTrip: Record<string, any>): Trip {
     tripStations: convexTrip.tripStations || [],
     reservationsCount: convexTrip.reservationsCount || 0,
     totalEarnings: convexTrip.totalEarnings || 0,
+    // Round trip fields
+    returnTripId: convexTrip.returnTripId,
+    outboundTripId: convexTrip.outboundTripId,
+    roundTripDiscount: convexTrip.roundTripDiscount,
+    isRoundTrip: convexTrip.isRoundTrip || false,
+    linkedTripInfo: convexTrip.linkedTripInfo,
   };
 }
 

@@ -26,7 +26,6 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { useCitiesForCountry } from "@/services/convex/countries";
 import { usePublicStationsForCity } from "@/services/convex/citiesStations";
 import { useNavigate } from "react-router-dom";
@@ -158,33 +157,26 @@ export default function TravelExBookingFlow({
     if (redirectToSearch) {
       // Navigate to search page with query params
       const params = new URLSearchParams({
-        fromCity: searchData.fromCity,
-        toCity: searchData.toCity,
-        ...(searchData.fromStation && { fromStation: searchData.fromStation }),
-        ...(searchData.toStation && { toStation: searchData.toStation }),
-        ...(searchData.departureDate && {
-          departureDate: format(searchData.departureDate, "yyyy-MM-dd"),
+        fromCity: searchFormData.fromCity,
+        toCity: searchFormData.toCity,
+        ...(searchFormData.fromStation && {
+          fromStation: searchFormData.fromStation,
         }),
-        ...(searchData.returnDate && {
-          returnDate: format(searchData.returnDate, "yyyy-MM-dd"),
+        ...(searchFormData.toStation && {
+          toStation: searchFormData.toStation,
         }),
-        passengers: searchData.passengers.toString(),
-        tripType: searchData.tripType,
+        ...(searchFormData.departureDate && {
+          departureDate: format(searchFormData.departureDate, "yyyy-MM-dd"),
+        }),
+        ...(searchFormData.returnDate && {
+          returnDate: format(searchFormData.returnDate, "yyyy-MM-dd"),
+        }),
+        passengers: searchFormData.passengers.toString(),
+        tripType: searchFormData.tripType,
       });
       navigate(`/search?${params.toString()}`);
     } else {
-      onSearch?.({
-        fromCountry: "CA",
-        toCountry: "CA",
-        fromCity: searchData.fromCity,
-        toCity: searchData.toCity,
-        fromStation: searchData.fromStation,
-        toStation: searchData.toStation,
-        departureDate: searchData.departureDate!,
-        returnDate: searchData.returnDate,
-        passengers: searchData.passengers,
-        tripType: searchData.tripType,
-      });
+      onSearch?.(searchFormData);
     }
   };
 
