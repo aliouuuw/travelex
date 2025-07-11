@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 import { useDriverRouteTemplates, useDeleteRouteTemplate, type RouteTemplate } from "@/services/convex/routeTemplates";
 import { toast } from "sonner";
 import type { Id } from "convex/_generated/dataModel";
-import { useGetCurrentUser } from "@/services/convex/users";
+// import { useGetCurrentUser } from "@/services/convex/users";
 
 // Types are now imported from the service layer
 
@@ -306,7 +306,7 @@ export default function DriverRoutesPage() {
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'draft'>('all');
 
   // Check authentication
-  const currentUser = useGetCurrentUser();
+  // const currentUser = useGetCurrentUser();
   
   // Fetch route templates from Convex
   const routeTemplates = useDriverRouteTemplates();
