@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { convex } from "@/lib/convex";
+import { useAuth } from "@/hooks/use-auth";
 
 // Types matching the original Supabase service
 export interface ReusableStation {
@@ -18,7 +19,13 @@ export interface ReusableCity {
 
 // React hooks for cities and stations
 export const useDriverCitiesAndStations = () => {
-  return useQuery(api.citiesStations.getDriverCitiesAndStations);
+  const { user } = useAuth();
+  return useQuery(
+    api.citiesStations.getDriverCitiesAndStations,
+    user?.profile?.role === "driver" || user?.profile?.role === "admin"
+      ? {}
+      : "skip",
+  );
 };
 
 export const useStationsForCity = (cityName: string) => {
@@ -28,8 +35,8 @@ export const useStationsForCity = (cityName: string) => {
 // Public hook for getting stations (no authentication required)
 export const usePublicStationsForCity = (cityName: string) => {
   return useQuery(
-    api.citiesStations.getPublicStationsForCity, 
-    cityName ? { cityName } : "skip"
+    api.citiesStations.getPublicStationsForCity,
+    cityName ? { cityName } : "skip",
   );
 };
 
@@ -48,17 +55,28 @@ export const useExtractAndSaveCitiesFromRoute = () => {
 
 // Promise-based functions for backward compatibility
 export const getDriverCitiesAndStations = async (): Promise<ReusableCity[]> => {
-  const result = await convex.query(api.citiesStations.getDriverCitiesAndStations);
+  const result = await convex.query(
+    api.citiesStations.getDriverCitiesAndStations,
+  );
   return result || [];
 };
 
-export const getStationsForCity = async (cityName: string): Promise<ReusableStation[]> => {
-  const result = await convex.query(api.citiesStations.getStationsForCity, { cityName });
+export const getStationsForCity = async (
+  cityName: string,
+): Promise<ReusableStation[]> => {
+  const result = await convex.query(api.citiesStations.getStationsForCity, {
+    cityName,
+  });
   return result || [];
 };
 
 // Public function to get stations without authentication
-export const getPublicStationsForCity = async (cityName: string): Promise<ReusableStation[]> => {
-  const result = await convex.query(api.citiesStations.getPublicStationsForCity, { cityName });
+export const getPublicStationsForCity = async (
+  cityName: string,
+): Promise<ReusableStation[]> => {
+  const result = await convex.query(
+    api.citiesStations.getPublicStationsForCity,
+    { cityName },
+  );
   return result || [];
-}; 
+};

@@ -1,27 +1,22 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   ArrowLeft, 
   CreditCard, 
-  Clock, 
+  AlertCircle, 
   CheckCircle, 
-  Loader2,
-  AlertCircle,
-  MapPin,
+  Clock, 
   Users,
   Package,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { 
-  useTempBooking, 
-  usePaymentStatus, 
-  type TempBooking 
-} from "@/services/convex/payments";
+import { loadStripe } from "@stripe/stripe-js";
+import { useRoundTripBookingData } from "@/services/convex/payments";
 import { useTripForBooking } from "@/services/convex/tripSearch";
 import type { Id } from "../../convex/_generated/dataModel";
 
@@ -34,19 +29,16 @@ const getStripe = async () => {
 
 // Payment Form Component (inside Elements provider)
 const PaymentForm = ({ 
-  tempBooking, 
+  totalPrice, 
   onPaymentSuccess 
 }: { 
-  tempBooking: TempBooking; 
+  totalPrice: number; 
   onPaymentSuccess: (bookingReference: string) => void;
 }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-
-  // Use the Convex hook for payment status
-  const paymentStatus = usePaymentStatus(tempBooking._id);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -59,55 +51,22 @@ const PaymentForm = ({
     setPaymentError(null);
 
     try {
-      const { error, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: `${window.location.origin}/booking-success/${tempBooking._id}`,
-        },
-        redirect: 'if_required',
-      });
+              const { error, paymentIntent } = await stripe.confirmPayment({
+          elements,
+          confirmParams: {
+            return_url: `${window.location.origin}/booking-success`,
+          },
+          redirect: 'if_required',
+        });
 
-      if (error) {
-        setPaymentError(error.message || 'Payment failed');
-        toast.error(error.message || 'Payment failed');
-      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        // Payment succeeded, poll for booking confirmation
-        toast.success('Payment successful! Processing your booking...');
-        
-        // Poll for booking completion (webhook processing)
-        let attempts = 0;
-        const maxAttempts = 10;
-        const pollInterval = 2000; // 2 seconds
-
-        const pollForCompletion = async () => {
-          try {
-            // The paymentStatus will be updated by the Convex query
-            if (paymentStatus?.status === 'succeeded' && paymentStatus.bookingReference) {
-              onPaymentSuccess(paymentStatus.bookingReference);
-              return;
-            } else if (paymentStatus?.status === 'failed') {
-              setPaymentError(paymentStatus.error || 'Booking processing failed');
-              return;
-            }
-
-            attempts++;
-            if (attempts < maxAttempts) {
-              setTimeout(pollForCompletion, pollInterval);
-            } else {
-              // Fallback - redirect to success page anyway
-              onPaymentSuccess('PROCESSING');
-            }
-          } catch (error) {
-            console.error('Error checking payment status:', error);
-            if (attempts < maxAttempts) {
-              attempts++;
-              setTimeout(pollForCompletion, pollInterval);
-            }
-          }
-        };
-
-        pollForCompletion();
-      }
+              if (error) {
+          setPaymentError(error.message || 'Payment failed');
+          toast.error(error.message || 'Payment failed');
+        } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+          // Payment succeeded
+          toast.success('Payment successful! Processing your booking...');
+          onPaymentSuccess(paymentIntent.id);
+        }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setPaymentError(errorMessage || 'Payment processing failed');
@@ -144,7 +103,7 @@ const PaymentForm = ({
       <Button
         type="submit"
         disabled={!stripe || isProcessing}
-        className="w-full bg-brand-orange text-white hover:bg-brand-orange/90 text-white py-3"
+        className="w-full bg-brand-orange text-white hover:bg-brand-orange/90 py-3"
         size="lg"
       >
         {isProcessing ? (
@@ -155,7 +114,7 @@ const PaymentForm = ({
         ) : (
           <>
             <CreditCard className="w-4 h-4 mr-2" />
-            Pay ₵{tempBooking.totalPrice}
+            Pay ₵{totalPrice}
           </>
         )}
       </Button>
@@ -176,20 +135,29 @@ export default function PaymentPage() {
 
   const [timeLeft, setTimeLeft] = useState<number>(0);
 
-  // Use Convex hooks instead of React Query
-  const tempBooking = useTempBooking(bookingId as Id<"tempBookings"> | null);
-  const trip = useTripForBooking(tempBooking?.tripId || "");
+  // Use the new round trip booking data hook
+  const bookingData = useRoundTripBookingData(bookingId as Id<"tempBookings"> | null);
+  
+  // Get trip data for both outbound and return (if applicable)
+  const outboundTrip = useTripForBooking(bookingData?.outboundBooking?.tripId || "");
+  const returnTrip = useTripForBooking(
+    bookingData?.isRoundTrip && bookingData?.returnBooking?.tripId 
+      ? bookingData.returnBooking.tripId 
+      : ""
+  );
 
-  const isLoadingBooking = tempBooking === undefined;
-  const isLoadingTrip = trip === undefined && !!tempBooking?.tripId;
+  const isLoadingBooking = bookingData === undefined;
+  const isLoadingTrips = 
+    (outboundTrip === undefined && !!bookingData?.outboundBooking?.tripId) ||
+    (bookingData?.isRoundTrip && returnTrip === undefined && !!bookingData?.returnBooking?.tripId);
 
   // Calculate time remaining
   useEffect(() => {
-    if (!tempBooking) return;
+    if (!bookingData?.outboundBooking) return;
 
     const updateTimeLeft = () => {
       const now = new Date().getTime();
-      const expiry = tempBooking.expiresAt;
+      const expiry = bookingData.outboundBooking.expiresAt;
       const remaining = expiry - now;
       
       if (remaining <= 0) {
@@ -206,7 +174,7 @@ export default function PaymentPage() {
     const interval = setInterval(updateTimeLeft, 1000);
 
     return () => clearInterval(interval);
-  }, [tempBooking, navigate]);
+  }, [bookingData, navigate]);
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -219,7 +187,7 @@ export default function PaymentPage() {
   };
 
   // Loading states
-  if (isLoadingBooking || isLoadingTrip) {
+  if (isLoadingBooking || isLoadingTrips) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex items-center gap-3">
@@ -231,7 +199,7 @@ export default function PaymentPage() {
   }
 
   // Error states
-  if (!tempBooking || !clientSecret) {
+  if (!bookingData || !clientSecret) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -241,7 +209,7 @@ export default function PaymentPage() {
             <p className="text-muted-foreground mb-4">
               The payment session could not be found or has expired. Please start your booking again.
             </p>
-            <Button onClick={() => navigate('/search')} className="bg-brand-orange text-white hover:bg-brand-orange/90">
+            <Button onClick={() => navigate('/search')}>
               Back to Search
             </Button>
           </CardContent>
@@ -250,7 +218,8 @@ export default function PaymentPage() {
     );
   }
 
-  const departureTime = trip ? new Date(trip.departureTime) : null;
+  const outboundDepartureTime = outboundTrip ? new Date(outboundTrip.departureTime) : null;
+  const returnDepartureTime = returnTrip ? new Date(returnTrip.departureTime) : null;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -295,12 +264,12 @@ export default function PaymentPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Elements stripe={getStripe()} options={{ clientSecret }}>
-                  <PaymentForm
-                    tempBooking={tempBooking}
-                    onPaymentSuccess={handlePaymentSuccess}
-                  />
-                </Elements>
+                                  <Elements stripe={getStripe()} options={{ clientSecret }}>
+                    <PaymentForm
+                      totalPrice={bookingData.totalPrice}
+                      onPaymentSuccess={handlePaymentSuccess}
+                    />
+                  </Elements>
               </CardContent>
             </Card>
           </div>
@@ -316,29 +285,59 @@ export default function PaymentPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Trip Details */}
-                {trip && (
+                {outboundTrip && (
                   <div className="space-y-3">
                     <div>
                       <p className="text-sm text-muted-foreground">Route</p>
-                      <p className="font-medium">{trip.routeTemplateName}</p>
+                      <p className="font-medium">{outboundTrip.routeTemplateName}</p>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-muted-foreground">Departure</p>
                         <p className="font-medium text-sm">
-                          {departureTime && format(departureTime, "MMM dd")}
+                          {outboundDepartureTime && format(outboundDepartureTime, "MMM dd")}
                         </p>
                         <p className="text-sm">
-                          {departureTime && format(departureTime, "HH:mm")}
+                          {outboundDepartureTime && format(outboundDepartureTime, "HH:mm")}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Driver</p>
-                        <p className="font-medium text-sm">{trip.driverName}</p>
+                        <p className="font-medium text-sm">{outboundTrip.driverName}</p>
                         <p className="text-xs text-muted-foreground">
-                          {trip.driverRating.toFixed(1)} rating
+                          {outboundTrip.driverRating.toFixed(1)} rating
                         </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {bookingData.isRoundTrip && returnTrip && (
+                  <div className="pt-4 border-t">
+                    <p className="text-sm text-muted-foreground mb-2">Return Trip</p>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Route</p>
+                        <p className="font-medium">{returnTrip.routeTemplateName}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Departure</p>
+                          <p className="font-medium text-sm">
+                            {returnDepartureTime && format(returnDepartureTime, "MMM dd")}
+                          </p>
+                          <p className="text-sm">
+                            {returnDepartureTime && format(returnDepartureTime, "HH:mm")}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Driver</p>
+                          <p className="font-medium text-sm">{returnTrip.driverName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {returnTrip.driverRating.toFixed(1)} rating
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -347,23 +346,32 @@ export default function PaymentPage() {
                 {/* Passenger Details */}
                 <div className="pt-4 border-t">
                   <p className="text-sm text-muted-foreground mb-2">Passenger</p>
-                  <p className="font-medium">{tempBooking.passengerName}</p>
-                  <p className="text-sm text-muted-foreground">{tempBooking.passengerEmail}</p>
+                  <p className="font-medium">{bookingData.outboundBooking?.passengerName}</p>
+                  <p className="text-sm text-muted-foreground">{bookingData.outboundBooking?.passengerEmail}</p>
                 </div>
 
                 {/* Journey Details */}
-                <div className="pt-4 border-t space-y-2">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">Journey details</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">{tempBooking.selectedSeats.length} seat{tempBooking.selectedSeats.length > 1 ? 's' : ''}: {tempBooking.selectedSeats.join(', ')}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Package className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">{tempBooking.numberOfBags} bag{tempBooking.numberOfBags > 1 ? 's' : ''}</span>
+                <div className="pt-4 border-t">
+                  <p className="text-sm text-muted-foreground mb-2">Journey details</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm">
+                        {bookingData.outboundBooking?.selectedSeats.length} seat{bookingData.outboundBooking?.selectedSeats.length > 1 ? 's' : ''}: {bookingData.outboundBooking?.selectedSeats.join(', ')}
+                        {bookingData.isRoundTrip && bookingData.returnBooking && (
+                          <span> + {bookingData.returnBooking.selectedSeats.length} return seat{bookingData.returnBooking.selectedSeats.length > 1 ? 's' : ''}: {bookingData.returnBooking.selectedSeats.join(', ')}</span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Package className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm">
+                        {bookingData.outboundBooking?.numberOfBags} bag{bookingData.outboundBooking?.numberOfBags > 1 ? 's' : ''}
+                        {bookingData.isRoundTrip && bookingData.returnBooking && (
+                          <span> + {bookingData.returnBooking.numberOfBags} return bag{bookingData.returnBooking.numberOfBags > 1 ? 's' : ''}</span>
+                        )}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -371,8 +379,16 @@ export default function PaymentPage() {
                 <div className="pt-4 border-t">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-bold">Total</span>
-                    <span className="text-2xl font-bold text-brand-orange">₵{tempBooking.totalPrice}</span>
+                    <span className="text-2xl font-bold text-brand-orange">₵{bookingData.totalPrice}</span>
                   </div>
+                  {bookingData.isRoundTrip && (
+                    <div className="mt-2 text-sm text-muted-foreground">
+                      <div className="flex justify-between">
+                        <span>Outbound: ₵{bookingData.outboundBooking?.totalPrice}</span>
+                        <span>Return: ₵{bookingData.returnBooking?.totalPrice}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

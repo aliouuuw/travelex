@@ -1,6 +1,12 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { auth } from "./auth";
+import { getAuthUserId } from "@convex-dev/auth/server";
+
+// SeatMap Type
+export type SeatMap = {
+  rows: number;
+  columns: number;
+};
 
 // Vehicle Types
 export const vehicleTypes = ["car", "van", "bus", "suv"] as const;
@@ -11,7 +17,7 @@ export const vehicleStatuses = ["active", "maintenance", "inactive"] as const;
 export const getDriverVehicles = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("User must be authenticated");
     }
@@ -43,7 +49,7 @@ export const getDriverVehicles = query({
 export const getVehicleById = query({
   args: { vehicleId: v.id("vehicles") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("User must be authenticated");
     }
@@ -58,7 +64,7 @@ export const getVehicleById = query({
     }
 
     const vehicle = await ctx.db.get(args.vehicleId);
-    
+
     if (!vehicle) {
       throw new Error("Vehicle not found");
     }
@@ -79,8 +85,18 @@ export const createVehicle = mutation({
     model: v.string(),
     year: v.number(),
     licensePlate: v.string(),
-    vehicleType: v.union(v.literal("car"), v.literal("van"), v.literal("bus"), v.literal("suv")),
-    fuelType: v.union(v.literal("gasoline"), v.literal("diesel"), v.literal("electric"), v.literal("hybrid")),
+    vehicleType: v.union(
+      v.literal("car"),
+      v.literal("van"),
+      v.literal("bus"),
+      v.literal("suv"),
+    ),
+    fuelType: v.union(
+      v.literal("gasoline"),
+      v.literal("diesel"),
+      v.literal("electric"),
+      v.literal("hybrid"),
+    ),
     color: v.optional(v.string()),
     capacity: v.number(),
     seatMap: v.optional(v.any()),
@@ -92,7 +108,7 @@ export const createVehicle = mutation({
     description: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("User must be authenticated");
     }
@@ -151,13 +167,33 @@ export const updateVehicle = mutation({
     model: v.optional(v.string()),
     year: v.optional(v.number()),
     licensePlate: v.optional(v.string()),
-    vehicleType: v.optional(v.union(v.literal("car"), v.literal("van"), v.literal("bus"), v.literal("suv"))),
-    fuelType: v.optional(v.union(v.literal("gasoline"), v.literal("diesel"), v.literal("electric"), v.literal("hybrid"))),
+    vehicleType: v.optional(
+      v.union(
+        v.literal("car"),
+        v.literal("van"),
+        v.literal("bus"),
+        v.literal("suv"),
+      ),
+    ),
+    fuelType: v.optional(
+      v.union(
+        v.literal("gasoline"),
+        v.literal("diesel"),
+        v.literal("electric"),
+        v.literal("hybrid"),
+      ),
+    ),
     color: v.optional(v.string()),
     capacity: v.optional(v.number()),
     seatMap: v.optional(v.any()),
     features: v.optional(v.array(v.string())),
-    status: v.optional(v.union(v.literal("active"), v.literal("maintenance"), v.literal("inactive"))),
+    status: v.optional(
+      v.union(
+        v.literal("active"),
+        v.literal("maintenance"),
+        v.literal("inactive"),
+      ),
+    ),
     insuranceExpiry: v.optional(v.string()),
     registrationExpiry: v.optional(v.string()),
     lastMaintenance: v.optional(v.string()),
@@ -165,7 +201,7 @@ export const updateVehicle = mutation({
     description: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("User must be authenticated");
     }
@@ -180,7 +216,7 @@ export const updateVehicle = mutation({
     }
 
     const vehicle = await ctx.db.get(args.vehicleId);
-    
+
     if (!vehicle) {
       throw new Error("Vehicle not found");
     }
@@ -191,12 +227,30 @@ export const updateVehicle = mutation({
     }
 
     // Prepare update data
-    const updateData: any = {};
-    
+    const updateData: {
+      make?: string;
+      model?: string;
+      year?: number;
+      licensePlate?: string;
+      type?: "car" | "van" | "bus" | "suv";
+      fuelType?: "gasoline" | "diesel" | "electric" | "hybrid";
+      color?: string;
+      capacity?: number;
+      seatMap?: SeatMap;
+      features?: string[];
+      status?: "active" | "maintenance" | "inactive";
+      insuranceExpiry?: string;
+      registrationExpiry?: string;
+      lastMaintenance?: string;
+      mileage?: number;
+      description?: string;
+    } = {};
+
     if (args.make !== undefined) updateData.make = args.make;
     if (args.model !== undefined) updateData.model = args.model;
     if (args.year !== undefined) updateData.year = args.year;
-    if (args.licensePlate !== undefined) updateData.licensePlate = args.licensePlate;
+    if (args.licensePlate !== undefined)
+      updateData.licensePlate = args.licensePlate;
     if (args.vehicleType !== undefined) updateData.type = args.vehicleType;
     if (args.fuelType !== undefined) updateData.fuelType = args.fuelType;
     if (args.color !== undefined) updateData.color = args.color;
@@ -204,14 +258,18 @@ export const updateVehicle = mutation({
     if (args.seatMap !== undefined) updateData.seatMap = args.seatMap;
     if (args.features !== undefined) updateData.features = args.features;
     if (args.status !== undefined) updateData.status = args.status;
-    if (args.insuranceExpiry !== undefined) updateData.insuranceExpiry = args.insuranceExpiry;
-    if (args.registrationExpiry !== undefined) updateData.registrationExpiry = args.registrationExpiry;
-    if (args.lastMaintenance !== undefined) updateData.lastMaintenance = args.lastMaintenance;
+    if (args.insuranceExpiry !== undefined)
+      updateData.insuranceExpiry = args.insuranceExpiry;
+    if (args.registrationExpiry !== undefined)
+      updateData.registrationExpiry = args.registrationExpiry;
+    if (args.lastMaintenance !== undefined)
+      updateData.lastMaintenance = args.lastMaintenance;
     if (args.mileage !== undefined) updateData.mileage = args.mileage;
-    if (args.description !== undefined) updateData.description = args.description;
+    if (args.description !== undefined)
+      updateData.description = args.description;
 
     await ctx.db.patch(args.vehicleId, updateData);
-    
+
     return args.vehicleId;
   },
 });
@@ -220,7 +278,7 @@ export const updateVehicle = mutation({
 export const deleteVehicle = mutation({
   args: { vehicleId: v.id("vehicles") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("User must be authenticated");
     }
@@ -235,7 +293,7 @@ export const deleteVehicle = mutation({
     }
 
     const vehicle = await ctx.db.get(args.vehicleId);
-    
+
     if (!vehicle) {
       throw new Error("Vehicle not found");
     }
@@ -258,7 +316,7 @@ export const deleteVehicle = mutation({
     }
 
     await ctx.db.delete(args.vehicleId);
-    
+
     return true;
   },
 });
@@ -267,7 +325,7 @@ export const deleteVehicle = mutation({
 export const setDefaultVehicle = mutation({
   args: { vehicleId: v.id("vehicles") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("User must be authenticated");
     }
@@ -282,7 +340,7 @@ export const setDefaultVehicle = mutation({
     }
 
     const vehicle = await ctx.db.get(args.vehicleId);
-    
+
     if (!vehicle) {
       throw new Error("Vehicle not found");
     }
@@ -306,7 +364,7 @@ export const setDefaultVehicle = mutation({
 
     // Set this vehicle as default
     await ctx.db.patch(args.vehicleId, { isDefault: true });
-    
+
     return true;
   },
 });
@@ -315,7 +373,7 @@ export const setDefaultVehicle = mutation({
 export const getAllVehicles = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("User must be authenticated");
     }
@@ -334,7 +392,7 @@ export const getAllVehicles = query({
     }
 
     const vehicles = await ctx.db.query("vehicles").collect();
-    
+
     // Get driver info for each vehicle
     const vehiclesWithDriver = await Promise.all(
       vehicles.map(async (vehicle) => {
@@ -344,7 +402,7 @@ export const getAllVehicles = query({
           driverName: driver?.fullName || "Unknown Driver",
           driverEmail: driver?.email || "Unknown Email",
         };
-      })
+      }),
     );
 
     return vehiclesWithDriver;
@@ -355,7 +413,7 @@ export const getAllVehicles = query({
 export const getVehiclesByDriverId = query({
   args: { driverId: v.id("profiles") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("User must be authenticated");
     }
@@ -380,4 +438,4 @@ export const getVehiclesByDriverId = query({
 
     return vehicles;
   },
-}); 
+});

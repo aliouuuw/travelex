@@ -1,6 +1,7 @@
 import { api } from "../../../convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { useAuth } from "@/hooks/use-auth";
 
 // TypeScript types for bag-based luggage policies
 export interface LuggagePolicy {
@@ -14,7 +15,7 @@ export interface LuggagePolicy {
   maxBagSize?: string;
   isDefault?: boolean;
   _creationTime: number;
-  
+
   // Computed properties for backward compatibility
   weightPerBag?: number;
   feePerAdditionalBag?: number;
@@ -49,7 +50,13 @@ export interface LegacyCreateLuggagePolicyInput {
 
 // React hooks for luggage policies
 export const useDriverLuggagePolicies = () => {
-  return useQuery(api.luggagePolicies.getDriverLuggagePolicies);
+  const { user } = useAuth();
+  return useQuery(
+    api.luggagePolicies.getDriverLuggagePolicies,
+    user?.profile?.role === "driver" || user?.profile?.role === "admin"
+      ? {}
+      : "skip",
+  );
 };
 
 export const useLuggagePolicyById = (policyId: Id<"luggagePolicies">) => {
@@ -72,8 +79,14 @@ export const useSetDefaultLuggagePolicy = () => {
   return useMutation(api.luggagePolicies.setDefaultLuggagePolicy);
 };
 
-export const useCalculateLuggageFeeByBags = (policyId: Id<"luggagePolicies">, numberOfBags: number) => {
-  return useQuery(api.luggagePolicies.calculateLuggageFeeByBags, { policyId, numberOfBags });
+export const useCalculateLuggageFeeByBags = (
+  policyId: Id<"luggagePolicies">,
+  numberOfBags: number,
+) => {
+  return useQuery(api.luggagePolicies.calculateLuggageFeeByBags, {
+    policyId,
+    numberOfBags,
+  });
 };
 
 // Service functions (for compatibility with existing code)
@@ -82,7 +95,7 @@ export const useCalculateLuggageFeeByBags = (policyId: Id<"luggagePolicies">, nu
  * Get all luggage policies for the authenticated driver
  */
 export async function getDriverLuggagePolicies(): Promise<LuggagePolicy[]> {
-  throw new Error('Use useDriverLuggagePolicies hook instead');
+  throw new Error("Use useDriverLuggagePolicies hook instead");
 }
 
 /**
@@ -128,11 +141,14 @@ export async function getDriverLuggagePolicies(): Promise<LuggagePolicy[]> {
 // }
 
 // Utility functions
-export function calculateBagFee(policy: LuggagePolicy, numberOfBags: number): number {
+export function calculateBagFee(
+  policy: LuggagePolicy,
+  numberOfBags: number,
+): number {
   // First bag is free, additional bags incur fee
   const additionalBags = Math.max(0, numberOfBags - 1);
   const maxAdditionalBags = policy.maxBags - 1; // Subtract 1 for the free bag
-  
+
   if (additionalBags > maxAdditionalBags) {
     throw new Error(`Maximum ${policy.maxBags} bags allowed`);
   }
@@ -153,9 +169,9 @@ export function getPolicyDisplaySummary(policy: LuggagePolicy): {
   const freeBagWeight = policy.freeWeightKg;
   const additionalBagFee = policy.excessFeePerKg;
   const maxAdditionalBags = policy.maxBags - 1;
-  
+
   const formattedSummary = `Free bag: ${freeBagWeight}kg | Additional bags: $${additionalBagFee} each | Max additional: ${maxAdditionalBags}`;
-  
+
   return {
     freeBagWeight,
     additionalBagFee,
@@ -164,29 +180,31 @@ export function getPolicyDisplaySummary(policy: LuggagePolicy): {
   };
 }
 
-export function validateLuggagePolicyInput(input: CreateLuggagePolicyInput): string[] {
+export function validateLuggagePolicyInput(
+  input: CreateLuggagePolicyInput,
+): string[] {
   const errors: string[] = [];
-  
+
   if (!input.name || input.name.trim().length === 0) {
-    errors.push('Name is required');
+    errors.push("Name is required");
   }
-  
+
   if (input.freeWeightKg <= 0) {
-    errors.push('Free weight per bag must be greater than 0');
+    errors.push("Free weight per bag must be greater than 0");
   }
-  
+
   if (input.excessFeePerKg < 0) {
-    errors.push('Additional bag fee cannot be negative');
+    errors.push("Additional bag fee cannot be negative");
   }
-  
+
   if (input.maxBags <= 0) {
-    errors.push('Maximum bags must be greater than 0');
+    errors.push("Maximum bags must be greater than 0");
   }
-  
+
   if (input.maxBags > 10) {
-    errors.push('Maximum bags cannot exceed 10');
+    errors.push("Maximum bags cannot exceed 10");
   }
-  
+
   return errors;
 }
 
@@ -211,7 +229,7 @@ export function transformLegacyPolicy(policy: LegacyPolicyData): LuggagePolicy {
   return {
     _id: policy._id,
     driverId: policy.driverId,
-    name: policy.name || 'Legacy Policy',
+    name: policy.name || "Legacy Policy",
     description: policy.description,
     freeWeightKg: policy.freeWeightKg || 23,
     excessFeePerKg: policy.excessFeePerKg || 5,
@@ -219,7 +237,7 @@ export function transformLegacyPolicy(policy: LegacyPolicyData): LuggagePolicy {
     maxBagSize: policy.maxBagSize,
     isDefault: policy.isDefault || false,
     _creationTime: policy._creationTime,
-    
+
     // Computed properties for backward compatibility
     weightPerBag: policy.freeWeightKg || 23,
     feePerAdditionalBag: policy.excessFeePerKg || 5,
@@ -230,9 +248,15 @@ export function transformLegacyPolicy(policy: LegacyPolicyData): LuggagePolicy {
 /**
  * Normalize input to handle both new and legacy formats
  */
-export function normalizeInput(input: CreateLuggagePolicyInput | LegacyCreateLuggagePolicyInput): CreateLuggagePolicyInput {
+export function normalizeInput(
+  input: CreateLuggagePolicyInput | LegacyCreateLuggagePolicyInput,
+): CreateLuggagePolicyInput {
   // If it's already in the new format
-  if ('freeWeightKg' in input && 'excessFeePerKg' in input && 'maxBags' in input) {
+  if (
+    "freeWeightKg" in input &&
+    "excessFeePerKg" in input &&
+    "maxBags" in input
+  ) {
     return input as CreateLuggagePolicyInput;
   }
 
@@ -245,6 +269,6 @@ export function normalizeInput(input: CreateLuggagePolicyInput | LegacyCreateLug
     excessFeePerKg: legacyInput.feePerExcessKg || 5,
     maxBags: legacyInput.maxBags || 3,
     maxBagSize: legacyInput.maxBagSize,
-    isDefault: legacyInput.isDefault
+    isDefault: legacyInput.isDefault,
   };
-} 
+}

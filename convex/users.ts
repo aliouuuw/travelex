@@ -8,8 +8,9 @@ export const getCurrentUser = query({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    //console.log("userId", userId);
-    if (!userId) return null;
+    if (!userId) {
+      return null;
+    }
 
     // Find the profile that references this auth user
     const profile = await ctx.db
@@ -17,7 +18,9 @@ export const getCurrentUser = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
 
-    if (!profile) return null;
+    if (!profile) {
+      return null;
+    }
 
     // Optionally get the auth user document if you need it
     const user = await ctx.db.get(userId);
@@ -35,7 +38,9 @@ export const createUserProfile = mutation({
     fullName: v.string(),
     email: v.string(),
     phone: v.optional(v.string()),
-    role: v.optional(v.union(v.literal("admin"), v.literal("driver"), v.literal("passenger"))),
+    role: v.optional(
+      v.union(v.literal("admin"), v.literal("driver"), v.literal("passenger")),
+    ),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -60,7 +65,9 @@ export const createUserProfile = mutation({
     // Verify this is actually the first user
     const allProfiles = await ctx.db.query("profiles").collect();
     if (allProfiles.length > 0) {
-      throw new Error("Admin profile already exists. Use signup requests for additional users.");
+      throw new Error(
+        "Admin profile already exists. Use signup requests for additional users.",
+      );
     }
 
     const profileId = await ctx.db.insert("profiles", {
@@ -89,7 +96,7 @@ export const generateAvatarUploadUrl = mutation({
 
 // Save avatar storage ID to user profile
 export const saveAvatar = mutation({
-  args: { 
+  args: {
     storageId: v.id("_storage"),
   },
   handler: async (ctx, args) => {
@@ -107,7 +114,7 @@ export const saveAvatar = mutation({
 
     // Get the file URL for the avatar
     const avatarUrl = await ctx.storage.getUrl(args.storageId);
-    
+
     if (!avatarUrl) {
       throw new Error("Failed to get avatar URL");
     }
@@ -180,7 +187,11 @@ export const getUserByEmail = query({
 export const updateUserRole = mutation({
   args: {
     userId: v.id("profiles"),
-    role: v.union(v.literal("admin"), v.literal("driver"), v.literal("passenger")),
+    role: v.union(
+      v.literal("admin"),
+      v.literal("driver"),
+      v.literal("passenger"),
+    ),
   },
   handler: async (ctx, args) => {
     const currentUserId = await getAuthUserId(ctx);
@@ -227,7 +238,7 @@ export const getProfileById = query({
     const profile = await ctx.db.get(args.profileId);
     return profile;
   },
-}); 
+});
 
 // Change password for authenticated user
 export const changePassword = mutation({
@@ -252,11 +263,11 @@ export const changePassword = mutation({
     // For now, we'll simulate password verification
     // In a real implementation, you would verify the current password
     // against the stored hash in the auth system
-    
+
     // TODO: Implement actual password verification logic
     // This would typically involve checking the current password
     // against the stored password hash in Convex Auth
-    
+
     // For now, we'll just validate that both passwords are provided
     if (!args.currentPassword || !args.newPassword) {
       throw new Error("Both current and new passwords are required");
@@ -264,14 +275,14 @@ export const changePassword = mutation({
 
     // In a real implementation, you would update the password in Convex Auth
     // This might involve calling internal Convex Auth functions or APIs
-    
+
     //console.log(`Password change requested for user ${userId}`);
-    
+
     // Return success for now
     //return { success: true, message: "Password update successfully" };
     throw new Error("Password update failed");
   },
-}); 
+});
 
 // Temporary mutation to create profile for authenticated user (for migration purposes)
 export const createDriverProfile = mutation({
@@ -305,7 +316,7 @@ export const createDriverProfile = mutation({
 
     return profileId;
   },
-}); 
+});
 
 // Get all drivers for admin use
 export const getAllDrivers = query({
@@ -330,7 +341,7 @@ export const getAllDrivers = query({
       .withIndex("by_role", (q) => q.eq("role", "driver"))
       .collect();
 
-    return drivers.map(driver => ({
+    return drivers.map((driver) => ({
       id: driver._id,
       full_name: driver.fullName || "",
       email: driver.email,
@@ -362,10 +373,14 @@ export const sendDriverPasswordReset = mutation({
     }
 
     // Use the existing password reset functionality
-    await ctx.scheduler.runAfter(0, internal.passwordReset.requestPasswordResetInternal, {
-      email: args.email,
-    });
+    await ctx.scheduler.runAfter(
+      0,
+      internal.passwordReset.requestPasswordResetInternal,
+      {
+        email: args.email,
+      },
+    );
 
     return { success: true };
   },
-}); 
+});

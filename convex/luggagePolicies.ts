@@ -1,12 +1,12 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { auth } from "./auth";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 // Get driver luggage policies
 export const getDriverLuggagePolicies = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("User must be authenticated");
     }
@@ -38,7 +38,7 @@ export const getDriverLuggagePolicies = query({
 export const getLuggagePolicyById = query({
   args: { policyId: v.id("luggagePolicies") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("User must be authenticated");
     }
@@ -53,7 +53,7 @@ export const getLuggagePolicyById = query({
     }
 
     const policy = await ctx.db.get(args.policyId);
-    
+
     if (!policy) {
       throw new Error("Luggage policy not found");
     }
@@ -79,7 +79,7 @@ export const createLuggagePolicy = mutation({
     isDefault: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("User must be authenticated");
     }
@@ -142,7 +142,7 @@ export const updateLuggagePolicy = mutation({
     isDefault: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("User must be authenticated");
     }
@@ -157,7 +157,7 @@ export const updateLuggagePolicy = mutation({
     }
 
     const policy = await ctx.db.get(args.policyId);
-    
+
     if (!policy) {
       throw new Error("Luggage policy not found");
     }
@@ -191,17 +191,20 @@ export const updateLuggagePolicy = mutation({
       maxBagSize?: string;
       isDefault?: boolean;
     } = {};
-    
+
     if (args.name !== undefined) updateData.name = args.name;
-    if (args.description !== undefined) updateData.description = args.description;
-    if (args.freeWeightKg !== undefined) updateData.freeWeightKg = args.freeWeightKg;
-    if (args.excessFeePerKg !== undefined) updateData.excessFeePerKg = args.excessFeePerKg;
+    if (args.description !== undefined)
+      updateData.description = args.description;
+    if (args.freeWeightKg !== undefined)
+      updateData.freeWeightKg = args.freeWeightKg;
+    if (args.excessFeePerKg !== undefined)
+      updateData.excessFeePerKg = args.excessFeePerKg;
     if (args.maxBags !== undefined) updateData.maxBags = args.maxBags;
     if (args.maxBagSize !== undefined) updateData.maxBagSize = args.maxBagSize;
     if (args.isDefault !== undefined) updateData.isDefault = args.isDefault;
 
     await ctx.db.patch(args.policyId, updateData);
-    
+
     return args.policyId;
   },
 });
@@ -210,7 +213,7 @@ export const updateLuggagePolicy = mutation({
 export const deleteLuggagePolicy = mutation({
   args: { policyId: v.id("luggagePolicies") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("User must be authenticated");
     }
@@ -225,7 +228,7 @@ export const deleteLuggagePolicy = mutation({
     }
 
     const policy = await ctx.db.get(args.policyId);
-    
+
     if (!policy) {
       throw new Error("Luggage policy not found");
     }
@@ -244,11 +247,13 @@ export const deleteLuggagePolicy = mutation({
       .collect();
 
     if (activeTrips.length > 0) {
-      throw new Error("Cannot delete luggage policy that is assigned to active trips");
+      throw new Error(
+        "Cannot delete luggage policy that is assigned to active trips",
+      );
     }
 
     await ctx.db.delete(args.policyId);
-    
+
     return true;
   },
 });
@@ -257,7 +262,7 @@ export const deleteLuggagePolicy = mutation({
 export const setDefaultLuggagePolicy = mutation({
   args: { policyId: v.id("luggagePolicies") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("User must be authenticated");
     }
@@ -272,7 +277,7 @@ export const setDefaultLuggagePolicy = mutation({
     }
 
     const policy = await ctx.db.get(args.policyId);
-    
+
     if (!policy) {
       throw new Error("Luggage policy not found");
     }
@@ -296,25 +301,25 @@ export const setDefaultLuggagePolicy = mutation({
 
     // Set this policy as default
     await ctx.db.patch(args.policyId, { isDefault: true });
-    
+
     return true;
   },
 });
 
 // Calculate luggage fee by number of bags
 export const calculateLuggageFeeByBags = query({
-  args: { 
+  args: {
     policyId: v.id("luggagePolicies"),
     numberOfBags: v.number(),
   },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("User must be authenticated");
     }
 
     const policy = await ctx.db.get(args.policyId);
-    
+
     if (!policy) {
       throw new Error("Luggage policy not found");
     }
@@ -323,13 +328,13 @@ export const calculateLuggageFeeByBags = query({
     // First bag is free, additional bags incur fee
     const additionalBags = Math.max(0, args.numberOfBags - 1);
     const maxAdditionalBags = policy.maxBags - 1; // Subtract 1 for the free bag
-    
+
     if (additionalBags > maxAdditionalBags) {
       throw new Error(`Maximum ${policy.maxBags} bags allowed`);
     }
 
     const totalFee = additionalBags * policy.excessFeePerKg;
-    
+
     return {
       totalFee,
       additionalBags,
@@ -344,7 +349,7 @@ export const calculateLuggageFeeByBags = query({
 export const getAllLuggagePolicies = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("User must be authenticated");
     }
@@ -363,7 +368,7 @@ export const getAllLuggagePolicies = query({
     }
 
     const policies = await ctx.db.query("luggagePolicies").collect();
-    
+
     // Get driver info for each policy
     const policiesWithDriver = await Promise.all(
       policies.map(async (policy) => {
@@ -373,7 +378,7 @@ export const getAllLuggagePolicies = query({
           driverName: driver?.fullName || "Unknown Driver",
           driverEmail: driver?.email || "Unknown Email",
         };
-      })
+      }),
     );
 
     return policiesWithDriver;
@@ -384,7 +389,7 @@ export const getAllLuggagePolicies = query({
 export const getLuggagePoliciesByDriverId = query({
   args: { driverId: v.id("profiles") },
   handler: async (ctx, args) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("User must be authenticated");
     }
@@ -409,4 +414,4 @@ export const getLuggagePoliciesByDriverId = query({
 
     return policies;
   },
-}); 
+});

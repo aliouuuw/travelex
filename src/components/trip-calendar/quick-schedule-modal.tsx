@@ -6,37 +6,51 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DateTimePickerField } from "@/components/ui/datetime-picker";
-import { 
-  Calendar as CalendarIcon, 
-  Save, 
+import {
+  Calendar as CalendarIcon,
+  Save,
   X,
   Plus,
   Clock,
-  MapPin
+  MapPin,
 } from "lucide-react";
-import { useDriverRouteTemplates, type RouteTemplate } from "@/services/convex/routeTemplates";
+import {
+  useDriverRouteTemplates,
+  type RouteTemplate,
+} from "@/services/convex/routeTemplates";
 import { useDriverVehicles } from "@/services/convex/vehicles";
 import { useDriverLuggagePolicies } from "@/services/convex/luggage-policies";
 import { createTrip, type TripFormData } from "@/services/convex/trips";
 import { toast } from "sonner";
 
 // Quick schedule form schema
-const quickScheduleSchema = z.object({
-  routeTemplateId: z.string().min(1, "Please select a route"),
-  vehicleId: z.string().min(1, "Please select a vehicle"),
-  luggagePolicyId: z.string().optional(),
-  departureTime: z.string().min(1, "Please set departure time"),
-  arrivalTime: z.string().min(1, "Please set arrival time"),
-}).refine((data) => {
-  const departure = new Date(data.departureTime);
-  const arrival = new Date(data.arrivalTime);
-  return arrival > departure;
-}, {
-  message: "Arrival time must be after departure time",
-  path: ["arrivalTime"]
-});
+const quickScheduleSchema = z
+  .object({
+    routeTemplateId: z.string().min(1, "Please select a route"),
+    vehicleId: z.string().min(1, "Please select a vehicle"),
+    luggagePolicyId: z.string().optional(),
+    departureTime: z.string().min(1, "Please set departure time"),
+    arrivalTime: z.string().min(1, "Please set arrival time"),
+  })
+  .refine(
+    (data) => {
+      const departure = new Date(data.departureTime);
+      const arrival = new Date(data.arrivalTime);
+      return arrival > departure;
+    },
+    {
+      message: "Arrival time must be after departure time",
+      path: ["arrivalTime"],
+    },
+  );
 
 type QuickScheduleFormData = z.infer<typeof quickScheduleSchema>;
 
@@ -46,10 +60,10 @@ interface QuickScheduleModalProps {
   selectedDate: Date;
 }
 
-const StationSelector = ({ 
-  routeTemplate, 
-  selectedStations, 
-  onStationToggle 
+const StationSelector = ({
+  routeTemplate,
+  selectedStations,
+  onStationToggle,
 }: {
   routeTemplate: RouteTemplate;
   selectedStations: Set<string>;
@@ -65,7 +79,7 @@ const StationSelector = ({
             </div>
             <h4 className="font-semibold text-lg">{city.cityName}</h4>
           </div>
-          
+
           {city.stations && city.stations.length > 0 ? (
             <div className="ml-11 space-y-2">
               {city.stations.map((station) => (
@@ -82,7 +96,9 @@ const StationSelector = ({
                   <div className="flex-1">
                     <span className="font-medium">{station.name}</span>
                     {station.address && (
-                      <p className="text-sm text-muted-foreground">{station.address}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {station.address}
+                      </p>
                     )}
                   </div>
                 </label>
@@ -99,47 +115,63 @@ const StationSelector = ({
   );
 };
 
-export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: QuickScheduleModalProps) {
-  const [currentStep, setCurrentStep] = useState<'details' | 'stations'>('details');
-  const [selectedStations, setSelectedStations] = useState<Set<string>>(new Set());
+export default function QuickScheduleModal({
+  isOpen,
+  onClose,
+  selectedDate,
+}: QuickScheduleModalProps) {
+  const [currentStep, setCurrentStep] = useState<"details" | "stations">(
+    "details",
+  );
+  const [selectedStations, setSelectedStations] = useState<Set<string>>(
+    new Set(),
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const form = useForm<QuickScheduleFormData>({
     resolver: zodResolver(quickScheduleSchema),
     defaultValues: {
-      routeTemplateId: '',
-      vehicleId: '',
-      luggagePolicyId: '',
-      departureTime: '',
-      arrivalTime: '',
+      routeTemplateId: "",
+      vehicleId: "",
+      luggagePolicyId: "",
+      departureTime: "",
+      arrivalTime: "",
     },
   });
 
   // Fetch data for dropdowns using Convex hooks
-  const routeTemplates = useDriverRouteTemplates() || [];
+  const routeTemplatesData = useDriverRouteTemplates();
   const vehicles = useDriverVehicles() || [];
   const luggagePolicies = useDriverLuggagePolicies() || [];
 
-  // Watch form values for reactivity
-  const routeTemplateId = form.watch('routeTemplateId');
-  const vehicleId = form.watch('vehicleId');
-  const departureTime = form.watch('departureTime');
-  const arrivalTime = form.watch('arrivalTime');
+  // Memoize routeTemplates to prevent unnecessary re-renders
+  const routeTemplates = useMemo(
+    () => routeTemplatesData || [],
+    [routeTemplatesData],
+  );
 
-  const selectedRouteTemplate = useMemo(() => 
-    routeTemplates.find((route) => route.id === routeTemplateId),
-    [routeTemplates, routeTemplateId]
+  // Watch form values for reactivity
+  const routeTemplateId = form.watch("routeTemplateId");
+  const vehicleId = form.watch("vehicleId");
+  const departureTime = form.watch("departureTime");
+  const arrivalTime = form.watch("arrivalTime");
+
+  const selectedRouteTemplate = useMemo(
+    () => routeTemplates.find((route) => route.id === routeTemplateId),
+    [routeTemplates, routeTemplateId],
   );
 
   const canProceedToStations = useMemo(() => {
-    return routeTemplateId && 
-           routeTemplateId.trim() !== '' && 
-           vehicleId && 
-           vehicleId.trim() !== '' && 
-           departureTime && 
-           departureTime.trim() !== '' && 
-           arrivalTime && 
-           arrivalTime.trim() !== '';
+    return (
+      routeTemplateId &&
+      routeTemplateId.trim() !== "" &&
+      vehicleId &&
+      vehicleId.trim() !== "" &&
+      departureTime &&
+      departureTime.trim() !== "" &&
+      arrivalTime &&
+      arrivalTime.trim() !== ""
+    );
   }, [routeTemplateId, vehicleId, departureTime, arrivalTime]);
 
   // Create trip function using Convex
@@ -156,12 +188,12 @@ export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: Qu
 
   const onSubmit = async (data: QuickScheduleFormData) => {
     if (selectedStations.size === 0) {
-      toast.error('Please select at least one station for the trip');
+      toast.error("Please select at least one station for the trip");
       return;
     }
 
     if (!selectedRouteTemplate) {
-      toast.error('Selected route template not found');
+      toast.error("Selected route template not found");
       return;
     }
 
@@ -169,23 +201,25 @@ export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: Qu
 
     try {
       // Build selected stations data with correct mapping
-      const selectedStationsData = Array.from(selectedStations).map((stationId) => {
-        // Find station and its city
-        for (const city of selectedRouteTemplate.cities) {
-          const station = city.stations?.find(s => s.id === stationId);
-          if (station) {
-            return {
-              routeTemplateCityId: city.id!, // City ID from route template
-              routeTemplateStationId: station.id!, // Station ID from route template
-              cityName: city.cityName,
-              sequenceOrder: city.sequenceOrder || 0,
-              isPickupPoint: true,
-              isDropoffPoint: true,
-            };
+      const selectedStationsData = Array.from(selectedStations)
+        .map((stationId) => {
+          // Find station and its city
+          for (const city of selectedRouteTemplate.cities) {
+            const station = city.stations?.find((s) => s.id === stationId);
+            if (station) {
+              return {
+                routeTemplateCityId: city.id!, // City ID from route template
+                routeTemplateStationId: station.id!, // Station ID from route template
+                cityName: city.cityName,
+                sequenceOrder: city.sequenceOrder || 0,
+                isPickupPoint: true,
+                isDropoffPoint: true,
+              };
+            }
           }
-        }
-        return null;
-      }).filter(Boolean) as TripFormData['selectedStations'];
+          return null;
+        })
+        .filter(Boolean) as TripFormData["selectedStations"];
 
       const tripData: TripFormData = {
         routeTemplateId: data.routeTemplateId,
@@ -197,7 +231,7 @@ export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: Qu
       };
 
       await createTrip(tripData);
-      toast.success('Trip scheduled successfully!');
+      toast.success("Trip scheduled successfully!");
       onClose();
       form.reset();
       setSelectedStations(new Set());
@@ -213,13 +247,16 @@ export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: Qu
     if (selectedDate && isOpen) {
       const defaultDeparture = new Date(selectedDate);
       defaultDeparture.setHours(8, 0, 0, 0);
-      
+
       const defaultArrival = new Date(selectedDate);
       defaultArrival.setHours(18, 0, 0, 0);
-      
-      form.setValue('departureTime', defaultDeparture.toISOString().slice(0, 16));
-      form.setValue('arrivalTime', defaultArrival.toISOString().slice(0, 16));
-      form.trigger(['departureTime', 'arrivalTime']);
+
+      form.setValue(
+        "departureTime",
+        defaultDeparture.toISOString().slice(0, 16),
+      );
+      form.setValue("arrivalTime", defaultArrival.toISOString().slice(0, 16));
+      form.trigger(["departureTime", "arrivalTime"]);
     }
   }, [selectedDate, isOpen, form]);
 
@@ -235,13 +272,15 @@ export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: Qu
                 <Plus className="w-5 h-5 text-white" />
               </div>
               <div>
-                <CardTitle className="text-xl font-heading">Quick Schedule Trip</CardTitle>
+                <CardTitle className="text-xl font-heading">
+                  Quick Schedule Trip
+                </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  {selectedDate.toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
+                  {selectedDate.toLocaleDateString("en-US", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
                   })}
                 </p>
               </div>
@@ -251,16 +290,21 @@ export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: Qu
             </Button>
           </div>
         </CardHeader>
-        
+
         <CardContent>
-          <Tabs value={currentStep} onValueChange={(value) => setCurrentStep(value as typeof currentStep)}>
+          <Tabs
+            value={currentStep}
+            onValueChange={(value) =>
+              setCurrentStep(value as typeof currentStep)
+            }
+          >
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="details" className="flex items-center gap-2">
                 <Clock className="w-4 h-4" />
                 Trip Details
               </TabsTrigger>
-              <TabsTrigger 
-                value="stations" 
+              <TabsTrigger
+                value="stations"
                 disabled={!canProceedToStations}
                 className="flex items-center gap-2"
               >
@@ -271,115 +315,167 @@ export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: Qu
 
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <TabsContent value="details" className="space-y-6">
-            {/* Route Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="routeTemplateId" className="text-sm font-medium">Route Template</Label>
-              <Select
-                value={form.watch('routeTemplateId')}
-                onValueChange={(value) => form.setValue('routeTemplateId', value)}
-              >
-                <SelectTrigger className="w-full h-12 px-3 bg-white focus:ring-2 focus:ring-brand-orange focus:border-transparent">
-                  <SelectValue placeholder="Select a route..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {routeTemplates.map((route) => (
-                    <SelectItem key={route.id} value={route.id}>
-                      {route.name} ({route.cities.map(c => c.cityName).join(' → ')})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.formState.errors.routeTemplateId && (
-                <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{form.formState.errors.routeTemplateId.message}</p>
-              )}
-            </div>
+                {/* Route Selection */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="routeTemplateId"
+                    className="text-sm font-medium"
+                  >
+                    Route Template
+                  </Label>
+                  <Select
+                    value={form.watch("routeTemplateId")}
+                    onValueChange={(value) =>
+                      form.setValue("routeTemplateId", value)
+                    }
+                  >
+                    <SelectTrigger className="w-full h-12 px-3 bg-white focus:ring-2 focus:ring-brand-orange focus:border-transparent">
+                      <SelectValue placeholder="Select a route..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {routeTemplates.map((route) => (
+                        <SelectItem key={route.id} value={route.id}>
+                          {route.name} (
+                          {route.cities.map((c) => c.cityName).join(" → ")})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.routeTemplateId && (
+                    <p className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                      {form.formState.errors.routeTemplateId.message}
+                    </p>
+                  )}
+                </div>
 
-            {/* Vehicle and Luggage */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="vehicleId" className="text-sm font-medium">Vehicle</Label>
-                <Select
-                  value={form.watch('vehicleId')}
-                  onValueChange={(value) => form.setValue('vehicleId', value)}
-                >
-                  <SelectTrigger className="w-full h-12 px-3 bg-white focus:ring-2 focus:ring-brand-orange focus:border-transparent">
-                    <SelectValue placeholder="Select vehicle..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {vehicles
-                      .filter(v => v.status === 'active')
-                      .map((vehicle) => (
-                      <SelectItem key={vehicle._id} value={vehicle._id}>
-                        {vehicle.make} {vehicle.model} ({vehicle.capacity} seats)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {form.formState.errors.vehicleId && (
-                  <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{form.formState.errors.vehicleId.message}</p>
-                )}
-              </div>
+                {/* Vehicle and Luggage */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="vehicleId" className="text-sm font-medium">
+                      Vehicle
+                    </Label>
+                    <Select
+                      value={form.watch("vehicleId")}
+                      onValueChange={(value) =>
+                        form.setValue("vehicleId", value)
+                      }
+                    >
+                      <SelectTrigger className="w-full h-12 px-3 bg-white focus:ring-2 focus:ring-brand-orange focus:border-transparent">
+                        <SelectValue placeholder="Select vehicle..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {vehicles
+                          .filter((v) => v.status === "active")
+                          .map((vehicle) => (
+                            <SelectItem key={vehicle._id} value={vehicle._id}>
+                              {vehicle.make} {vehicle.model} ({vehicle.capacity}{" "}
+                              seats)
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    {form.formState.errors.vehicleId && (
+                      <p className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                        {form.formState.errors.vehicleId.message}
+                      </p>
+                    )}
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="luggagePolicyId" className="text-sm font-medium">Luggage Policy <span className="text-muted-foreground">(Optional)</span></Label>
-                <Select
-                  value={form.watch('luggagePolicyId') || undefined}
-                  onValueChange={(value) => form.setValue('luggagePolicyId', value === 'none' ? undefined : value)}
-                >
-                  <SelectTrigger className="w-full h-12 px-3 bg-white focus:ring-2 focus:ring-brand-orange focus:border-transparent">
-                    <SelectValue placeholder="Default policy" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Default policy</SelectItem>
-                    {luggagePolicies.map((policy) => (
-                      <SelectItem key={policy._id} value={policy._id}>
-                        {policy.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="luggagePolicyId"
+                      className="text-sm font-medium"
+                    >
+                      Luggage Policy{" "}
+                      <span className="text-muted-foreground">(Optional)</span>
+                    </Label>
+                    <Select
+                      value={form.watch("luggagePolicyId") || undefined}
+                      onValueChange={(value) =>
+                        form.setValue(
+                          "luggagePolicyId",
+                          value === "none" ? undefined : value,
+                        )
+                      }
+                    >
+                      <SelectTrigger className="w-full h-12 px-3 bg-white focus:ring-2 focus:ring-brand-orange focus:border-transparent">
+                        <SelectValue placeholder="Default policy" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Default policy</SelectItem>
+                        {luggagePolicies.map((policy) => (
+                          <SelectItem key={policy._id} value={policy._id}>
+                            {policy.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
-            {/* Time Selection */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="departureTime" className="text-sm font-medium">Departure Time</Label>
-                <DateTimePickerField
-                  value={form.watch('departureTime')}
-                  onChange={(date) => {
-                    form.setValue('departureTime', date.toISOString().slice(0, 16));
-                    form.trigger('departureTime');
-                  }}
-                  placeholder="Select departure time"
-                  minDate={new Date()}
-                />
-                {form.formState.errors.departureTime && (
-                  <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{form.formState.errors.departureTime.message}</p>
-                )}
-              </div>
+                {/* Time Selection */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="departureTime"
+                      className="text-sm font-medium"
+                    >
+                      Departure Time
+                    </Label>
+                    <DateTimePickerField
+                      value={form.watch("departureTime")}
+                      onChange={(date) => {
+                        form.setValue(
+                          "departureTime",
+                          date.toISOString().slice(0, 16),
+                        );
+                        form.trigger("departureTime");
+                      }}
+                      placeholder="Select departure time"
+                      minDate={new Date()}
+                    />
+                    {form.formState.errors.departureTime && (
+                      <p className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                        {form.formState.errors.departureTime.message}
+                      </p>
+                    )}
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="arrivalTime" className="text-sm font-medium">Arrival Time</Label>
-                <DateTimePickerField
-                  value={form.watch('arrivalTime')}
-                  onChange={(date) => {
-                    form.setValue('arrivalTime', date.toISOString().slice(0, 16));
-                    form.trigger('arrivalTime');
-                  }}
-                  placeholder="Select arrival time"
-                  minDate={form.watch('departureTime') ? new Date(form.watch('departureTime')) : new Date()}
-                />
-                {form.formState.errors.arrivalTime && (
-                  <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{form.formState.errors.arrivalTime.message}</p>
-                )}
-              </div>
-            </div>
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="arrivalTime"
+                      className="text-sm font-medium"
+                    >
+                      Arrival Time
+                    </Label>
+                    <DateTimePickerField
+                      value={form.watch("arrivalTime")}
+                      onChange={(date) => {
+                        form.setValue(
+                          "arrivalTime",
+                          date.toISOString().slice(0, 16),
+                        );
+                        form.trigger("arrivalTime");
+                      }}
+                      placeholder="Select arrival time"
+                      minDate={
+                        form.watch("departureTime")
+                          ? new Date(form.watch("departureTime"))
+                          : new Date()
+                      }
+                    />
+                    {form.formState.errors.arrivalTime && (
+                      <p className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                        {form.formState.errors.arrivalTime.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
 
                 <div className="flex justify-end">
                   <Button
                     type="button"
-                    onClick={() => setCurrentStep('stations')}
+                    onClick={() => setCurrentStep("stations")}
                     disabled={!canProceedToStations}
                     className="bg-brand-orange hover:bg-brand-orange-600 text-white"
                   >
@@ -397,7 +493,8 @@ export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: Qu
                         Select Stations to Serve
                       </h3>
                       <p className="text-sm text-muted-foreground mb-4">
-                        Choose which stations along your route you'll pick up and drop off passengers
+                        Choose which stations along your route you'll pick up
+                        and drop off passengers
                       </p>
                     </div>
                     <StationSelector
@@ -422,11 +519,11 @@ export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: Qu
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setCurrentStep('details')}
+                    onClick={() => setCurrentStep("details")}
                   >
                     Back to Details
                   </Button>
-                  <Button 
+                  <Button
                     type="submit"
                     disabled={isSubmitting || selectedStations.size === 0}
                     className="bg-brand-orange hover:bg-brand-orange-600 text-white"
@@ -451,4 +548,4 @@ export default function QuickScheduleModal({ isOpen, onClose, selectedDate }: Qu
       </Card>
     </div>
   );
-} 
+}

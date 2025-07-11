@@ -13,7 +13,11 @@ export default defineSchema({
     fullName: v.optional(v.string()),
     email: v.string(),
     phone: v.optional(v.string()),
-    role: v.union(v.literal("admin"), v.literal("driver"), v.literal("passenger")),
+    role: v.union(
+      v.literal("admin"),
+      v.literal("driver"),
+      v.literal("passenger"),
+    ),
     rating: v.optional(v.number()),
     avatarUrl: v.optional(v.string()),
   })
@@ -30,7 +34,7 @@ export default defineSchema({
     .index("by_code", ["code"])
     .index("by_name", ["name"]),
 
-  // Reusable Cities - For route management efficiency  
+  // Reusable Cities - For route management efficiency
   reusableCities: defineTable({
     driverId: v.id("profiles"),
     cityName: v.string(),
@@ -46,8 +50,7 @@ export default defineSchema({
     reusableCityId: v.id("reusableCities"),
     stationName: v.string(),
     stationAddress: v.string(),
-  })
-    .index("by_city", ["reusableCityId"]),
+  }).index("by_city", ["reusableCityId"]),
 
   // Route Templates - Define intercity connections
   routeTemplates: defineTable({
@@ -55,7 +58,11 @@ export default defineSchema({
     name: v.string(),
     estimatedDuration: v.string(),
     basePrice: v.number(),
-    status: v.union(v.literal("draft"), v.literal("active"), v.literal("inactive")),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("active"),
+      v.literal("inactive"),
+    ),
   })
     .index("by_driver", ["driverId"])
     .index("by_status", ["status"])
@@ -77,8 +84,7 @@ export default defineSchema({
     routeTemplateCityId: v.id("routeTemplateCities"),
     stationName: v.string(),
     stationAddress: v.string(),
-  })
-    .index("by_route_city", ["routeTemplateCityId"]),
+  }).index("by_route_city", ["routeTemplateCityId"]),
 
   // Intercity segment pricing
   routeTemplatePricing: defineTable({
@@ -86,8 +92,7 @@ export default defineSchema({
     fromCity: v.string(),
     toCity: v.string(),
     price: v.number(),
-  })
-    .index("by_route_template", ["routeTemplateId"]),
+  }).index("by_route_template", ["routeTemplateId"]),
 
   // Vehicles - Driver fleet management
   vehicles: defineTable({
@@ -102,7 +107,11 @@ export default defineSchema({
     capacity: v.number(),
     seatMap: v.optional(v.any()), // JSON for seat configuration
     features: v.optional(v.array(v.string())),
-    status: v.union(v.literal("active"), v.literal("maintenance"), v.literal("inactive")),
+    status: v.union(
+      v.literal("active"),
+      v.literal("maintenance"),
+      v.literal("inactive"),
+    ),
     isDefault: v.optional(v.boolean()),
     insuranceExpiry: v.optional(v.string()),
     registrationExpiry: v.optional(v.string()),
@@ -137,18 +146,24 @@ export default defineSchema({
     departureTime: v.number(), // Unix timestamp
     arrivalTime: v.optional(v.number()),
     status: v.union(
-      v.literal("scheduled"), 
-      v.literal("in-progress"), 
-      v.literal("completed"), 
-      v.literal("cancelled")
+      v.literal("scheduled"),
+      v.literal("in-progress"),
+      v.literal("completed"),
+      v.literal("cancelled"),
     ),
     availableSeats: v.optional(v.number()),
+    // Round trip linking fields
+    returnTripId: v.optional(v.id("trips")), // Points to the return trip
+    outboundTripId: v.optional(v.id("trips")), // Reverse reference
+    roundTripDiscount: v.optional(v.number()), // Optional discount percentage (0-1)
   })
     .index("by_driver", ["driverId"])
     .index("by_route_template", ["routeTemplateId"])
     .index("by_status", ["status"])
     .index("by_departure_time", ["departureTime"])
-    .index("by_driver_and_date", ["driverId", "departureTime"]),
+    .index("by_driver_and_date", ["driverId", "departureTime"])
+    .index("by_return_trip", ["returnTripId"])
+    .index("by_outbound_trip", ["outboundTripId"]),
 
   // Selected stations for trips
   tripStations: defineTable({
@@ -180,12 +195,13 @@ export default defineSchema({
     bookingReference: v.string(),
     paymentIntentId: v.optional(v.string()),
     status: v.union(
-      v.literal("pending"), 
-      v.literal("processing"), 
-      v.literal("completed"), 
-      v.literal("expired")
+      v.literal("pending"),
+      v.literal("processing"),
+      v.literal("completed"),
+      v.literal("expired"),
     ),
     expiresAt: v.number(), // Unix timestamp for expiry
+    isRoundTrip: v.optional(v.boolean()), // Indicates if part of round trip
   })
     .index("by_trip", ["tripId"])
     .index("by_booking_reference", ["bookingReference"])
@@ -209,27 +225,31 @@ export default defineSchema({
     bookingReference: v.string(),
     tempBookingId: v.optional(v.string()),
     status: v.union(
-      v.literal("pending"), 
-      v.literal("confirmed"), 
-      v.literal("completed"), 
-      v.literal("cancelled")
+      v.literal("pending"),
+      v.literal("confirmed"),
+      v.literal("completed"),
+      v.literal("cancelled"),
     ),
     updatedAt: v.optional(v.number()), // Track when status was last updated
     expiresAt: v.optional(v.number()), // For anonymous booking timeout
+    // Round trip booking fields
+    bookingGroupId: v.optional(v.string()), // Links round trip reservations
+    linkedReservationId: v.optional(v.id("reservations")), // Direct link to paired reservation
+    isRoundTrip: v.optional(v.boolean()), // Indicates if part of round trip
   })
     .index("by_trip", ["tripId"])
     .index("by_passenger", ["passengerId"])
     .index("by_booking_reference", ["bookingReference"])
     .index("by_temp_booking_id", ["tempBookingId"]) // ADD THIS INDEX
     .index("by_status", ["status"])
-    .index("by_expires_at", ["expiresAt"]),
+    .index("by_expires_at", ["expiresAt"])
+    .index("by_booking_group", ["bookingGroupId"]),
 
   // Booked Seats
   bookedSeats: defineTable({
     reservationId: v.id("reservations"),
     seatNumber: v.string(),
-  })
-    .index("by_reservation", ["reservationId"]),
+  }).index("by_reservation", ["reservationId"]),
 
   // Payment Records
   payments: defineTable({
@@ -238,10 +258,10 @@ export default defineSchema({
     amount: v.number(),
     currency: v.string(),
     status: v.union(
-      v.literal("pending"), 
-      v.literal("succeeded"), 
-      v.literal("failed"), 
-      v.literal("cancelled")
+      v.literal("pending"),
+      v.literal("succeeded"),
+      v.literal("failed"),
+      v.literal("cancelled"),
     ),
     paidAt: v.optional(v.number()),
   })
@@ -254,7 +274,11 @@ export default defineSchema({
     countryName: v.string(),
     countryCode: v.optional(v.string()),
     businessJustification: v.optional(v.string()),
-    status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("rejected"),
+    ),
     reviewedBy: v.optional(v.id("profiles")),
     reviewedAt: v.optional(v.number()),
   })
@@ -268,7 +292,11 @@ export default defineSchema({
     fullName: v.string(),
     message: v.optional(v.string()),
     phone: v.optional(v.string()),
-    status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("rejected"),
+    ),
     reviewedBy: v.optional(v.id("profiles")),
     reviewedAt: v.optional(v.number()),
     invitationSent: v.optional(v.boolean()),
@@ -319,4 +347,4 @@ export default defineSchema({
     .index("by_trip", ["tripId"])
     .index("by_rater", ["raterId"])
     .index("by_ratee", ["rateeId"]),
-}); 
+});

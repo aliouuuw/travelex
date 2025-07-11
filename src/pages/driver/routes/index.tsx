@@ -314,9 +314,9 @@ export default function DriverRoutesPage() {
   const error = null; // Convex handles errors differently
 
   // Debug: Log auth state
-  console.log("Current User:", currentUser);
-  console.log("Route Templates Data:", routeTemplates);
-  console.log("Is Loading:", isLoading);
+  // console.log("Current User:", currentUser);
+  // console.log("Route Templates Data:", routeTemplates);
+  // console.log("Is Loading:", isLoading);
 
   const filteredRoutes = (routeTemplates || []).filter((route) => 
     selectedStatus === 'all' || route.status === selectedStatus

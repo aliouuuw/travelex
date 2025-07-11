@@ -1,4 +1,4 @@
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 
@@ -47,25 +47,29 @@ export interface TempBooking {
   expiresAt: number;
 }
 
-// Hook to create a payment intent
+// Hook to use payment intent creation
 export const useCreatePaymentIntent = () => {
   return useAction(api.payments.createPaymentIntent);
 };
 
-// Hook to get temporary booking
-export const useTempBooking = (tempBookingId: Id<"tempBookings"> | null) => {
-  return useQuery(
-    api.payments.getTempBooking,
-    tempBookingId ? { tempBookingId } : "skip"
-  );
+// Hook to use round trip payment intent creation
+export const useCreateRoundTripPaymentIntent = () => {
+  return useAction(api.payments.createRoundTripPaymentIntent);
 };
 
-// Hook to check payment status
-export const usePaymentStatus = (tempBookingId: Id<"tempBookings"> | null) => {
-  return useQuery(
-    api.payments.checkPaymentStatus,
-    tempBookingId ? { tempBookingId } : "skip"
-  );
+// Hook to get temporary booking
+export const useTempBooking = (tempBookingId: Id<"tempBookings"> | null) => {
+  return useQuery(api.payments.getTempBooking, tempBookingId ? { tempBookingId } : "skip");
+};
+
+// Hook to get round trip booking data
+export const useRoundTripBookingData = (tempBookingId: Id<"tempBookings"> | null) => {
+  return useQuery(api.payments.getRoundTripBookingData, tempBookingId ? { tempBookingId } : "skip");
+};
+
+// Hook to process round trip payment
+export const useProcessRoundTripPayment = () => {
+  return useAction(api.payments.processRoundTripPayment);
 };
 
 // Hook to cleanup expired bookings

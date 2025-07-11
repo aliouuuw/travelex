@@ -1,6 +1,7 @@
 import { api } from "../../../convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { useAuth } from "@/hooks/use-auth";
 
 // Vehicle Types
 export interface Vehicle {
@@ -16,7 +17,7 @@ export interface Vehicle {
   capacity: number;
   seatMap?: SeatMap;
   features?: string[];
-  status: 'active' | 'maintenance' | 'inactive';
+  status: "active" | "maintenance" | "inactive";
   isDefault?: boolean;
   insuranceExpiry?: string;
   registrationExpiry?: string;
@@ -41,7 +42,7 @@ export interface Seat {
   id: string;
   row: number;
   column: number;
-  type: 'regular' | 'disabled' | 'empty';
+  type: "regular" | "disabled" | "empty";
   available: boolean;
 }
 
@@ -50,8 +51,8 @@ export interface CreateVehicleData {
   model: string;
   year: number;
   licensePlate: string;
-  vehicleType: 'car' | 'van' | 'bus' | 'suv';
-  fuelType: 'gasoline' | 'diesel' | 'electric' | 'hybrid';
+  vehicleType: "car" | "van" | "bus" | "suv";
+  fuelType: "gasoline" | "diesel" | "electric" | "hybrid";
   color?: string;
   capacity: number;
   seatMap?: SeatMap;
@@ -64,47 +65,53 @@ export interface CreateVehicleData {
 }
 
 export interface UpdateVehicleData extends Partial<CreateVehicleData> {
-  status?: 'active' | 'maintenance' | 'inactive';
+  status?: "active" | "maintenance" | "inactive";
   isDefault?: boolean;
 }
 
 // Vehicle Options
 export const VEHICLE_TYPES = [
-  { value: 'car', label: 'Car' },
-  { value: 'van', label: 'Van' },
-  { value: 'bus', label: 'Bus' },
-  { value: 'suv', label: 'SUV' },
+  { value: "car", label: "Car" },
+  { value: "van", label: "Van" },
+  { value: "bus", label: "Bus" },
+  { value: "suv", label: "SUV" },
 ] as const;
 
 export const FUEL_TYPES = [
-  { value: 'gasoline', label: 'Gasoline' },
-  { value: 'diesel', label: 'Diesel' },
-  { value: 'electric', label: 'Electric' },
-  { value: 'hybrid', label: 'Hybrid' },
+  { value: "gasoline", label: "Gasoline" },
+  { value: "diesel", label: "Diesel" },
+  { value: "electric", label: "Electric" },
+  { value: "hybrid", label: "Hybrid" },
 ] as const;
 
 export const VEHICLE_STATUS = [
-  { value: 'active', label: 'Active' },
-  { value: 'maintenance', label: 'Under Maintenance' },
-  { value: 'inactive', label: 'Inactive' },
+  { value: "active", label: "Active" },
+  { value: "maintenance", label: "Under Maintenance" },
+  { value: "inactive", label: "Inactive" },
 ] as const;
 
 export const VEHICLE_FEATURES = [
-  { value: 'air_conditioning', label: 'Air Conditioning' },
-  { value: 'wifi', label: 'WiFi' },
-  { value: 'usb_charging', label: 'USB Charging' },
-  { value: 'bluetooth', label: 'Bluetooth' },
-  { value: 'gps', label: 'GPS Navigation' },
-  { value: 'entertainment', label: 'Entertainment System' },
-  { value: 'seat_belts', label: 'Seat Belts' },
-  { value: 'first_aid', label: 'First Aid Kit' },
-  { value: 'fire_extinguisher', label: 'Fire Extinguisher' },
-  { value: 'phone_charger', label: 'Phone Charger' },
+  { value: "air_conditioning", label: "Air Conditioning" },
+  { value: "wifi", label: "WiFi" },
+  { value: "usb_charging", label: "USB Charging" },
+  { value: "bluetooth", label: "Bluetooth" },
+  { value: "gps", label: "GPS Navigation" },
+  { value: "entertainment", label: "Entertainment System" },
+  { value: "seat_belts", label: "Seat Belts" },
+  { value: "first_aid", label: "First Aid Kit" },
+  { value: "fire_extinguisher", label: "Fire Extinguisher" },
+  { value: "phone_charger", label: "Phone Charger" },
 ] as const;
 
 // React hooks for vehicles
 export const useDriverVehicles = () => {
-  return useQuery(api.vehicles.getDriverVehicles);
+  const { user } = useAuth();
+  return useQuery(
+    api.vehicles.getDriverVehicles,
+    user?.profile?.role === "driver" || user?.profile?.role === "admin"
+      ? {}
+      : "skip",
+  );
 };
 
 export const useVehicleById = (vehicleId: Id<"vehicles">) => {
@@ -133,7 +140,7 @@ export const useSetDefaultVehicle = () => {
  * Get all vehicles for the current driver
  */
 export async function getDriverVehicles(): Promise<Vehicle[]> {
-  throw new Error('Use useDriverVehicles hook instead');
+  throw new Error("Use useDriverVehicles hook instead");
 }
 
 /**
@@ -154,7 +161,7 @@ export async function getDriverVehicles(): Promise<Vehicle[]> {
 //  * Update an existing vehicle
 //  */
 // export async function updateVehicle(
-//   vehicleId: Id<"vehicles">, 
+//   vehicleId: Id<"vehicles">,
 //   vehicleData: UpdateVehicleData
 // ): Promise<boolean> {
 //   throw new Error('Use useUpdateVehicle hook instead');
@@ -175,24 +182,27 @@ export async function getDriverVehicles(): Promise<Vehicle[]> {
 // }
 
 // Utility functions
-export function generateBasicSeatMap(capacity: number, vehicleType: string): SeatMap {
+export function generateBasicSeatMap(
+  capacity: number,
+  vehicleType: string,
+): SeatMap {
   let rows: number;
   let columns: number;
 
   switch (vehicleType) {
-    case 'car':
+    case "car":
       rows = Math.ceil(capacity / 2);
       columns = capacity <= 2 ? capacity : 2;
       break;
-    case 'van':
+    case "van":
       rows = Math.ceil(capacity / 3);
       columns = capacity <= 3 ? capacity : 3;
       break;
-    case 'bus':
+    case "bus":
       rows = Math.ceil(capacity / 4);
       columns = capacity <= 4 ? capacity : 4;
       break;
-    case 'suv':
+    case "suv":
       rows = Math.ceil(capacity / 3);
       columns = capacity <= 3 ? capacity : 3;
       break;
@@ -212,7 +222,7 @@ export function generateBasicSeatMap(capacity: number, vehicleType: string): Sea
         id: `${row}-${col}`,
         row,
         column: col,
-        type: 'regular',
+        type: "regular",
         available: true,
       });
     }
@@ -224,58 +234,70 @@ export function generateBasicSeatMap(capacity: number, vehicleType: string): Sea
 }
 
 export function formatVehicleName(vehicle: Vehicle): string {
-  return `${vehicle.make} ${vehicle.model}${vehicle.year ? ` (${vehicle.year})` : ''}`;
+  return `${vehicle.make} ${vehicle.model}${vehicle.year ? ` (${vehicle.year})` : ""}`;
 }
 
 export function getVehicleTypeLabel(type: string): string {
-  const vehicleType = VEHICLE_TYPES.find(t => t.value === type);
+  const vehicleType = VEHICLE_TYPES.find((t) => t.value === type);
   return vehicleType?.label || type;
 }
 
 export function getFuelTypeLabel(type: string): string {
-  const fuelType = FUEL_TYPES.find(t => t.value === type);
+  const fuelType = FUEL_TYPES.find((t) => t.value === type);
   return fuelType?.label || type;
 }
 
-export function getStatusInfo(status: string): { label: string; color: string } {
+export function getStatusInfo(status: string): {
+  label: string;
+  color: string;
+} {
   switch (status) {
-    case 'active':
-      return { label: 'Active', color: 'green' };
-    case 'maintenance':
-      return { label: 'Under Maintenance', color: 'yellow' };
-    case 'inactive':
-      return { label: 'Inactive', color: 'red' };
+    case "active":
+      return { label: "Active", color: "green" };
+    case "maintenance":
+      return { label: "Under Maintenance", color: "yellow" };
+    case "inactive":
+      return { label: "Inactive", color: "red" };
     default:
-      return { label: status, color: 'gray' };
+      return { label: status, color: "gray" };
   }
 }
 
-export function isMaintenanceDue(vehicle: Vehicle, warningDays: number = 30): boolean {
+export function isMaintenanceDue(
+  vehicle: Vehicle,
+  warningDays: number = 30,
+): boolean {
   if (!vehicle.lastMaintenance) return true;
-  
+
   const lastMaintenance = new Date(vehicle.lastMaintenance);
   const warningDate = new Date();
   warningDate.setDate(warningDate.getDate() - warningDays);
-  
+
   return lastMaintenance < warningDate;
 }
 
-export function isInsuranceExpiring(vehicle: Vehicle, warningDays: number = 30): boolean {
+export function isInsuranceExpiring(
+  vehicle: Vehicle,
+  warningDays: number = 30,
+): boolean {
   if (!vehicle.insuranceExpiry) return false;
-  
+
   const expiryDate = new Date(vehicle.insuranceExpiry);
   const warningDate = new Date();
   warningDate.setDate(warningDate.getDate() + warningDays);
-  
+
   return expiryDate < warningDate;
 }
 
-export function isRegistrationExpiring(vehicle: Vehicle, warningDays: number = 30): boolean {
+export function isRegistrationExpiring(
+  vehicle: Vehicle,
+  warningDays: number = 30,
+): boolean {
   if (!vehicle.registrationExpiry) return false;
-  
+
   const expiryDate = new Date(vehicle.registrationExpiry);
   const warningDate = new Date();
   warningDate.setDate(warningDate.getDate() + warningDays);
-  
+
   return expiryDate < warningDate;
-} 
+}

@@ -24,6 +24,11 @@ export interface TripSearchQueryWithCountry {
   maxPrice?: number;
 }
 
+export interface RoundTripSearchQuery extends TripSearchQueryWithCountry {
+  returnDate?: string; // YYYY-MM-DD format
+  tripType: "one-way" | "round-trip";
+}
+
 export interface TripSearchResult {
   tripId: string;
   routeTemplateId: string;
@@ -49,7 +54,7 @@ export interface TripSearchResult {
           id: string;
           row: number;
           column: number;
-          type: 'regular' | 'disabled' | 'empty';
+          type: "regular" | "disabled" | "empty";
           available: boolean;
         }>;
       }>;
@@ -93,6 +98,22 @@ export interface TripSearchResult {
     maxBags: number;
     maxBagWeightKg?: number;
   };
+  // Round trip specific fields
+  isRoundTrip?: boolean;
+  returnTripId?: string;
+  returnTripDetails?: {
+    tripId: string;
+    routeTemplateName: string;
+    driverName: string;
+    vehicleInfo: string;
+    departureTime: string;
+    arrivalTime?: string;
+    availableSeats: number;
+    price: number;
+  };
+  totalPrice?: number;
+  discountAmount?: number;
+  discountPercentage?: number;
 }
 
 export interface TripBookingDetails {
@@ -119,7 +140,7 @@ export interface TripBookingDetails {
           id: string;
           row: number;
           column: number;
-          type: 'regular' | 'disabled' | 'empty';
+          type: "regular" | "disabled" | "empty";
           available: boolean;
         }>;
       }>;
@@ -163,7 +184,7 @@ export interface TripSearchFilters {
   minSeats?: number;
   departureTimeRange?: {
     start: string; // HH:MM format
-    end: string;   // HH:MM format
+    end: string; // HH:MM format
   };
   minDriverRating?: number;
 }
@@ -180,11 +201,11 @@ export const useSearchTrips = (
   toCity: string,
   departureDate?: string,
   minSeats?: number,
-  maxPrice?: number
+  maxPrice?: number,
 ) => {
   return useQuery(
     api.tripSearch.searchTripsBySegment,
-    fromCity && toCity 
+    fromCity && toCity
       ? {
           fromCity,
           toCity,
@@ -192,7 +213,7 @@ export const useSearchTrips = (
           minSeats,
           maxPrice,
         }
-      : "skip"
+      : "skip",
   );
 };
 
@@ -202,7 +223,7 @@ export const useSearchTrips = (
 export const useTripForBooking = (tripId: string) => {
   return useQuery(
     api.tripSearch.getTripForBooking,
-    tripId ? { tripId: tripId as Id<"trips"> } : "skip"
+    tripId ? { tripId: tripId as Id<"trips"> } : "skip",
   );
 };
 
@@ -221,7 +242,9 @@ export const searchTripsBySegment = async (): Promise<TripSearchResult[]> => {
 /**
  * Search for trips with country filtering (for backward compatibility)
  */
-export const searchTripsBySegmentWithCountry = async (): Promise<TripSearchResult[]> => {
+export const searchTripsBySegmentWithCountry = async (): Promise<
+  TripSearchResult[]
+> => {
   // This is a placeholder - in practice, you'd use the useSearchTrips hook
   // The country filtering is handled by the city selection
   throw new Error("Use useSearchTrips hook instead");
@@ -230,17 +253,18 @@ export const searchTripsBySegmentWithCountry = async (): Promise<TripSearchResul
 /**
  * Get detailed trip information for booking (for backward compatibility)
  */
-export const getTripForBooking = async (): Promise<TripBookingDetails | null> => {
-  // This is a placeholder - in practice, you'd use the useTripForBooking hook
-  throw new Error("Use useTripForBooking hook instead");
-};
+export const getTripForBooking =
+  async (): Promise<TripBookingDetails | null> => {
+    // This is a placeholder - in practice, you'd use the useTripForBooking hook
+    throw new Error("Use useTripForBooking hook instead");
+  };
 
 /**
  * Apply client-side filters to search results
  */
 export const applyTripFilters = (
   trips: TripSearchResult[],
-  filters: TripSearchFilters
+  filters: TripSearchFilters,
 ): TripSearchResult[] => {
   return trips.filter((trip) => {
     // Vehicle type filter
@@ -262,14 +286,20 @@ export const applyTripFilters = (
     if (filters.departureTimeRange) {
       const departureTime = new Date(trip.departureTime);
       const timeString = departureTime.toTimeString().substring(0, 5); // HH:MM format
-      
-      if (timeString < filters.departureTimeRange.start || timeString > filters.departureTimeRange.end) {
+
+      if (
+        timeString < filters.departureTimeRange.start ||
+        timeString > filters.departureTimeRange.end
+      ) {
         return false;
       }
     }
 
     // Minimum driver rating filter
-    if (filters.minDriverRating && trip.driverRating < filters.minDriverRating) {
+    if (
+      filters.minDriverRating &&
+      trip.driverRating < filters.minDriverRating
+    ) {
       return false;
     }
 
@@ -282,29 +312,35 @@ export const applyTripFilters = (
  */
 export const sortTripResults = (
   trips: TripSearchResult[],
-  sortBy: 'price' | 'departure' | 'duration' | 'rating' = 'departure'
+  sortBy: "price" | "departure" | "duration" | "rating" = "departure",
 ): TripSearchResult[] => {
   const sorted = [...trips];
 
   switch (sortBy) {
-    case 'price':
+    case "price":
       return sorted.sort((a, b) => a.segmentPrice - b.segmentPrice);
-    
-    case 'departure':
-      return sorted.sort((a, b) => 
-        new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime()
+
+    case "departure":
+      return sorted.sort(
+        (a, b) =>
+          new Date(a.departureTime).getTime() -
+          new Date(b.departureTime).getTime(),
       );
-    
-    case 'duration':
+
+    case "duration":
       return sorted.sort((a, b) => {
-        const durationA = new Date(a.arrivalTime || a.departureTime).getTime() - new Date(a.departureTime).getTime();
-        const durationB = new Date(b.arrivalTime || b.departureTime).getTime() - new Date(b.departureTime).getTime();
+        const durationA =
+          new Date(a.arrivalTime || a.departureTime).getTime() -
+          new Date(a.departureTime).getTime();
+        const durationB =
+          new Date(b.arrivalTime || b.departureTime).getTime() -
+          new Date(b.departureTime).getTime();
         return durationA - durationB;
       });
-    
-    case 'rating':
+
+    case "rating":
       return sorted.sort((a, b) => b.driverRating - a.driverRating);
-    
+
     default:
       return sorted;
   }
@@ -313,15 +349,18 @@ export const sortTripResults = (
 /**
  * Format trip duration for display
  */
-export const formatTripDuration = (departureTime: string, arrivalTime?: string): string => {
+export const formatTripDuration = (
+  departureTime: string,
+  arrivalTime?: string,
+): string => {
   if (!arrivalTime) return "Duration not specified";
-  
+
   const departure = new Date(departureTime);
   const arrival = new Date(arrivalTime);
   const durationMs = arrival.getTime() - departure.getTime();
   const hours = Math.floor(durationMs / (1000 * 60 * 60));
   const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
-  
+
   if (hours > 0) {
     return `${hours}h ${minutes}m`;
   }
@@ -334,6 +373,32 @@ export const formatTripDuration = (departureTime: string, arrivalTime?: string):
 export const getRoutePathString = (cities: string[]): string => {
   if (cities.length === 0) return "";
   if (cities.length === 1) return cities[0];
-  
-  return cities.join(' → ');
-}; 
+
+  return cities.join(" → ");
+};
+
+/**
+ * Search for trips with round trip options
+ */
+export const useSearchTripsWithRoundTrip = (
+  fromCity: string,
+  toCity: string,
+  departureDate?: string,
+  returnDate?: string,
+  passengers?: number,
+  tripType: "one-way" | "round-trip" = "one-way",
+) => {
+  return useQuery(
+    api.tripSearch.searchTripsWithRoundTrip,
+    fromCity && toCity
+      ? {
+          fromCity,
+          toCity,
+          departureDate,
+          returnDate,
+          passengers,
+          tripType,
+        }
+      : "skip",
+  );
+};

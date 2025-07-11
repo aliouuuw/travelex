@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -19,8 +20,10 @@ import {
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useTripForBooking } from "@/services/convex/tripSearch";
-import { useCreatePaymentIntent } from "@/services/convex/payments";
+import { useCreatePaymentIntent, useCreateRoundTripPaymentIntent } from "@/services/convex/payments";
 import type { SeatMap } from "@/services/convex/vehicles";
+import type { TripSearchResult } from "@/services/convex/tripSearch";
+
 interface BookingFormData {
   pickupStationId: string;
   dropoffStationId: string;
@@ -31,7 +34,127 @@ interface BookingFormData {
     email: string;
     phone: string;
   };
+  // NEW: Optional round trip fields
+  returnTrip?: {
+    pickupStationId: string;
+    dropoffStationId: string;
+    selectedSeats: string[];
+    numberOfBags: number;
+  };
 }
+
+const LuggageSelector = ({
+  policy,
+  selectedSeats,
+  numberOfBags,
+  onBagsChange,
+  tripTitle,
+  titleColor = "text-gray-900",
+}: {
+  policy: TripSearchResult["luggagePolicy"];
+  selectedSeats: number;
+  numberOfBags: number;
+  onBagsChange: (newCount: number) => void;
+  tripTitle: string;
+  titleColor?: string;
+}) => {
+  if (selectedSeats === 0) {
+    return (
+      <div className="p-4 bg-gray-50 rounded-lg text-center">
+        <p className="text-sm text-muted-foreground">
+          Select seats to manage luggage for the {tripTitle.toLowerCase()}.
+        </p>
+      </div>
+    );
+  }
+
+  const freeBags = selectedSeats;
+  const additionalBags = Math.max(0, numberOfBags - freeBags);
+  const feePerBag = policy?.excessFeePerKg || 0;
+  const maxBags = (policy?.maxBags || 4) * selectedSeats + freeBags;
+  const luggageFee = additionalBags * feePerBag;
+
+  return (
+    <div className="space-y-4 p-6 rounded-lg border bg-white">
+      <h4 className={`font-semibold text-lg ${titleColor}`}>{tripTitle}</h4>
+      {policy ? (
+        <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+          <div className="flex items-start gap-3">
+            <Package className="w-5 h-5 text-green-600 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="font-semibold text-green-900 mb-3">{policy.name || "Luggage Policy"}</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-gray-700">Free bags included</span>
+                  </div>
+                  <p className="text-green-800 ml-4">
+                    {freeBags} bag{freeBags > 1 ? 's' : ''} up to {policy.freeWeightKg || 23}kg each
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                    <span className="text-gray-700">Additional bags</span>
+                  </div>
+                  <p className="text-green-800 ml-4">₵{(policy.excessFeePerKg || 5).toFixed(2)} per additional bag</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+          <p className="text-yellow-800 text-sm">No specific luggage policy available.</p>
+        </div>
+      )}
+
+      <div>
+        <Label className="text-sm font-medium mb-3 block">Total Bags</Label>
+        <div className="flex items-center gap-4">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onBagsChange(Math.max(freeBags, numberOfBags - 1))}
+            disabled={numberOfBags <= freeBags}
+            className="w-10 h-10 p-0"
+          >
+            -
+          </Button>
+          <div className="text-center min-w-[80px]">
+            <div className="text-2xl font-bold text-brand-orange">{numberOfBags}</div>
+            <div className="text-xs text-muted-foreground">
+              {numberOfBags === freeBags
+                ? `${freeBags} bag${freeBags > 1 ? 's' : ''} (all free)`
+                : `${freeBags} free + ${additionalBags} additional`}
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onBagsChange(Math.min(maxBags, numberOfBags + 1))}
+            disabled={numberOfBags >= maxBags}
+            className="w-10 h-10 p-0"
+          >
+            +
+          </Button>
+        </div>
+
+        {luggageFee > 0 && (
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm">
+            <div className="flex justify-between items-center">
+              <span>Additional luggage fee ({additionalBags} bag{additionalBags > 1 ? 's' : ''})</span>
+              <span className="font-semibold text-brand-orange">₵{luggageFee.toFixed(2)}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 // Visual Seat Selection Component
 const SeatSelectionGrid = ({ 
@@ -148,9 +271,14 @@ export default function BookingPage() {
   const fromStationId = searchParams.get('fromStation');
   const toStationId = searchParams.get('toStation');
 
+  // NEW: Round trip detection
+  const returnTripId = searchParams.get("returnTripId");
+  const isRoundTrip = !!returnTripId;
+
   // Form state - skip station selection if stations are pre-selected
   const hasPreSelectedStations = fromStationId && toStationId;
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(hasPreSelectedStations ? 1 : 1); // Always start at step 1 (seat selection)
+  
   const [formData, setFormData] = useState<BookingFormData>({
     pickupStationId: fromStationId || '',
     dropoffStationId: toStationId || '',
@@ -161,12 +289,25 @@ export default function BookingPage() {
       email: '',
       phone: '',
     },
+    // NEW: Initialize return trip data for round trips
+    ...(isRoundTrip && {
+      returnTrip: {
+        pickupStationId: toStationId || '', // Return pickup is original dropoff
+        dropoffStationId: fromStationId || '', // Return dropoff is original pickup
+        selectedSeats: [],
+        numberOfBags: 1,
+      }
+    }),
   });
 
   // Fetch trip details using Convex
   const trip = useTripForBooking(tripId || "");
   const isLoading = trip === undefined && !!tripId;
   const error = null; // Convex handles errors differently
+
+  // NEW: Fetch return trip data conditionally
+  const returnTrip = useTripForBooking(returnTripId || "");
+  const returnLoading = returnTrip === undefined && !!returnTripId;
 
   // Find the actual station objects for display
   const pickupStation = useMemo(() => {
@@ -281,6 +422,26 @@ export default function BookingPage() {
     return pricingSegment?.price || 50; // fallback price
   }, [trip, searchFromCity, searchToCity]);
 
+  // NEW: Calculate return trip pricing
+  const returnSegmentPrice = useMemo(() => {
+    if (!isRoundTrip || !returnTrip || !searchFromCity || !searchToCity) return 0;
+    
+    // Return trip is from searchToCity to searchFromCity (reversed)
+    let pricingSegment = returnTrip.pricing.find(p => 
+      p.fromCity.toLowerCase() === searchToCity.toLowerCase() && 
+      p.toCity.toLowerCase() === searchFromCity.toLowerCase()
+    );
+    
+    if (!pricingSegment) {
+      pricingSegment = returnTrip.pricing.find(p => 
+        p.fromCity.toLowerCase().includes(searchToCity.toLowerCase()) && 
+        p.toCity.toLowerCase().includes(searchFromCity.toLowerCase())
+      );
+    }
+    
+    return pricingSegment?.price || segmentPrice; // fallback to outbound price
+  }, [isRoundTrip, returnTrip, searchFromCity, searchToCity, segmentPrice]);
+
   const luggageFee = useMemo(() => {
     if (!trip?.luggagePolicy) {
       return 0;
@@ -298,34 +459,71 @@ export default function BookingPage() {
     return additionalBags * feePerBag;
   }, [trip, formData.numberOfBags, formData.selectedSeats.length]);
 
-  const totalPrice = segmentPrice * formData.selectedSeats.length + luggageFee;
+  // NEW: Calculate return trip luggage fee
+  const returnLuggageFee = useMemo(() => {
+    if (!isRoundTrip || !returnTrip?.luggagePolicy || !formData.returnTrip) {
+      return 0;
+    }
+    
+    if (formData.returnTrip.selectedSeats.length === 0) {
+      return 0;
+    }
+    
+    const totalFreeBags = formData.returnTrip.selectedSeats.length;
+    const additionalBags = Math.max(0, formData.returnTrip.numberOfBags - totalFreeBags);
+    const feePerBag = returnTrip.luggagePolicy.excessFeePerKg || 0;
+    return additionalBags * feePerBag;
+  }, [isRoundTrip, returnTrip, formData.returnTrip]);
+
+  const totalPrice = isRoundTrip 
+    ? (segmentPrice * formData.selectedSeats.length + luggageFee) + 
+      (returnSegmentPrice * (formData.returnTrip?.selectedSeats.length || 0) + returnLuggageFee)
+    : segmentPrice * formData.selectedSeats.length + luggageFee;
 
   // Handle form updates
   const updateFormData = (updates: Partial<BookingFormData>) => {
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
-  const handleSeatSelect = (seatId: string) => {
-    const isSelected = formData.selectedSeats.includes(seatId);
-    if (isSelected) {
-      const newSelectedSeats = formData.selectedSeats.filter(id => id !== seatId);
+  const handleSeatSelect = (seatId: string, tripType: "outbound" | "return") => {
+    if (tripType === "return" && formData.returnTrip) {
+      // Handle return trip seat selection
+      const currentReturnSeats = formData.returnTrip.selectedSeats || [];
+      const isSelected = currentReturnSeats.includes(seatId);
+      
+      let newSelectedSeats;
+      if (isSelected) {
+        newSelectedSeats = currentReturnSeats.filter(id => id !== seatId);
+      } else {
+        newSelectedSeats = [...currentReturnSeats, seatId];
+      }
+      
       updateFormData({
-        selectedSeats: newSelectedSeats,
-        // Reset numberOfBags to 1 if no seats selected, otherwise use the new count
-        numberOfBags: newSelectedSeats.length === 0 ? 1 : newSelectedSeats.length
+        returnTrip: {
+          ...formData.returnTrip,
+          selectedSeats: newSelectedSeats,
+          numberOfBags: newSelectedSeats.length === 0 ? 1 : newSelectedSeats.length,
+        },
       });
-    } else {
-      const newSelectedSeats = [...formData.selectedSeats, seatId];
+    } else if (tripType === "outbound") {
+      // Handle outbound trip seat selection
+      const isSelected = formData.selectedSeats.includes(seatId);
+      let newSelectedSeats;
+      if (isSelected) {
+        newSelectedSeats = formData.selectedSeats.filter(id => id !== seatId);
+      } else {
+        newSelectedSeats = [...formData.selectedSeats, seatId];
+      }
       updateFormData({
         selectedSeats: newSelectedSeats,
-        // Update numberOfBags to match the new number of passengers (free bags)
-        numberOfBags: newSelectedSeats.length
+        numberOfBags: newSelectedSeats.length === 0 ? 1 : newSelectedSeats.length,
       });
     }
   };
 
   // Create payment intent action
   const createPaymentIntent = useCreatePaymentIntent();
+  const createRoundTripPaymentIntent = useCreateRoundTripPaymentIntent();
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
 
   const handleSubmit = async () => {
@@ -334,10 +532,52 @@ export default function BookingPage() {
       return;
     }
 
+    if (isRoundTrip && !returnTrip) {
+      toast.error('Return trip data not available');
+      return;
+    }
+
     setIsCreatingPayment(true);
     
     try {
-      const paymentData = {
+      let response;
+      
+      if (isRoundTrip && formData.returnTrip) {
+        // Round trip payment
+        const roundTripPaymentData = {
+          outboundBooking: {
+            tripId: trip.tripId,
+            pickupStationId: formData.pickupStationId,
+            dropoffStationId: formData.dropoffStationId,
+            selectedSeats: formData.selectedSeats,
+            numberOfBags: formData.numberOfBags,
+            totalPrice: segmentPrice * formData.selectedSeats.length + luggageFee,
+            passengerInfo: {
+              fullName: formData.passengerInfo.fullName,
+              email: formData.passengerInfo.email,
+              phone: formData.passengerInfo.phone || '',
+            },
+          },
+          returnBooking: {
+            tripId: returnTrip!.tripId,
+            pickupStationId: formData.returnTrip.pickupStationId,
+            dropoffStationId: formData.returnTrip.dropoffStationId,
+            selectedSeats: formData.returnTrip.selectedSeats,
+            numberOfBags: formData.returnTrip.numberOfBags,
+            totalPrice: returnSegmentPrice * formData.returnTrip.selectedSeats.length + returnLuggageFee,
+            passengerInfo: {
+              fullName: formData.passengerInfo.fullName,
+              email: formData.passengerInfo.email,
+              phone: formData.passengerInfo.phone || '',
+            },
+          },
+          totalAmount: totalPrice,
+          discountAmount: 0,
+        };
+        response = await createRoundTripPaymentIntent(roundTripPaymentData);
+      } else {
+        // One-way payment
+        const oneWayPaymentData = {
         tripId: trip.tripId,
         passengerInfo: {
           fullName: formData.passengerInfo.fullName,
@@ -350,12 +590,15 @@ export default function BookingPage() {
         numberOfBags: formData.numberOfBags,
         totalPrice: totalPrice,
       };
-      
-      const response = await createPaymentIntent(paymentData);
+        response = await createPaymentIntent(oneWayPaymentData);
+      }
       
       toast.success('Redirecting to payment...');
       // Navigate to payment page with client secret
-      navigate(`/payment/${response.tempBookingId}?client_secret=${response.clientSecret}`);
+      const bookingId = isRoundTrip 
+        ? (response as { outboundTempId: string }).outboundTempId 
+        : (response as { tempBookingId: string }).tempBookingId;
+      navigate(`/payment/${bookingId}?client_secret=${response.clientSecret}`);
     } catch (error) {
       toast.error('Failed to create payment session: ' + (error as Error).message);
     } finally {
@@ -364,7 +607,7 @@ export default function BookingPage() {
   };
 
   // Loading and error states
-  if (isLoading) {
+  if (isLoading || (isRoundTrip && returnLoading)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex items-center gap-3">
@@ -375,7 +618,7 @@ export default function BookingPage() {
     );
   }
 
-  if (error || !trip) {
+  if (error || !trip || (isRoundTrip && !returnTrip)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -398,7 +641,9 @@ export default function BookingPage() {
   const arrivalTime = new Date(trip.arrivalTime || "");
 
   // Validation for each step
-  const canProceedFromStep1 = formData.selectedSeats.length > 0;
+  const canProceedFromStep1 = isRoundTrip 
+    ? formData.selectedSeats.length > 0 && (formData.returnTrip?.selectedSeats.length || 0) > 0
+    : formData.selectedSeats.length > 0;
   const canProceedFromStep2 = true; // Luggage is optional
   const canSubmit = formData.passengerInfo.fullName && formData.passengerInfo.email && formData.passengerInfo.phone;
 
@@ -419,6 +664,12 @@ export default function BookingPage() {
                 : "Complete your booking in a few simple steps"
               }
             </p>
+            {/* NEW: Round trip indicator */}
+            {isRoundTrip && (
+              <Badge variant="secondary" className="mt-2 bg-blue-100 text-blue-800">
+                Round Trip Booking
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -459,32 +710,99 @@ export default function BookingPage() {
                   <div className="mb-6 p-4 bg-green-50 rounded-lg">
                     <div className="flex items-center gap-2 text-green-800 mb-2">
                       <CheckCircle className="w-4 h-4" />
-                      <span className="font-medium">Stations Selected</span>
+                      <span className="font-medium">
+                        {isRoundTrip ? "Round Trip Stations Selected" : "Stations Selected"}
+                      </span>
                     </div>
-                    {pickupStation && dropoffStation ? (
-                      <div className="space-y-2 text-sm text-green-700">
-                        <div className="flex items-start gap-2">
-                          <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
-                          <div>
-                            <p className="font-medium">Pickup: {pickupStation?.stationName}</p>
-                            <p className="text-xs opacity-80">{pickupStation?.stationAddress}</p>
-                          </div>
+                    
+                    {isRoundTrip ? (
+                      /* Round Trip: Show both outbound and return */
+                      <div className="space-y-4">
+                        {/* Outbound */}
+                        <div className="p-3 bg-blue-50 rounded border border-blue-200">
+                          <h4 className="font-medium text-blue-900 mb-2">
+                            Outbound: {searchFromCity} → {searchToCity}
+                          </h4>
+                          {pickupStation && dropoffStation ? (
+                            <div className="space-y-2 text-sm text-blue-700">
+                              <div className="flex items-start gap-2">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                                <div>
+                                  <p className="font-medium">Pickup: {pickupStation?.stationName}</p>
+                                  <p className="text-xs opacity-80">{pickupStation?.stationAddress}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-2">
+                                <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                                <div>
+                                  <p className="font-medium">Dropoff: {dropoffStation?.stationName}</p>
+                                  <p className="text-xs opacity-80">{dropoffStation?.stationAddress}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-blue-700">Loading station details...</p>
+                          )}
+                          <p className="text-sm font-bold text-blue-800 mt-2">₵{segmentPrice} per seat</p>
                         </div>
-                        <div className="flex items-start gap-2">
-                          <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
-                          <div>
-                            <p className="font-medium">Dropoff: {dropoffStation?.stationName}</p>
-                            <p className="text-xs opacity-80">{dropoffStation?.stationAddress}</p>
-                          </div>
+                        
+                        {/* Return */}
+                        <div className="p-3 bg-green-50 rounded border border-green-200">
+                          <h4 className="font-medium text-green-900 mb-2">
+                            Return: {searchToCity} → {searchFromCity}
+                          </h4>
+                          {pickupStation && dropoffStation ? (
+                            <div className="space-y-2 text-sm text-green-700">
+                              <div className="flex items-start gap-2">
+                                <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                                <div>
+                                  <p className="font-medium">Pickup: {dropoffStation?.stationName}</p>
+                                  <p className="text-xs opacity-80">{dropoffStation?.stationAddress}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-2">
+                                <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                                <div>
+                                  <p className="font-medium">Dropoff: {pickupStation?.stationName}</p>
+                                  <p className="text-xs opacity-80">{pickupStation?.stationAddress}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-green-700">Loading station details...</p>
+                          )}
+                          <p className="text-sm font-bold text-green-800 mt-2">₵{returnSegmentPrice} per seat</p>
                         </div>
                       </div>
                     ) : (
-                      <div className="text-sm text-green-700">
-                        <p>Your journey: {searchFromCity} → {searchToCity}</p>
-                        <p className="text-xs opacity-80">Loading station details...</p>
+                      /* One-Way: Original layout */
+                      <div>
+                        {pickupStation && dropoffStation ? (
+                          <div className="space-y-2 text-sm text-green-700">
+                            <div className="flex items-start gap-2">
+                              <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                              <div>
+                                <p className="font-medium">Pickup: {pickupStation?.stationName}</p>
+                                <p className="text-xs opacity-80">{pickupStation?.stationAddress}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                              <div>
+                                <p className="font-medium">Dropoff: {dropoffStation?.stationName}</p>
+                                <p className="text-xs opacity-80">{dropoffStation?.stationAddress}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-sm text-green-700">
+                            <p>Your journey: {searchFromCity} → {searchToCity}</p>
+                            <p className="text-xs opacity-80">Loading station details...</p>
+                          </div>
+                        )}
+                        <p className="text-lg font-bold text-green-800 mt-3">₵{segmentPrice} per seat</p>
                       </div>
                     )}
-                    <p className="text-lg font-bold text-green-800 mt-3">₵{segmentPrice} per seat</p>
                   </div>
                 )}
 
@@ -494,38 +812,87 @@ export default function BookingPage() {
                     <div className="text-center mb-6">
                       <h3 className="text-lg font-semibold mb-2">Select Your Seats</h3>
                       <p className="text-muted-foreground">
-                        Choose {formData.selectedSeats.length > 0 ? `${formData.selectedSeats.length} seat${formData.selectedSeats.length > 1 ? 's' : ''}` : 'your preferred seats'} for this journey
+                        {isRoundTrip 
+                          ? `Choose your seats for both outbound and return journeys`
+                          : `Choose your preferred seats for this journey`
+                        }
                       </p>
                     </div>
 
-                    <SeatSelectionGrid
-                      seatMap={trip.vehicleInfo?.seatMap || {
-                        rows: 0,
-                        columns: 0,
-                        layout: [] as Array<{
-                          row: number;
-                          seats: Array<{
-                            id: string;
-                            row: number;
-                            column: number;
-                            type: 'regular' | 'disabled' | 'empty';
-                            available: boolean;
-                          }>;
-                        }>,
-                      }}
-                      selectedSeats={formData.selectedSeats}
-                      onSeatSelect={handleSeatSelect}
-                      occupiedSeats={trip.bookedSeats || []}
-                    />
+                    {isRoundTrip ? (
+                      /* Round Trip: Sequential "Accordion" Layout */
+                      <div className="space-y-8">
+                        {/* Outbound Trip */}
+                        <div className="p-6 rounded-lg border bg-white shadow-sm">
+                          <div className="flex justify-between items-center mb-4">
+                            <h4 className="font-semibold text-lg text-blue-900">
+                              Outbound: {searchFromCity} → {searchToCity}
+                            </h4>
+                            {formData.selectedSeats.length > 0 && (
+                              <div className="flex items-center gap-2 text-green-600">
+                                <CheckCircle className="w-5 h-5" />
+                                <span className="font-medium">Completed</span>
+                              </div>
+                            )}
+                          </div>
+                          <SeatSelectionGrid
+                            seatMap={trip.vehicleInfo?.seatMap as SeatMap}
+                            selectedSeats={formData.selectedSeats}
+                            onSeatSelect={(seatId) => handleSeatSelect(seatId, "outbound")}
+                            occupiedSeats={trip.bookedSeats || []}
+                          />
+                        </div>
 
-                    {formData.selectedSeats.length > 0 && (
-                      <div className="text-center p-4 bg-brand-orange/10 rounded-lg">
-                        <p className="font-medium text-brand-orange">
-                          Selected: {formData.selectedSeats.join(', ')} 
-                          ({formData.selectedSeats.length} seat{formData.selectedSeats.length > 1 ? 's' : ''})
-                        </p>
+                        {/* Return Trip - Appears after outbound seats are selected */}
+                        {formData.selectedSeats.length > 0 && (
+                          <div className="p-6 rounded-lg border bg-white shadow-sm animate-fade-in">
+                            <div className="flex justify-between items-center mb-4">
+                              <h4 className="font-semibold text-lg text-green-900">
+                                Return: {searchToCity} → {searchFromCity}
+                              </h4>
+                              {formData.returnTrip && formData.returnTrip.selectedSeats.length > 0 && (
+                                <div className="flex items-center gap-2 text-green-600">
+                                  <CheckCircle className="w-5 h-5" />
+                                  <span className="font-medium">Completed</span>
+                                </div>
+                              )}
+                            </div>
+                            <SeatSelectionGrid
+                              seatMap={returnTrip?.vehicleInfo?.seatMap as SeatMap}
+                              selectedSeats={formData.returnTrip?.selectedSeats || []}
+                              onSeatSelect={(seatId) => handleSeatSelect(seatId, "return")}
+                              occupiedSeats={returnTrip?.bookedSeats || []}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      /* One-Way: Existing seat selection UI */
+                      <div className="p-6 rounded-lg border bg-white shadow-sm">
+                        <SeatSelectionGrid
+                          seatMap={trip.vehicleInfo?.seatMap as SeatMap}
+                          selectedSeats={formData.selectedSeats}
+                          onSeatSelect={(seatId) => handleSeatSelect(seatId, "outbound")}
+                          occupiedSeats={trip.bookedSeats || []}
+                        />
                       </div>
                     )}
+
+                    {/* Seat selection summary */}
+                    <div className="pt-4 border-t">
+                      <div className="flex justify-between items-center font-medium text-gray-800">
+                        <span>
+                          Outbound Seats: {formData.selectedSeats.length}
+                          {isRoundTrip && `, Return Seats: ${formData.returnTrip?.selectedSeats.length || 0}`}
+                        </span>
+                        <span>
+                          Total Selected: {formData.selectedSeats.length + (formData.returnTrip?.selectedSeats.length || 0)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {canProceedFromStep1 ? "You may now proceed to the next step." : "Please select seats for your entire journey to continue."}
+                      </p>
+                    </div>
                   </div>
                 )}
 
@@ -534,7 +901,12 @@ export default function BookingPage() {
                   <div className="space-y-6">
                     <div className="mb-6">
                       <h3 className="text-lg font-semibold mb-2">Luggage Information</h3>
-                      <p className="text-muted-foreground">Select additional bags to bring on your trip</p>
+                      <p className="text-muted-foreground">
+                        {isRoundTrip 
+                          ? "Manage luggage for both your outbound and return journeys"
+                          : "Select additional bags to bring on your trip"
+                        }
+                      </p>
                     </div>
 
                     {/* Pricing Summary */}
@@ -544,114 +916,56 @@ export default function BookingPage() {
                         <span className="text-sm font-medium text-blue-900">Pricing Summary</span>
                       </div>
                       <div className="text-sm text-blue-800">
+                        {isRoundTrip ? (
+                          <div className="space-y-1">
+                            <p>Outbound: {formData.selectedSeats.length} × ₵{segmentPrice} = ₵{segmentPrice * formData.selectedSeats.length}</p>
+                            <p>Return: {formData.returnTrip?.selectedSeats.length || 0} × ₵{returnSegmentPrice} = ₵{returnSegmentPrice * (formData.returnTrip?.selectedSeats.length || 0)}</p>
+                            <div className="border-t pt-1 mt-2">
+                              <p className="font-medium">Total Base Fare: ₵{(segmentPrice * formData.selectedSeats.length) + (returnSegmentPrice * (formData.returnTrip?.selectedSeats.length || 0))}</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
                         <p>Base fare: ₵{segmentPrice} per passenger</p>
                         <p>Selected seats: {formData.selectedSeats.length} × ₵{segmentPrice} = ₵{segmentPrice * formData.selectedSeats.length}</p>
-                      </div>
-                    </div>
-
-                    {trip.luggagePolicy ? (
-                      <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200 mb-6">
-                        <div className="flex items-start gap-3">
-                          <Package className="w-5 h-5 text-green-600 mt-0.5" />
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-green-900 mb-3">{trip.luggagePolicy.name || 'Luggage Policy'}</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                  <span className="text-gray-700">Free bags included</span>
-                                </div>
-                                <p className="text-green-800 ml-4">
-                                  {formData.selectedSeats.length} bag{formData.selectedSeats.length > 1 ? 's' : ''} up to {trip.luggagePolicy.freeWeightKg || 23}kg each included in your ticket
-                                </p>
-                              </div>
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                                  <span className="text-gray-700">Additional bags</span>
-                                </div>
-                                <p className="text-green-800 ml-4">₵{(trip.luggagePolicy.excessFeePerKg || 5).toFixed(2)} per additional bag (up to {trip.luggagePolicy.freeWeightKg || 23}kg each)</p>
-                              </div>
-                            </div>
-                            {trip.luggagePolicy.maxBags && (
-                              <div className="mt-3 p-3 bg-white/60 rounded border border-green-100">
-                                <p className="text-sm text-green-800">
-                                  <strong>Maximum:</strong> {(trip.luggagePolicy.maxBags * formData.selectedSeats.length)} additional bags total ({trip.luggagePolicy.maxBags} per passenger)
-                                </p>
                               </div>
                             )}
                           </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200 mb-6">
-                        <p className="text-yellow-800 text-sm">
-                          No specific luggage policy available for this trip. Please contact the driver for details.
-                        </p>
-                      </div>
-                    )}
 
-                    <div>
-                      <Label className="text-sm font-medium mb-3 block">Total Bags for Your Trip</Label>
-                      <div className="flex items-center gap-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => updateFormData({ numberOfBags: Math.max(formData.selectedSeats.length, formData.numberOfBags - 1) })}
-                          disabled={formData.numberOfBags <= formData.selectedSeats.length}
-                          className="w-10 h-10 p-0"
-                        >
-                          -
-                        </Button>
-                        <div className="text-center min-w-[80px]">
-                          <div className="text-2xl font-bold text-brand-orange">{formData.numberOfBags}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {formData.numberOfBags === formData.selectedSeats.length 
-                              ? `${formData.selectedSeats.length} bag${formData.selectedSeats.length > 1 ? 's' : ''} (all free)` 
-                              : `${formData.selectedSeats.length} free + ${formData.numberOfBags - formData.selectedSeats.length} additional`
+                    {isRoundTrip ? (
+                      <div className="flex flex-col w-full items-center space-y-6">
+                        <LuggageSelector
+                          policy={trip.luggagePolicy}
+                          selectedSeats={formData.selectedSeats.length}
+                          numberOfBags={formData.numberOfBags}
+                          onBagsChange={(newCount) => updateFormData({ numberOfBags: newCount })}
+                          tripTitle="Outbound"
+                          titleColor="text-blue-900"
+                        />
+                        <LuggageSelector
+                          policy={returnTrip?.luggagePolicy}
+                          selectedSeats={formData.returnTrip?.selectedSeats.length || 0}
+                          numberOfBags={formData.returnTrip?.numberOfBags || 1}
+                          onBagsChange={(newCount) => updateFormData({
+                            returnTrip: {
+                              ...formData.returnTrip!,
+                              numberOfBags: newCount
                             }
+                          })}
+                          tripTitle="Return"
+                          titleColor="text-green-900"
+                        />
                           </div>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => updateFormData({ numberOfBags: Math.min((trip?.luggagePolicy?.maxBags || 4) * formData.selectedSeats.length + formData.selectedSeats.length, formData.numberOfBags + 1) })}
-                          disabled={formData.numberOfBags >= ((trip?.luggagePolicy?.maxBags || 4) * formData.selectedSeats.length + formData.selectedSeats.length)}
-                          className="w-10 h-10 p-0"
-                        >
-                          +
-                        </Button>
-                      </div>
-                      
-                      {formData.numberOfBags > formData.selectedSeats.length && trip?.luggagePolicy && (
-                        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                          <div className="flex justify-between items-center text-sm">
-                            <span>Additional luggage fee ({formData.numberOfBags - formData.selectedSeats.length} additional bag{formData.numberOfBags - formData.selectedSeats.length > 1 ? 's' : ''})</span>
-                            <span className="font-semibold text-brand-orange">₵{luggageFee.toFixed(2)}</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Each additional bag up to {trip.luggagePolicy.freeWeightKg || 23}kg • {formData.selectedSeats.length} free bag{formData.selectedSeats.length > 1 ? 's' : ''} included
-                          </p>
-                        </div>
-                      )}
-
-                      {formData.numberOfBags === formData.selectedSeats.length && (
-                        <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
-                          <div className="flex items-center gap-2 text-sm text-green-800">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            <span>Perfect! {formData.selectedSeats.length} free bag{formData.selectedSeats.length > 1 ? 's' : ''} included in the ticket price.</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {formData.numberOfBags >= ((trip?.luggagePolicy?.maxBags || 4) * formData.selectedSeats.length + formData.selectedSeats.length) && (
-                        <p className="text-sm text-amber-600 mt-2">
-                          You've reached the maximum number of bags allowed ({formData.selectedSeats.length} free + {(trip?.luggagePolicy?.maxBags || 3) * formData.selectedSeats.length} additional).
-                        </p>
-                      )}
-                    </div>
+                    ) : (
+                      <LuggageSelector
+                        policy={trip.luggagePolicy}
+                        selectedSeats={formData.selectedSeats.length}
+                        numberOfBags={formData.numberOfBags}
+                        onBagsChange={(newCount) => updateFormData({ numberOfBags: newCount })}
+                        tripTitle="Your Trip"
+                      />
+                    )}
                   </div>
                 )}
 
@@ -702,6 +1016,65 @@ export default function BookingPage() {
                     <div className="p-6 bg-gray-50 rounded-lg">
                       <h4 className="font-semibold mb-4">Booking Summary</h4>
                       <div className="space-y-3 text-sm">
+                        {isRoundTrip ? (
+                          <div className="space-y-4">
+                            {/* Outbound Trip Summary */}
+                            <div className="p-3 bg-blue-50 rounded border border-blue-200">
+                              <h5 className="font-medium text-blue-900 mb-2">
+                                Outbound: {searchFromCity} → {searchToCity}
+                              </h5>
+                              <div className="space-y-1 text-xs">
+                                <div className="flex justify-between">
+                                  <span>Price per seat</span>
+                                  <span>₵{segmentPrice}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Seats ({formData.selectedSeats.length})</span>
+                                  <span>₵{segmentPrice * formData.selectedSeats.length}</span>
+                                </div>
+                                {luggageFee > 0 && (
+                                  <div className="flex justify-between">
+                                    <span>Additional luggage</span>
+                                    <span>₵{luggageFee.toFixed(2)}</span>
+                                  </div>
+                                )}
+                                <div className="flex justify-between font-medium border-t pt-1">
+                                  <span>Outbound Subtotal</span>
+                                  <span>₵{segmentPrice * formData.selectedSeats.length + luggageFee}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Return Trip Summary */}
+                            <div className="p-3 bg-green-50 rounded border border-green-200">
+                              <h5 className="font-medium text-green-900 mb-2">
+                                Return: {searchToCity} → {searchFromCity}
+                              </h5>
+                              <div className="space-y-1 text-xs">
+                                <div className="flex justify-between">
+                                  <span>Price per seat</span>
+                                  <span>₵{returnSegmentPrice}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Seats ({formData.returnTrip?.selectedSeats.length || 0})</span>
+                                  <span>₵{returnSegmentPrice * (formData.returnTrip?.selectedSeats.length || 0)}</span>
+                                </div>
+                                {returnLuggageFee > 0 && (
+                                  <div className="flex justify-between">
+                                    <span>Additional luggage</span>
+                                    <span>₵{returnLuggageFee.toFixed(2)}</span>
+                                  </div>
+                                )}
+                                <div className="flex justify-between font-medium border-t pt-1">
+                                  <span>Return Subtotal</span>
+                                  <span>₵{returnSegmentPrice * (formData.returnTrip?.selectedSeats.length || 0) + returnLuggageFee}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          /* One-Way Trip Summary (existing logic) */
+                          <div>
                         <div className="flex justify-between">
                           <span>Price per seat</span>
                           <span>₵{segmentPrice}</span>
@@ -716,6 +1089,9 @@ export default function BookingPage() {
                             <span>₵{luggageFee.toFixed(2)}</span>
                           </div>
                         )}
+                          </div>
+                        )}
+                        
                         <div className="border-t pt-3">
                           <div className="flex justify-between font-bold text-lg">
                             <span>Total Amount</span>
@@ -851,10 +1227,17 @@ export default function BookingPage() {
                       <span className="text-lg font-bold">Total</span>
                       <span className="text-2xl font-bold text-brand-orange">₵{totalPrice}</span>
                     </div>
-                    {formData.selectedSeats.length > 0 && (
+                    {isRoundTrip ? (
+                      <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                        <p>Outbound: {formData.selectedSeats.length} seat{formData.selectedSeats.length !== 1 ? 's' : ''} × ₵{segmentPrice}</p>
+                        <p>Return: {formData.returnTrip?.selectedSeats.length || 0} seat{(formData.returnTrip?.selectedSeats.length || 0) !== 1 ? 's' : ''} × ₵{returnSegmentPrice}</p>
+                      </div>
+                    ) : (
+                      formData.selectedSeats.length > 0 && (
                       <p className="text-sm text-muted-foreground mt-1">
                         ₵{segmentPrice} per seat × {formData.selectedSeats.length} passenger{formData.selectedSeats.length > 1 ? 's' : ''}
                       </p>
+                      )
                     )}
                   </div>
                 )}

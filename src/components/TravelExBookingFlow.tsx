@@ -3,15 +3,33 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ArrowRight, Calendar as CalendarIcon, MapPin, Users, ArrowLeftRight, Building2 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  ArrowRight,
+  Calendar as CalendarIcon,
+  MapPin,
+  Users,
+  ArrowLeftRight,
+  Building2,
+} from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useCitiesForCountry } from "@/services/convex/countries";
 import { usePublicStationsForCity } from "@/services/convex/citiesStations";
+import { useNavigate } from "react-router-dom";
 
 interface SearchFormData {
   fromCity: string;
@@ -19,23 +37,27 @@ interface SearchFormData {
   fromStation: string;
   toStation: string;
   departureDate: Date | undefined;
+  returnDate: Date | undefined;
   passengers: number;
+  tripType: "one-way" | "round-trip";
 }
 
 interface TravelExBookingFlowProps {
-  onSearch?: (searchData: SearchFormData & { fromCountry: string; toCountry: string }) => void;
+  onSearch?: (
+    searchData: SearchFormData & { fromCountry: string; toCountry: string },
+  ) => void;
   redirectToSearch?: boolean;
   showTitle?: boolean;
   className?: string;
   initialValues?: Partial<SearchFormData>;
 }
 
-export default function TravelExBookingFlow({ 
-  onSearch, 
-  redirectToSearch = false, 
+export default function TravelExBookingFlow({
+  onSearch,
+  redirectToSearch = false,
   showTitle = true,
   className = "",
-  initialValues
+  initialValues,
 }: TravelExBookingFlowProps) {
   const [searchData, setSearchData] = useState<SearchFormData>({
     fromCity: initialValues?.fromCity || "",
@@ -43,11 +65,15 @@ export default function TravelExBookingFlow({
     fromStation: initialValues?.fromStation || "",
     toStation: initialValues?.toStation || "",
     departureDate: initialValues?.departureDate || undefined,
-    passengers: initialValues?.passengers || 1
+    returnDate: initialValues?.returnDate || undefined,
+    passengers: initialValues?.passengers || 1,
+    tripType: initialValues?.tripType || "one-way",
   });
 
+  const navigate = useNavigate();
+
   // Load cities for Canada
-  const canadianCities = useCitiesForCountry('CA');
+  const canadianCities = useCitiesForCountry("CA");
   const cities = canadianCities || [];
   const loading = canadianCities === undefined;
 
@@ -58,7 +84,7 @@ export default function TravelExBookingFlow({
   const updateSearchData = (updates: Partial<SearchFormData>) => {
     setSearchData((prev: SearchFormData) => {
       const newData = { ...prev, ...updates };
-      
+
       // If updating origin city, clear destination if they're the same and clear selected stations
       if (updates.fromCity !== undefined) {
         newData.fromStation = "";
@@ -67,7 +93,7 @@ export default function TravelExBookingFlow({
           newData.toStation = "";
         }
       }
-      
+
       // If updating destination city, clear origin if they're the same and clear selected stations
       if (updates.toCity !== undefined) {
         newData.toStation = "";
@@ -76,77 +102,88 @@ export default function TravelExBookingFlow({
           newData.fromStation = "";
         }
       }
-      
+
       return newData;
     });
   };
 
   const swapCities = () => {
-    if (searchData.fromCity && searchData.toCity && searchData.fromCity !== searchData.toCity) {
+    if (
+      searchData.fromCity &&
+      searchData.toCity &&
+      searchData.fromCity !== searchData.toCity
+    ) {
       updateSearchData({
         fromCity: searchData.toCity,
         toCity: searchData.fromCity,
         fromStation: searchData.toStation,
-        toStation: searchData.fromStation
+        toStation: searchData.fromStation,
       });
     }
   };
 
   const canSearch = () => {
-    return searchData.fromCity && 
-           searchData.toCity && 
-           searchData.fromCity !== searchData.toCity &&
-           searchData.fromStation &&
-           searchData.toStation &&
-           searchData.departureDate && 
-           searchData.passengers > 0;
+    const baseRequirements =
+      searchData.fromCity &&
+      searchData.toCity &&
+      searchData.fromCity !== searchData.toCity &&
+      searchData.fromStation &&
+      searchData.toStation &&
+      searchData.departureDate &&
+      searchData.passengers > 0;
+
+    if (searchData.tripType === "round-trip") {
+      return baseRequirements && searchData.returnDate;
+    }
+
+    return baseRequirements;
   };
 
   const handleSearch = () => {
-    if (!canSearch()) {
-      if (!searchData.fromCity || !searchData.toCity) {
-        toast.error("Please select both departure and destination cities");
-      } else if (searchData.fromCity === searchData.toCity) {
-        toast.error("Departure and destination cities must be different");
-      } else if (!searchData.fromStation || !searchData.toStation) {
-        toast.error("Please select both pickup and dropoff stations");
-      } else if (!searchData.departureDate) {
-        toast.error("Please select a departure date");
-      }
-      return;
-    }
+    if (!canSearch()) return;
+
+    const searchFormData = {
+      fromCity: searchData.fromCity,
+      toCity: searchData.toCity,
+      fromStation: searchData.fromStation,
+      toStation: searchData.toStation,
+      departureDate: searchData.departureDate,
+      returnDate: searchData.returnDate,
+      passengers: searchData.passengers,
+      fromCountry: "CA",
+      toCountry: "CA",
+      tripType: searchData.tripType,
+    };
 
     if (redirectToSearch) {
-      const searchUrl = new URL('/search', window.location.origin);
-      searchUrl.searchParams.set('fromCountry', 'CA');
-      searchUrl.searchParams.set('toCountry', 'CA');
-      searchUrl.searchParams.set('fromCity', searchData.fromCity);
-      searchUrl.searchParams.set('toCity', searchData.toCity);
-      if (searchData.fromStation) {
-        searchUrl.searchParams.set('fromStation', searchData.fromStation);
-      }
-      if (searchData.toStation) {
-        searchUrl.searchParams.set('toStation', searchData.toStation);
-      }
-      if (searchData.departureDate) {
-        searchUrl.searchParams.set('departureDate', format(searchData.departureDate, 'yyyy-MM-dd'));
-      }
-      if (searchData.passengers) {
-        searchUrl.searchParams.set('passengers', searchData.passengers.toString());
-      }
-      
-      window.location.href = searchUrl.toString();
+      // Navigate to search page with query params
+      const params = new URLSearchParams({
+        fromCity: searchData.fromCity,
+        toCity: searchData.toCity,
+        ...(searchData.fromStation && { fromStation: searchData.fromStation }),
+        ...(searchData.toStation && { toStation: searchData.toStation }),
+        ...(searchData.departureDate && {
+          departureDate: format(searchData.departureDate, "yyyy-MM-dd"),
+        }),
+        ...(searchData.returnDate && {
+          returnDate: format(searchData.returnDate, "yyyy-MM-dd"),
+        }),
+        passengers: searchData.passengers.toString(),
+        tripType: searchData.tripType,
+      });
+      navigate(`/search?${params.toString()}`);
     } else {
-      // Call the onSearch callback with station information
       onSearch?.({
-        fromCountry: 'CA',
-        toCountry: 'CA',
+        fromCountry: "CA",
+        toCountry: "CA",
         fromCity: searchData.fromCity,
         toCity: searchData.toCity,
         fromStation: searchData.fromStation,
         toStation: searchData.toStation,
-        departureDate: searchData.departureDate,
+        departureDate: searchData.departureDate!,
+        returnDate: searchData.returnDate,
         passengers: searchData.passengers,
+        tripType: searchData.tripType,
       });
     }
   };
@@ -159,11 +196,12 @@ export default function TravelExBookingFlow({
             Book Your Journey
           </CardTitle>
           <p className="text-sm sm:text-base text-gray-600">
-            Select your route, choose your travel date, and get ready for premium travel
+            Select your route, choose your travel date, and get ready for
+            premium travel
           </p>
         </CardHeader>
       )}
-      
+
       <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6">
         {/* City Selection */}
         <div className="space-y-4">
@@ -178,7 +216,11 @@ export default function TravelExBookingFlow({
                 <SelectTrigger className="h-12 w-full">
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-travelex-orange" />
-                    <SelectValue placeholder={loading ? "Loading cities..." : "Select departure city"} />
+                    <SelectValue
+                      placeholder={
+                        loading ? "Loading cities..." : "Select departure city"
+                      }
+                    />
                   </div>
                 </SelectTrigger>
                 <SelectContent>
@@ -192,7 +234,7 @@ export default function TravelExBookingFlow({
                     </div>
                   ) : (
                     <>
-                      {cities.map(city => (
+                      {cities.map((city) => (
                         <SelectItem key={city.cityName} value={city.cityName}>
                           <div className="flex flex-col items-start">
                             <span className="font-medium">{city.cityName}</span>
@@ -210,15 +252,20 @@ export default function TravelExBookingFlow({
               size="icon"
               onClick={swapCities}
               className="mt-0 lg:mt-6 border-travelex-orange text-travelex-orange hover:bg-travelex-orange hover:text-white flex-shrink-0"
-              disabled={loading || !searchData.fromCity || !searchData.toCity || searchData.fromCity === searchData.toCity}
+              disabled={
+                loading ||
+                !searchData.fromCity ||
+                !searchData.toCity ||
+                searchData.fromCity === searchData.toCity
+              }
               title={
-                loading 
+                loading
                   ? "Loading cities..."
-                  : !searchData.fromCity || !searchData.toCity 
-                  ? "Select both departure and destination cities to swap"
-                  : searchData.fromCity === searchData.toCity
-                  ? "Cannot swap identical cities"
-                  : "Swap departure and destination cities"
+                  : !searchData.fromCity || !searchData.toCity
+                    ? "Select both departure and destination cities to swap"
+                    : searchData.fromCity === searchData.toCity
+                      ? "Cannot swap identical cities"
+                      : "Swap departure and destination cities"
               }
             >
               <ArrowLeftRight className="h-4 w-4" />
@@ -234,7 +281,13 @@ export default function TravelExBookingFlow({
                 <SelectTrigger className="h-12 w-full">
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-travelex-orange" />
-                    <SelectValue placeholder={loading ? "Loading cities..." : "Select destination city"} />
+                    <SelectValue
+                      placeholder={
+                        loading
+                          ? "Loading cities..."
+                          : "Select destination city"
+                      }
+                    />
                   </div>
                 </SelectTrigger>
                 <SelectContent>
@@ -248,7 +301,7 @@ export default function TravelExBookingFlow({
                     </div>
                   ) : (
                     <>
-                      {cities.map(city => (
+                      {cities.map((city) => (
                         <SelectItem key={city.cityName} value={city.cityName}>
                           <div className="flex flex-col items-start">
                             <span className="font-medium">{city.cityName}</span>
@@ -267,37 +320,49 @@ export default function TravelExBookingFlow({
             <div className="flex flex-col lg:flex-row items-center gap-4">
               <div className="flex-1 w-full space-y-2">
                 <label className="text-sm font-medium text-gray-700">
-                  Pickup Station {searchData.fromCity && `(${searchData.fromCity})`}
+                  Pickup Station{" "}
+                  {searchData.fromCity && `(${searchData.fromCity})`}
                 </label>
                 <Select
                   value={searchData.fromStation}
-                  onValueChange={(value) => updateSearchData({ fromStation: value })}
+                  onValueChange={(value) =>
+                    updateSearchData({ fromStation: value })
+                  }
                   disabled={loading || !searchData.fromCity}
                 >
                   <SelectTrigger className="h-12 w-full">
                     <div className="flex items-center gap-2">
                       <Building2 className="h-4 w-4 text-travelex-orange" />
-                      <SelectValue placeholder={
-                        !searchData.fromCity 
-                          ? "Select departure city first"
-                          : loading 
-                          ? "Loading stations..."
-                          : fromStations === undefined 
-                          ? "Loading stations..."
-                          : fromStations.length === 0
-                          ? "No stations available"
-                          : "Select pickup station"
-                      } />
+                      <SelectValue
+                        placeholder={
+                          !searchData.fromCity
+                            ? "Select departure city first"
+                            : loading
+                              ? "Loading stations..."
+                              : fromStations === undefined
+                                ? "Loading stations..."
+                                : fromStations.length === 0
+                                  ? "No stations available"
+                                  : "Select pickup station"
+                        }
+                      />
                     </div>
                   </SelectTrigger>
                   <SelectContent>
                     {fromStations && fromStations.length > 0 && (
                       <>
-                        {fromStations.map(station => (
-                          <SelectItem key={station.id} value={station.id || station.name}>
+                        {fromStations.map((station) => (
+                          <SelectItem
+                            key={station.id}
+                            value={station.id || station.name}
+                          >
                             <div className="flex flex-col items-start">
-                              <span className="font-medium">{station.name}</span>
-                              <span className="text-xs text-muted-foreground">{station.address}</span>
+                              <span className="font-medium">
+                                {station.name}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {station.address}
+                              </span>
                             </div>
                           </SelectItem>
                         ))}
@@ -315,37 +380,49 @@ export default function TravelExBookingFlow({
 
               <div className="flex-1 w-full space-y-2">
                 <label className="text-sm font-medium text-gray-700">
-                  Dropoff Station {searchData.toCity && `(${searchData.toCity})`}
+                  Dropoff Station{" "}
+                  {searchData.toCity && `(${searchData.toCity})`}
                 </label>
                 <Select
                   value={searchData.toStation}
-                  onValueChange={(value) => updateSearchData({ toStation: value })}
+                  onValueChange={(value) =>
+                    updateSearchData({ toStation: value })
+                  }
                   disabled={loading || !searchData.toCity}
                 >
                   <SelectTrigger className="h-12 w-full">
                     <div className="flex items-center gap-2">
                       <Building2 className="h-4 w-4 text-travelex-orange" />
-                      <SelectValue placeholder={
-                        !searchData.toCity 
-                          ? "Select destination city first"
-                          : loading 
-                          ? "Loading stations..."
-                          : toStations === undefined 
-                          ? "Loading stations..."
-                          : toStations.length === 0
-                          ? "No stations available"
-                          : "Select dropoff station"
-                      } />
+                      <SelectValue
+                        placeholder={
+                          !searchData.toCity
+                            ? "Select destination city first"
+                            : loading
+                              ? "Loading stations..."
+                              : toStations === undefined
+                                ? "Loading stations..."
+                                : toStations.length === 0
+                                  ? "No stations available"
+                                  : "Select dropoff station"
+                        }
+                      />
                     </div>
                   </SelectTrigger>
                   <SelectContent>
                     {toStations && toStations.length > 0 && (
                       <>
-                        {toStations.map(station => (
-                          <SelectItem key={station.id} value={station.id || station.name}>
+                        {toStations.map((station) => (
+                          <SelectItem
+                            key={station.id}
+                            value={station.id || station.name}
+                          >
                             <div className="flex flex-col items-start">
-                              <span className="font-medium">{station.name}</span>
-                              <span className="text-xs text-muted-foreground">{station.address}</span>
+                              <span className="font-medium">
+                                {station.name}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {station.address}
+                              </span>
                             </div>
                           </SelectItem>
                         ))}
@@ -358,26 +435,70 @@ export default function TravelExBookingFlow({
           )}
         </div>
 
+        {/* Trip Type Selection */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">Trip Type</label>
+          <div className="flex gap-4">
+            <Button
+              type="button"
+              variant={
+                searchData.tripType === "one-way" ? "default" : "outline"
+              }
+              className={cn(
+                "flex-1",
+                searchData.tripType === "one-way" &&
+                  "bg-travelex-orange hover:bg-travelex-orange/90",
+              )}
+              onClick={() =>
+                updateSearchData({ tripType: "one-way", returnDate: undefined })
+              }
+            >
+              One-way
+            </Button>
+            <Button
+              type="button"
+              variant={
+                searchData.tripType === "round-trip" ? "default" : "outline"
+              }
+              className={cn(
+                "flex-1",
+                searchData.tripType === "round-trip" &&
+                  "bg-travelex-orange hover:bg-travelex-orange/90",
+              )}
+              onClick={() => updateSearchData({ tripType: "round-trip" })}
+            >
+              Round-trip
+            </Button>
+          </div>
+        </div>
+
         {/* Date and Passengers Selection */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Departure Date</label>
+            <label className="text-sm font-medium text-gray-700">
+              Departure Date
+            </label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   className={cn(
                     "w-full h-12 justify-start text-left font-normal",
-                    !searchData.departureDate && "text-muted-foreground"
+                    !searchData.departureDate && "text-muted-foreground",
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4 text-travelex-orange" />
                   <span className="truncate">
-                    {searchData.departureDate ? format(searchData.departureDate, "PPP") : "Select date"}
+                    {searchData.departureDate
+                      ? format(searchData.departureDate, "PPP")
+                      : "Select date"}
                   </span>
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-white border shadow-lg z-50" align="start">
+              <PopoverContent
+                className="w-auto p-0 bg-white border shadow-lg z-50"
+                align="start"
+              >
                 <Calendar
                   mode="single"
                   selected={searchData.departureDate}
@@ -393,11 +514,60 @@ export default function TravelExBookingFlow({
             </Popover>
           </div>
 
+          {searchData.tripType === "round-trip" && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Return Date
+              </label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full h-12 justify-start text-left font-normal",
+                      !searchData.returnDate && "text-muted-foreground",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4 text-travelex-orange" />
+                    <span className="truncate">
+                      {searchData.returnDate
+                        ? format(searchData.returnDate, "PPP")
+                        : "Select return date"}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-auto p-0 bg-white border shadow-lg z-50"
+                  align="start"
+                >
+                  <Calendar
+                    mode="single"
+                    selected={searchData.returnDate}
+                    onSelect={(date) => updateSearchData({ returnDate: date })}
+                    disabled={(date) => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const minReturnDate = searchData.departureDate || today;
+                      return date < minReturnDate;
+                    }}
+                    initialFocus
+                    numberOfMonths={1}
+                    className="rounded-md border-0"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
+
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Passengers</label>
+            <label className="text-sm font-medium text-gray-700">
+              Passengers
+            </label>
             <Select
               value={searchData.passengers.toString()}
-              onValueChange={(value) => updateSearchData({ passengers: parseInt(value) })}
+              onValueChange={(value) =>
+                updateSearchData({ passengers: parseInt(value) })
+              }
             >
               <SelectTrigger className="h-12 w-full">
                 <div className="flex items-center gap-2">
@@ -421,10 +591,13 @@ export default function TravelExBookingFlow({
           <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
             <div className="flex items-center gap-2 mb-2">
               <Building2 className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-900">Station Selection</span>
+              <span className="text-sm font-medium text-blue-900">
+                Station Selection
+              </span>
             </div>
             <p className="text-xs text-blue-700">
-              Station selection is required. Please select both pickup and dropoff stations.
+              Station selection is required. Please select both pickup and
+              dropoff stations.
             </p>
           </div>
         )}
@@ -449,4 +622,4 @@ export default function TravelExBookingFlow({
       </CardContent>
     </Card>
   );
-} 
+}

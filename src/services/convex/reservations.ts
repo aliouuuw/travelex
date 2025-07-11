@@ -1,19 +1,35 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
-import type { DriverReservation, ReservationStats } from "../../../convex/reservations";
+import type {
+  DriverReservation,
+  ReservationStats,
+} from "../../../convex/reservations";
+import { useAuth } from "@/hooks/use-auth";
 
 // Hook for getting driver reservations
 export const useDriverReservations = (filters?: {
   status?: string;
   tripId?: string;
 }) => {
-  return useQuery(api.reservations.getDriverReservations, filters || {});
+  const { user } = useAuth();
+  return useQuery(
+    api.reservations.getDriverReservations,
+    user?.profile?.role === "driver" || user?.profile?.role === "admin"
+      ? filters || {}
+      : "skip",
+  );
 };
 
 // Hook for getting driver reservation stats
 export const useDriverReservationStats = () => {
-  return useQuery(api.reservations.getDriverReservationStats);
+  const { user } = useAuth();
+  return useQuery(
+    api.reservations.getDriverReservationStats,
+    user?.profile?.role === "driver" || user?.profile?.role === "admin"
+      ? {}
+      : "skip",
+  );
 };
 
 // Hook for getting a specific reservation

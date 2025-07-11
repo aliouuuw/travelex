@@ -1,9 +1,10 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "convex/_generated/dataModel";
+import { useAuth } from "@/hooks/use-auth";
 
 // Types matching the original Supabase service
-export type RouteTemplateStatus = 'draft' | 'active' | 'inactive';
+export type RouteTemplateStatus = "draft" | "active" | "inactive";
 
 export interface Station {
   id?: Id<"routeTemplateStations">;
@@ -56,15 +57,30 @@ export interface RouteCountryValidation {
 
 // React hooks for route templates
 export const useDriverRouteTemplates = () => {
-  return useQuery(api.routeTemplates.getDriverRouteTemplates);
+  const { user } = useAuth();
+  return useQuery(
+    api.routeTemplates.getDriverRouteTemplates,
+    user?.profile?.role === "driver" || user?.profile?.role === "admin"
+      ? {}
+      : "skip",
+  );
 };
 
-export const useRouteTemplateById = (routeTemplateId?: Id<"routeTemplates">) => {
-  return useQuery(api.routeTemplates.getRouteTemplateById, routeTemplateId ? { routeTemplateId } : "skip");
+export const useRouteTemplateById = (
+  routeTemplateId?: Id<"routeTemplates">,
+) => {
+  return useQuery(
+    api.routeTemplates.getRouteTemplateById,
+    routeTemplateId ? { routeTemplateId } : "skip",
+  );
 };
 
-export const useValidateRouteCountries = (routeTemplateId: Id<"routeTemplates">) => {
-  return useQuery(api.routeTemplates.validateRouteCountries, { routeTemplateId });
+export const useValidateRouteCountries = (
+  routeTemplateId: Id<"routeTemplates">,
+) => {
+  return useQuery(api.routeTemplates.validateRouteCountries, {
+    routeTemplateId,
+  });
 };
 
 // Mutation hooks
@@ -119,4 +135,4 @@ export const useToggleRouteTemplateStatus = () => {
 
 // export const autoAssignCountriesToRoutes = async (): Promise<number> => {
 //   throw new Error("Not implemented in Convex version");
-// }; 
+// };

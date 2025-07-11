@@ -4,14 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Calendar, 
-  Plus, 
-  Search, 
-  Clock, 
-  MapPin, 
-  Users, 
-  Car, 
+import {
+  Calendar,
+  Plus,
+  Search,
+  Clock,
+  MapPin,
+  Users,
+  Car,
   Package,
   Edit,
   Trash2,
@@ -19,27 +19,31 @@ import {
   Loader2,
   DollarSign,
   Grid3X3,
-  List
+  List,
+  Link2,
+  Unlink,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useMutation } from "convex/react";
-import { 
+import {
   useDriverTrips,
   formatTripDuration,
   isUpcomingTrip,
+  useUnlinkReturnTrip,
   type Trip,
 } from "@/services/convex/trips";
 import { toast } from "sonner";
-import EnhancedCalendarView from "@/components/trip-calendar/enhanced-calendar-view";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
+import EnhancedCalendarView from "@/components/trip-calendar/enhanced-calendar-view";
+import { LinkReturnTripModal } from "@/components/modals/LinkReturnTripModal";
 
 // Fix the status constants to match backend
 const STATUS_COLORS = {
-  scheduled: 'bg-blue-100 text-blue-800',
-  'in-progress': 'bg-yellow-100 text-yellow-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800'
+  scheduled: "bg-blue-100 text-blue-800",
+  "in-progress": "bg-yellow-100 text-yellow-800",
+  completed: "bg-green-100 text-green-800",
+  cancelled: "bg-red-100 text-red-800",
 } as const;
 
 // Trip with enhanced date properties for calendar display
@@ -54,16 +58,23 @@ interface CalendarTrip extends Trip {
 const TripCard = ({ trip }: { trip: Trip }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [isUnlinking, setIsUnlinking] = useState(false);
 
   const deleteTripMutation = useMutation(api.trips.deleteTrip);
   const updateTripStatusMutation = useMutation(api.trips.updateTripStatus);
+  const unlinkReturnTripMutation = useUnlinkReturnTrip();
 
   const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this trip? This action cannot be undone.')) {
+    if (
+      window.confirm(
+        "Are you sure you want to delete this trip? This action cannot be undone.",
+      )
+    ) {
       setIsDeleting(true);
       try {
         await deleteTripMutation({ tripId: trip.id as Id<"trips"> });
-        toast.success('Trip deleted successfully');
+        toast.success("Trip deleted successfully");
       } catch (error) {
         toast.error(`Failed to delete trip: ${(error as Error).message}`);
       } finally {
@@ -72,15 +83,36 @@ const TripCard = ({ trip }: { trip: Trip }) => {
     }
   };
 
-  const handleStatusChange = async (status: Trip['status']) => {
+  const handleStatusChange = async (status: Trip["status"]) => {
     setIsUpdatingStatus(true);
     try {
-      await updateTripStatusMutation({ tripId: trip.id as Id<"trips">, status });
-      toast.success('Trip status updated successfully');
+      await updateTripStatusMutation({
+        tripId: trip.id as Id<"trips">,
+        status,
+      });
+      toast.success("Trip status updated successfully");
     } catch (error) {
       toast.error(`Failed to update trip status: ${(error as Error).message}`);
     } finally {
       setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleUnlinkTrip = async () => {
+    if (
+      window.confirm(
+        "Are you sure you want to unlink this round trip? Passengers will no longer be able to book both trips together.",
+      )
+    ) {
+      setIsUnlinking(true);
+      try {
+        await unlinkReturnTripMutation({ tripId: trip.id as Id<"trips"> });
+        toast.success("Trips unlinked successfully");
+      } catch (error) {
+        toast.error(`Failed to unlink trips: ${(error as Error).message}`);
+      } finally {
+        setIsUnlinking(false);
+      }
     }
   };
 
@@ -89,10 +121,11 @@ const TripCard = ({ trip }: { trip: Trip }) => {
   const duration = formatTripDuration(trip.departureTime, trip.arrivalTime);
   const isUpcoming = isUpcomingTrip(trip.departureTime);
 
+  const canLinkReturnTrip =
+    trip.status === "scheduled" && !trip.isRoundTrip && isUpcoming;
+
   // Generate route path display
-  const routePath = trip.routeCities
-    .map(city => city.cityName)
-    .join(' → ');
+  const routePath = trip.routeCities.map((city) => city.cityName).join(" → ");
 
   return (
     <Card className="bg-white hover:shadow-md transition-all">
@@ -104,10 +137,21 @@ const TripCard = ({ trip }: { trip: Trip }) => {
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <CardTitle className="text-lg font-heading">{trip.routeTemplateName}</CardTitle>
+                <CardTitle className="text-lg font-heading">
+                  {trip.routeTemplateName}
+                </CardTitle>
                 <Badge className={STATUS_COLORS[trip.status]}>
-                  {trip.status.replace('_', ' ')}
+                  {trip.status.replace("_", " ")}
                 </Badge>
+                {trip.isRoundTrip && (
+                  <Badge
+                    variant="secondary"
+                    className="bg-blue-100 text-blue-700"
+                  >
+                    <Link2 className="w-3 h-3 mr-1" />
+                    Round Trip
+                  </Badge>
+                )}
               </div>
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
@@ -116,7 +160,9 @@ const TripCard = ({ trip }: { trip: Trip }) => {
                 </div>
                 <div className="flex items-center gap-1">
                   <Users className="w-4 h-4" />
-                  <span>{trip.availableSeats}/{trip.totalSeats} seats</span>
+                  <span>
+                    {trip.availableSeats}/{trip.totalSeats} seats
+                  </span>
                 </div>
                 {trip.totalEarnings && trip.totalEarnings > 0 && (
                   <div className="flex items-center gap-1">
@@ -128,22 +174,47 @@ const TripCard = ({ trip }: { trip: Trip }) => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {canLinkReturnTrip && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowLinkModal(true)}
+              >
+                <Link2 className="w-4 h-4 mr-1" />
+                Link Return
+              </Button>
+            )}
+            {trip.isRoundTrip && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleUnlinkTrip}
+                disabled={isUnlinking}
+                className="text-blue-600 hover:text-blue-700"
+              >
+                {isUnlinking ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Unlink className="w-4 h-4" />
+                )}
+              </Button>
+            )}
             <Button variant="outline" size="sm" asChild>
               <Link to={`/driver/trips/${trip.id}`}>
                 <Eye className="w-4 h-4 mr-1" />
                 View
               </Link>
             </Button>
-            {isUpcoming && trip.status === 'scheduled' && (
+            {isUpcoming && trip.status === "scheduled" && (
               <Button variant="ghost" size="sm" asChild>
                 <Link to={`/driver/trips/${trip.id}/edit`}>
                   <Edit className="w-4 h-4" />
                 </Link>
               </Button>
             )}
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleDelete}
               disabled={isDeleting}
               className="text-red-500 hover:text-red-700 hover:bg-red-50"
@@ -157,7 +228,7 @@ const TripCard = ({ trip }: { trip: Trip }) => {
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {/* Route Path */}
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
@@ -170,13 +241,21 @@ const TripCard = ({ trip }: { trip: Trip }) => {
           <div>
             <p className="text-xs text-muted-foreground">Departure</p>
             <p className="text-sm font-medium">
-              {departureDate.toLocaleDateString()} at {departureDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {departureDate.toLocaleDateString()} at{" "}
+              {departureDate.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
             </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Arrival</p>
             <p className="text-sm font-medium">
-              {arrivalDate.toLocaleDateString()} at {arrivalDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {arrivalDate.toLocaleDateString()} at{" "}
+              {arrivalDate.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
             </p>
           </div>
         </div>
@@ -199,49 +278,107 @@ const TripCard = ({ trip }: { trip: Trip }) => {
           </div>
           {trip.reservationsCount !== undefined && (
             <div className="text-muted-foreground">
-              {trip.reservationsCount} reservation{trip.reservationsCount !== 1 ? 's' : ''}
+              {trip.reservationsCount} reservation
+              {trip.reservationsCount !== 1 ? "s" : ""}
             </div>
           )}
         </div>
 
+        {/* Linked Trip Info */}
+        {trip.linkedTripInfo && (
+          <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-sm font-medium text-blue-700">
+              {trip.linkedTripInfo.type === "return"
+                ? "Return trip"
+                : "Outbound trip"}
+              : {trip.linkedTripInfo.routeTemplateName}
+            </p>
+            <p className="text-xs text-blue-600 mt-1">
+              {new Date(trip.linkedTripInfo.departureTime).toLocaleDateString()}{" "}
+              at{" "}
+              {new Date(trip.linkedTripInfo.departureTime).toLocaleTimeString(
+                [],
+                { hour: "2-digit", minute: "2-digit" },
+              )}
+            </p>
+            {trip.roundTripDiscount && trip.roundTripDiscount > 0 && (
+              <p className="text-xs text-blue-600 mt-1">
+                {(trip.roundTripDiscount * 100).toFixed(0)}% discount when
+                booked together
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Status Actions */}
-        {isUpcoming && trip.status === 'scheduled' && (
+        {isUpcoming && trip.status === "scheduled" && (
           <div className="flex gap-2 pt-2 border-t border-border/40">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => handleStatusChange('in-progress')}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleStatusChange("in-progress")}
               disabled={isUpdatingStatus}
               className="flex-1 bg-brand-orange text-white hover:bg-brand-orange-600"
             >
-              {isUpdatingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Start Trip'}
+              {isUpdatingStatus ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                "Start Trip"
+              )}
             </Button>
           </div>
         )}
 
-        {trip.status === 'in-progress' && (
+        {trip.status === "in-progress" && (
           <div className="flex gap-2 pt-2 border-t border-border/40">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => handleStatusChange('completed')}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleStatusChange("completed")}
               disabled={isUpdatingStatus}
               className="flex-1"
             >
-              {isUpdatingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Complete Trip'}
+              {isUpdatingStatus ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                "Complete Trip"
+              )}
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => handleStatusChange('cancelled')}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleStatusChange("cancelled")}
               disabled={isUpdatingStatus}
               className="flex-1 text-red-600 hover:text-red-700"
             >
-              {isUpdatingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Cancel Trip'}
+              {isUpdatingStatus ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                "Cancel Trip"
+              )}
             </Button>
           </div>
         )}
       </CardContent>
+
+      {/* Link Return Trip Modal */}
+      {canLinkReturnTrip && (
+        <LinkReturnTripModal
+          open={showLinkModal}
+          onOpenChange={setShowLinkModal}
+          outboundTrip={{
+            id: trip.id,
+            routeTemplateName: trip.routeTemplateName,
+            departureTime: new Date(trip.departureTime).getTime(),
+            arrivalTime: new Date(trip.arrivalTime).getTime(),
+            routeCities: trip.routeCities,
+          }}
+          onLinkSuccess={() => {
+            setShowLinkModal(false);
+            // The data will automatically refresh via the useDriverTrips hook
+          }}
+        />
+      )}
     </Card>
   );
 };
@@ -253,8 +390,8 @@ const TripDetailsPanel = ({ trip }: { trip: CalendarTrip | null }) => {
   const departureDate = new Date(trip.departureTime);
   const arrivalDate = new Date(trip.arrivalTime);
   const duration = formatTripDuration(trip.departureTime, trip.arrivalTime);
-  
-  const routePath = trip.routeTemplateName || 'Unknown Route';
+
+  const routePath = trip.routeTemplateName || "Unknown Route";
 
   return (
     <Card className="bg-white">
@@ -265,9 +402,11 @@ const TripDetailsPanel = ({ trip }: { trip: CalendarTrip | null }) => {
               <Calendar className="w-5 h-5 text-gray-600" />
             </div>
             <div>
-              <CardTitle className="text-lg font-heading">{trip.routeTemplateName}</CardTitle>
+              <CardTitle className="text-lg font-heading">
+                {trip.routeTemplateName}
+              </CardTitle>
               <Badge className={STATUS_COLORS[trip.status]}>
-                {trip.status.replace('_', ' ')}
+                {trip.status.replace("_", " ")}
               </Badge>
             </div>
           </div>
@@ -278,7 +417,7 @@ const TripDetailsPanel = ({ trip }: { trip: CalendarTrip | null }) => {
                 View
               </Link>
             </Button>
-            {trip.status === 'scheduled' && (
+            {trip.status === "scheduled" && (
               <Button variant="ghost" size="sm" asChild>
                 <Link to={`/driver/trips/${trip.id}/edit`}>
                   <Edit className="w-4 h-4" />
@@ -288,7 +427,7 @@ const TripDetailsPanel = ({ trip }: { trip: CalendarTrip | null }) => {
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {/* Route Path */}
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
@@ -301,13 +440,21 @@ const TripDetailsPanel = ({ trip }: { trip: CalendarTrip | null }) => {
           <div>
             <p className="text-xs text-muted-foreground">Departure</p>
             <p className="text-sm font-medium">
-              {departureDate.toLocaleDateString()} at {departureDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {departureDate.toLocaleDateString()} at{" "}
+              {departureDate.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
             </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Arrival</p>
             <p className="text-sm font-medium">
-              {arrivalDate.toLocaleDateString()} at {arrivalDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {arrivalDate.toLocaleDateString()} at{" "}
+              {arrivalDate.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
             </p>
           </div>
         </div>
@@ -320,7 +467,9 @@ const TripDetailsPanel = ({ trip }: { trip: CalendarTrip | null }) => {
           </div>
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-muted-foreground" />
-            <span>{trip.availableSeats}/{trip.totalSeats} seats</span>
+            <span>
+              {trip.availableSeats}/{trip.totalSeats} seats
+            </span>
           </div>
           {trip.vehicleName && (
             <div className="flex items-center gap-2">
@@ -341,9 +490,11 @@ const TripDetailsPanel = ({ trip }: { trip: CalendarTrip | null }) => {
 };
 
 export default function DriverTripsPage() {
-  const [view, setView] = useState<'list' | 'calendar'>('list');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'scheduled' | 'in-progress' | 'completed' | 'cancelled'>('all');
+  const [view, setView] = useState<"list" | "calendar">("list");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "scheduled" | "in-progress" | "completed" | "cancelled"
+  >("all");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTrip, setSelectedTrip] = useState<CalendarTrip | null>(null);
 
@@ -393,11 +544,18 @@ export default function DriverTripsPage() {
   }, [tripsData]);
 
   const filteredTrips = useMemo(() => {
-    return calendarTrips.filter(trip => {
-      const matchesSearch = trip.routeTemplateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (trip.routeCities && trip.routeCities.some((city) => city.cityName.toLowerCase().includes(searchTerm.toLowerCase())));
-      
-      const matchesStatus = statusFilter === 'all' || trip.status === statusFilter;
+    return calendarTrips.filter((trip) => {
+      const matchesSearch =
+        trip.routeTemplateName
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        (trip.routeCities &&
+          trip.routeCities.some((city) =>
+            city.cityName.toLowerCase().includes(searchTerm.toLowerCase()),
+          ));
+
+      const matchesStatus =
+        statusFilter === "all" || trip.status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
@@ -406,10 +564,14 @@ export default function DriverTripsPage() {
   const stats = useMemo(() => {
     return {
       total: calendarTrips.length,
-      scheduled: calendarTrips.filter((t) => t.status === 'scheduled').length,
-      inProgress: calendarTrips.filter((t) => t.status === 'in-progress').length,
-      completed: calendarTrips.filter((t) => t.status === 'completed').length,
-      totalEarnings: calendarTrips.reduce((acc, t) => acc + (t.totalEarnings || 0), 0),
+      scheduled: calendarTrips.filter((t) => t.status === "scheduled").length,
+      inProgress: calendarTrips.filter((t) => t.status === "in-progress")
+        .length,
+      completed: calendarTrips.filter((t) => t.status === "completed").length,
+      totalEarnings: calendarTrips.reduce(
+        (acc, t) => acc + (t.totalEarnings || 0),
+        0,
+      ),
     };
   }, [calendarTrips]);
 
@@ -419,7 +581,7 @@ export default function DriverTripsPage() {
 
   const handleDateChange = (date: Date) => {
     setSelectedDate(date);
-    setView('list'); // Switch to list view when a date is clicked
+    setView("list"); // Switch to list view when a date is clicked
     // Optionally filter trips for this date
   };
 
@@ -428,7 +590,9 @@ export default function DriverTripsPage() {
       <div className="flex items-center justify-center py-12">
         <div className="flex items-center gap-3">
           <Loader2 className="w-6 h-6 animate-spin text-brand-orange" />
-          <span className="text-lg text-muted-foreground">Loading trips...</span>
+          <span className="text-lg text-muted-foreground">
+            Loading trips...
+          </span>
         </div>
       </div>
     );
@@ -447,20 +611,23 @@ export default function DriverTripsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline"
-            asChild 
-          >
-            <Link to="/driver/trips/batch-schedule" className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link
+              to="/driver/trips/batch-schedule"
+              className="flex items-center gap-2"
+            >
               <Calendar className="h-4 w-4" />
               Batch Schedule
             </Link>
           </Button>
-          <Button 
-            asChild 
+          <Button
+            asChild
             className="bg-brand-orange hover:bg-brand-orange-600 text-white"
           >
-            <Link to="/driver/trips/schedule" className="flex items-center gap-2">
+            <Link
+              to="/driver/trips/schedule"
+              className="flex items-center gap-2"
+            >
               <Plus className="h-4 w-4" />
               Schedule Trip
             </Link>
@@ -472,24 +639,40 @@ export default function DriverTripsPage() {
       <div className="bg-white rounded-lg border border-border/40 p-6">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
           <div className="text-center">
-            <div className="text-2xl font-bold text-foreground">{stats.total}</div>
-            <div className="text-sm text-muted-foreground mt-1">Total Trips</div>
+            <div className="text-2xl font-bold text-foreground">
+              {stats.total}
+            </div>
+            <div className="text-sm text-muted-foreground mt-1">
+              Total Trips
+            </div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-foreground">{stats.scheduled}</div>
+            <div className="text-2xl font-bold text-foreground">
+              {stats.scheduled}
+            </div>
             <div className="text-sm text-muted-foreground mt-1">Scheduled</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-foreground">{stats.inProgress}</div>
-            <div className="text-sm text-muted-foreground mt-1">In Progress</div>
+            <div className="text-2xl font-bold text-foreground">
+              {stats.inProgress}
+            </div>
+            <div className="text-sm text-muted-foreground mt-1">
+              In Progress
+            </div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-foreground">{stats.completed}</div>
+            <div className="text-2xl font-bold text-foreground">
+              {stats.completed}
+            </div>
             <div className="text-sm text-muted-foreground mt-1">Completed</div>
           </div>
           <div className="text-center md:col-span-3 lg:col-span-1">
-            <div className="text-2xl font-bold text-foreground">₵{stats.totalEarnings}</div>
-            <div className="text-sm text-muted-foreground mt-1">Total Earnings</div>
+            <div className="text-2xl font-bold text-foreground">
+              ₵{stats.totalEarnings}
+            </div>
+            <div className="text-sm text-muted-foreground mt-1">
+              Total Earnings
+            </div>
           </div>
         </div>
       </div>
@@ -497,7 +680,10 @@ export default function DriverTripsPage() {
       {/* View Toggle and Filters */}
       <div className="flex flex-col lg:flex-row gap-4">
         {/* View Toggle */}
-        <Tabs value={view} onValueChange={(value) => setView(value as 'list' | 'calendar')}>
+        <Tabs
+          value={view}
+          onValueChange={(value) => setView(value as "list" | "calendar")}
+        >
           <TabsList className="w-fit">
             <TabsTrigger value="list" className="flex items-center gap-2">
               <List className="w-4 h-4" />
@@ -511,7 +697,7 @@ export default function DriverTripsPage() {
         </Tabs>
 
         {/* Search and Filters (only for list view) */}
-        {view === 'list' && (
+        {view === "list" && (
           <div className="flex flex-col sm:flex-row gap-4 flex-1">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -523,15 +709,36 @@ export default function DriverTripsPage() {
               />
             </div>
             <div className="flex gap-2 flex-wrap">
-              {(['all', 'scheduled', 'in-progress', 'completed', 'cancelled'] as const).map((status) => (
+              {(
+                [
+                  "all",
+                  "scheduled",
+                  "in-progress",
+                  "completed",
+                  "cancelled",
+                ] as const
+              ).map((status) => (
                 <Button
                   key={status}
                   variant={statusFilter === status ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setStatusFilter(status as 'all' | 'scheduled' | 'in-progress' | 'completed' | 'cancelled')}
-                  className={statusFilter === status ? "bg-brand-orange text-white hover:bg-brand-orange-600" : ""}
+                  onClick={() =>
+                    setStatusFilter(
+                      status as
+                        | "all"
+                        | "scheduled"
+                        | "in-progress"
+                        | "completed"
+                        | "cancelled",
+                    )
+                  }
+                  className={
+                    statusFilter === status
+                      ? "bg-brand-orange text-white hover:bg-brand-orange-600"
+                      : ""
+                  }
                 >
-                  {status === 'all' ? 'All' : status.replace('_', ' ')}
+                  {status === "all" ? "All" : status.replace("_", " ")}
                 </Button>
               ))}
             </div>
@@ -540,13 +747,11 @@ export default function DriverTripsPage() {
       </div>
 
       {/* Content based on active view */}
-      {view === 'list' ? (
+      {view === "list" ? (
         /* List View */
         <div className="space-y-4">
-          {filteredTrips?.map((trip) => (
-            <TripCard key={trip.id} trip={trip} />
-          ))}
-          
+          {filteredTrips?.map((trip) => <TripCard key={trip.id} trip={trip} />)}
+
           {filteredTrips?.length === 0 && (
             <Card className="bg-white">
               <CardContent className="p-12 text-center">
@@ -555,15 +760,18 @@ export default function DriverTripsPage() {
                   No trips found
                 </h3>
                 <p className="text-muted-foreground mb-4">
-                  {statusFilter === 'all' 
-                    ? "Get started by scheduling your first trip" 
-                    : `No ${statusFilter.replace('_', ' ')} trips found`}
+                  {statusFilter === "all"
+                    ? "Get started by scheduling your first trip"
+                    : `No ${statusFilter.replace("_", " ")} trips found`}
                 </p>
-                <Button 
-                  asChild 
+                <Button
+                  asChild
                   className="bg-brand-orange hover:bg-brand-orange-600 text-white"
                 >
-                  <Link to="/driver/trips/schedule" className="flex items-center gap-2">
+                  <Link
+                    to="/driver/trips/schedule"
+                    className="flex items-center gap-2"
+                  >
                     <Plus className="h-4 w-4" />
                     Schedule Trip
                   </Link>
@@ -581,13 +789,11 @@ export default function DriverTripsPage() {
             selectedDate={selectedDate}
             onDateSelect={handleDateChange}
           />
-          
+
           {/* Trip Details Panel - Shows when a trip is selected */}
-          {selectedTrip && (
-            <TripDetailsPanel trip={selectedTrip} />
-          )}
+          {selectedTrip && <TripDetailsPanel trip={selectedTrip} />}
         </div>
       )}
     </div>
   );
-} 
+}
