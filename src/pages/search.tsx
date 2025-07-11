@@ -167,14 +167,30 @@ export const TripResultCard = ({
           {/* Pricing and Book Button */}
           <div className="flex flex-col items-end gap-4 lg:min-w-[200px]">
             <div className="text-right">
-              <div className="text-2xl font-bold text-brand-orange">
-                ₵{trip.segmentPrice}
-              </div>
-              <div className="text-xs text-muted-foreground">per passenger</div>
-              {trip.fullRoutePrice !== trip.segmentPrice && (
-                <div className="text-xs text-muted-foreground">
-                  Full route: ₵{trip.fullRoutePrice}
-                </div>
+              {isRoundTrip ? (
+                <>
+                  <div className="text-2xl font-bold text-brand-orange">
+                    ₵{trip.totalPrice}
+                  </div>
+                  <div className="text-xs text-muted-foreground">round trip per passenger</div>
+                  {trip.discountAmount && trip.discountAmount > 0 && (
+                    <div className="text-xs text-green-600">
+                      -₵{trip.discountAmount} discount
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold text-brand-orange">
+                    ₵{trip.segmentPrice}
+                  </div>
+                  <div className="text-xs text-muted-foreground">per passenger</div>
+                  {trip.fullRoutePrice !== trip.segmentPrice && (
+                    <div className="text-xs text-muted-foreground">
+                      Full route: ₵{trip.fullRoutePrice}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
