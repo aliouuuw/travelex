@@ -90,39 +90,48 @@ export default function Home() {
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-travelex-blue mb-4">Why Choose TravelEx?</h2>
+            <h2 className="text-3xl font-bold text-travelex-blue mb-4">The TravelEx Advantage</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
               We&apos;re redefining intercity travel with premium amenities, reliable service, and competitive pricing.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-travelex-orange/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Shield className="h-8 w-8 text-travelex-orange" />
+            {/* Feature 1: Safe & Reliable */}
+            <div className="group bg-gray-50 rounded-xl p-8 transition-all duration-300 hover:bg-white hover:shadow-2xl hover:-translate-y-2">
+              <div className="flex justify-center mb-6">
+                <div className="w-20 h-20 bg-travelex-orange/10 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:bg-travelex-orange/20">
+                  <Shield className="h-10 w-10 text-travelex-orange" />
+                </div>
               </div>
-              <h3 className="text-xl font-semibold text-travelex-blue mb-2">Safe & Reliable</h3>
-              <p className="text-gray-600">
+              <h3 className="text-2xl font-semibold text-travelex-blue mb-3 text-center">Safe & Reliable</h3>
+              <p className="text-gray-600 text-center text-base leading-relaxed">
                 Professional drivers, well-maintained vehicles, and comprehensive insurance for your peace of mind.
               </p>
             </div>
 
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-travelex-orange/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Star className="h-8 w-8 text-travelex-orange" />
+            {/* Feature 2: Premium Comfort */}
+            <div className="group bg-gray-50 rounded-xl p-8 transition-all duration-300 hover:bg-white hover:shadow-2xl hover:-translate-y-2">
+              <div className="flex justify-center mb-6">
+                <div className="w-20 h-20 bg-travelex-orange/10 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:bg-travelex-orange/20">
+                  <Star className="h-10 w-10 text-travelex-orange" />
+                </div>
               </div>
-              <h3 className="text-xl font-semibold text-travelex-blue mb-2">Premium Comfort</h3>
-              <p className="text-gray-600">
+              <h3 className="text-2xl font-semibold text-travelex-blue mb-3 text-center">Premium Comfort</h3>
+              <p className="text-gray-600 text-center text-base leading-relaxed">
                 Spacious seating, climate control, power outlets, and complimentary refreshments on every trip.
               </p>
             </div>
 
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-travelex-orange/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Clock className="h-8 w-8 text-travelex-orange" />
+            {/* Feature 3: Convenient Schedule */}
+            <div className="group bg-gray-50 rounded-xl p-8 transition-all duration-300 hover:bg-white hover:shadow-2xl hover:-translate-y-2">
+              <div className="flex justify-center mb-6">
+                <div className="w-20 h-20 bg-travelex-orange/10 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:bg-travelex-orange/20">
+                  <Clock className="h-10 w-10 text-travelex-orange" />
+                </div>
               </div>
-              <h3 className="text-xl font-semibold text-travelex-blue mb-2">Convenient Schedule</h3>
-              <p className="text-gray-600">
+              <h3 className="text-2xl font-semibold text-travelex-blue mb-3 text-center">Convenient Schedule</h3>
+              <p className="text-gray-600 text-center text-base leading-relaxed">
                 Multiple daily departures with convenient pickup locations in each city center and airports.
               </p>
             </div>

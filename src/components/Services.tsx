@@ -1,98 +1,87 @@
-import { MapPin, Clock, Users, Luggage } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { MapPin, Clock, Users, Luggage, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const services = [
   {
     title: "Ottawa ↔ Toronto",
-    description: "Direct premium travel between Canada's capital and largest city",
+    description: "Direct premium travel between Canada's capital and largest city.",
     icon: MapPin,
     features: ["4.5 hour journey", "Multiple daily departures", "City center pickup"],
     badge: "Most Popular",
   },
   {
     title: "Express Routes",
-    description: "Fast, comfortable travel with minimal stops",
+    description: "Fast, comfortable travel with minimal stops for a quicker journey.",
     icon: Clock,
     features: ["Limited stops", "Priority boarding", "On-time guarantee"],
   },
   {
     title: "Group Travel",
-    description: "Perfect for families and business teams",
+    description: "Perfect for families, friends, and business teams traveling together.",
     icon: Users,
-    features: ["Group discounts", "Reserved seating", "Coordinated pickup"],
+    features: ["Group discounts", "Reserved seating", "Coordinated pickup options"],
   },
   {
     title: "Extra Luggage",
-    description: "Flexible baggage options for extended trips",
+    description: "Flexible baggage options for when you need to bring a little more.",
     icon: Luggage,
-    features: ["First bag free", "Affordable extra bags", "Secure storage"],
+    features: ["First bag free", "Affordable extra bags", "Secure onboard storage"],
   },
 ];
 
 function Services() {
   return (
-    <section className="py-16 px-8 md:px-16 bg-gray-50">
-      <div>
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-8 text-travelex-blue">
-          Why Choose TravelEx?
-        </h2>
-        <p className="text-center mb-12 max-w-2xl mx-auto text-lg md:text-xl text-gray-700">
-          Experience premium intercity travel with the comfort and convenience you deserve.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+    <section className="py-20 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold tracking-tight text-travelex-blue sm:text-4xl">
+            Our Services
+          </h2>
+          <p className="mt-4 text-lg leading-8 text-gray-600 max-w-3xl mx-auto">
+            We offer a range of services to make your journey comfortable, convenient, and tailored to your needs. From express routes to group bookings, we have you covered.
+          </p>
+        </div>
+        <div className="mt-16 space-y-16">
           {services.map((service, index) => (
-            <Card
-              key={index}
-              className="bg-white border-2 border-gray-200 hover:border-travelex-orange flex flex-col h-full shadow-lg transition-all transform hover:scale-105 duration-300 relative"
+            <div
+              key={service.title}
+              className={`relative flex flex-col-reverse lg:flex-row ${
+                index % 2 === 0 ? "lg:flex-row" : "lg:flex-row-reverse"
+              } items-center gap-8 lg:gap-16`}
             >
-              <CardHeader className="flex items-center w-full">
-                <div className="rounded-full flex items-center justify-center mb-4">
-                  <service.icon className="w-8 h-8 text-travelex-orange" />
-                </div>
-                <CardTitle className="text-xl md:text-2xl mb-2 font-semibold text-travelex-blue text-center">
+              <div className="lg:w-1/2 lg:pl-16 lg:pr-16">
+                {service.badge && (
+                    <Badge className="mb-2 bg-travelex-orange text-white">{service.badge}</Badge>
+                )}
+                <h3 className="text-2xl font-bold tracking-tight text-travelex-blue sm:text-3xl">
                   {service.title}
-                </CardTitle>
-
-                <CardDescription className="text-gray-600 text-center">
+                </h3>
+                <p className="mt-4 text-lg text-gray-600">
                   {service.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <ul className="space-y-3">
-                  {service.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-center">
-                      <svg
-                        className="w-4 h-4 mr-3 text-travelex-orange flex-shrink-0"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M5 13l4 4L19 7"
-                        ></path>
-                      </svg>
-                      <span className="text-gray-700">{feature}</span>
+                </p>
+                <ul className="mt-6 space-y-4">
+                  {service.features.map((feature) => (
+                    <li key={feature} className="flex items-center gap-x-3">
+                      <Check
+                        className="h-6 w-6 flex-none text-travelex-orange"
+                        aria-hidden="true"
+                      />
+                      <span className="text-base font-leading-7 text-gray-700">{feature}</span>
                     </li>
                   ))}
                 </ul>
-              </CardContent>
-              {service.badge && (
-                <div className="absolute top-4 right-4">
-                  <Badge className="bg-travelex-orange text-white">{service.badge}</Badge>
-                </div>
-              )}
-            </Card>
+              </div>
+              <div className="lg:w-1/2 flex justify-center items-center">
+                 <div className="w-48 h-48 lg:w-64 lg:h-64 bg-travelex-blue/5 rounded-full flex items-center justify-center group">
+                    <div className="w-36 h-36 lg:w-48 lg:h-48 bg-travelex-orange/10 rounded-full flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
+                      <service.icon
+                        className="h-20 w-20 lg:h-24 lg:w-24 text-travelex-orange"
+                        aria-hidden="true"
+                      />
+                    </div>
+                 </div>
+              </div>
+            </div>
           ))}
         </div>
       </div>
