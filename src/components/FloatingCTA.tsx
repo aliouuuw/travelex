@@ -43,7 +43,7 @@ function FloatingCTA() {
       {/* Book Now Button */}
       <Button
         onClick={scrollToBooking}
-        className="hidden md:flex gap-2"
+        className="hidden bg-travelex-orange text-white hover:bg-travelex-orange/90 md:flex gap-2"
       >
         <Calendar className="h-5 w-5" />
         <span className="font-semibold">Book Now</span>

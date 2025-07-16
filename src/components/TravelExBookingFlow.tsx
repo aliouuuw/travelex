@@ -195,6 +195,43 @@ export default function TravelExBookingFlow({
       )}
 
       <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6">
+        {/* Trip Type Selection */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">Trip Type</label>
+          <div className="flex gap-4">
+            <Button
+              type="button"
+              variant={
+                searchData.tripType === "one-way" ? "default" : "outline"
+              }
+              className={cn(
+                "flex-1",
+                searchData.tripType === "one-way" &&
+                  "bg-travelex-orange text-white hover:bg-travelex-orange/90",
+              )}
+              onClick={() =>
+                updateSearchData({ tripType: "one-way", returnDate: undefined })
+              }
+            >
+              One-way
+            </Button>
+            <Button
+              type="button"
+              variant={
+                searchData.tripType === "round-trip" ? "default" : "outline"
+              }
+              className={cn(
+                "flex-1",
+                searchData.tripType === "round-trip" &&
+                  "bg-travelex-orange text-white hover:bg-travelex-orange/90",
+              )}
+              onClick={() => updateSearchData({ tripType: "round-trip" })}
+            >
+              Round-trip
+            </Button>
+          </div>
+        </div>
+
         {/* City Selection */}
         <div className="space-y-4">
           <div className="flex flex-col lg:flex-row items-center gap-4">
@@ -427,42 +464,7 @@ export default function TravelExBookingFlow({
           )}
         </div>
 
-        {/* Trip Type Selection */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700">Trip Type</label>
-          <div className="flex gap-4">
-            <Button
-              type="button"
-              variant={
-                searchData.tripType === "one-way" ? "default" : "outline"
-              }
-              className={cn(
-                "flex-1",
-                searchData.tripType === "one-way" &&
-                  "bg-travelex-orange hover:bg-travelex-orange/90",
-              )}
-              onClick={() =>
-                updateSearchData({ tripType: "one-way", returnDate: undefined })
-              }
-            >
-              One-way
-            </Button>
-            <Button
-              type="button"
-              variant={
-                searchData.tripType === "round-trip" ? "default" : "outline"
-              }
-              className={cn(
-                "flex-1",
-                searchData.tripType === "round-trip" &&
-                  "bg-travelex-orange hover:bg-travelex-orange/90",
-              )}
-              onClick={() => updateSearchData({ tripType: "round-trip" })}
-            >
-              Round-trip
-            </Button>
-          </div>
-        </div>
+        
 
         {/* Date and Passengers Selection */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
