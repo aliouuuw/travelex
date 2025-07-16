@@ -55,12 +55,14 @@ export const TripResultCard = ({
   searchToCity,
   searchFromStation,
   searchToStation,
+  searchPassengers,
 }: {
   trip: TripSearchResult;
   searchFromCity?: string;
   searchToCity?: string;
   searchFromStation?: string;
   searchToStation?: string;
+  searchPassengers?: number;
 }) => {
   const departureTime = new Date(trip.departureTime);
   const arrivalTime = new Date(trip.arrivalTime || trip.departureTime);
@@ -77,6 +79,7 @@ export const TripResultCard = ({
     if (searchToCity) params.append("toCity", searchToCity);
     if (searchFromStation) params.append("fromStation", searchFromStation);
     if (searchToStation) params.append("toStation", searchToStation);
+    if (searchPassengers) params.append("passengers", searchPassengers.toString());
 
     // NEW: Add returnTripId for round trips
     if (isRoundTrip && trip.returnTripDetails) {
@@ -173,7 +176,7 @@ export const TripResultCard = ({
                     ${trip.totalPrice}
                   </div>
                   <div className="text-xs text-muted-foreground">round trip per passenger</div>
-                  {trip.discountAmount && trip.discountAmount > 0 && (
+                  {(trip.discountAmount ?? 0) > 0 && (
                     <div className="text-xs text-green-600">
                       -${trip.discountAmount} discount
                     </div>
@@ -594,6 +597,7 @@ export default function SearchPage() {
                       searchToCity={searchQuery?.toCity}
                       searchFromStation={searchQuery?.fromStation}
                       searchToStation={searchQuery?.toStation}
+                      searchPassengers={searchQuery?.minSeats}
                     />
                   ))}
                 </div>

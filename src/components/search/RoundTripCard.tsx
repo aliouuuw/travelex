@@ -23,6 +23,7 @@ interface RoundTripCardProps {
   searchToCity?: string;
   searchFromStation?: string;
   searchToStation?: string;
+  searchPassengers?: number;
 }
 
 export function RoundTripCard({
@@ -31,6 +32,7 @@ export function RoundTripCard({
   searchToCity,
   searchFromStation,
   searchToStation,
+  searchPassengers,
 }: RoundTripCardProps) {
   if (!trip.isRoundTrip || !trip.returnTripDetails) {
     return null;
@@ -63,6 +65,7 @@ export function RoundTripCard({
     if (searchToCity) params.append("toCity", searchToCity);
     if (searchFromStation) params.append("fromStation", searchFromStation);
     if (searchToStation) params.append("toStation", searchToStation);
+    if (searchPassengers) params.append("passengers", searchPassengers.toString());
 
     return `${baseUrl}?${params.toString()}`;
   };

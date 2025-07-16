@@ -4,41 +4,56 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  Plus, 
-  Trash2, 
-  GripVertical, 
-  MapPin, 
-  ArrowRight, 
-  Save, 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Plus,
+  Trash2,
+  GripVertical,
+  MapPin,
+  ArrowRight,
+  Save,
   Eye,
   DollarSign,
-  Route as RouteIcon
+  Route as RouteIcon,
+  Search,
+  Clock,
+  Check,
 } from "lucide-react";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { 
-  useCreateRouteTemplate, 
-  useUpdateRouteTemplate, 
+import {
+  useCreateRouteTemplate,
+  useUpdateRouteTemplate,
   useRouteTemplateById,
   type RouteTemplateFormData,
   type Station,
   type CityWithStations,
-  type InterCityFare
+  type InterCityFare,
 } from "@/services/convex/routeTemplates";
 import { useAvailableCountries } from "@/services/convex/countries";
+import {
+  useCombinedStationsForCity,
+  type ReusableStation,
+  useExtractAndSaveCitiesFromRoute,
+} from "@/services/convex/citiesStations";
 import { EnhancedCitySelector } from "@/components/shared/enhanced-city-selector";
 import { toast } from "sonner";
 import type { Id } from "convex/_generated/dataModel";
 
 // Reusable Station Manager Component
-const StationManager = ({ 
-  stations, 
-  onAdd, 
-  onRemove, 
+const StationManager = ({
+  stations,
+  onAdd,
+  onRemove,
   onUpdate,
-  cityName 
+  cityName,
 }: {
   stations: Station[];
   onAdd: (station: Station) => void;
@@ -46,13 +61,26 @@ const StationManager = ({
   onUpdate: (index: number, station: Station) => void;
   cityName: string;
 }) => {
+  console.log("StationManager - received cityName:", cityName);
   const [newStation, setNewStation] = useState({ name: "", address: "" });
-  
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState<"new" | "existing">("new");
+
+  // Fetch existing stations for this city
+  const existingStations = useCombinedStationsForCity(cityName) || [];
+
+  // Filter existing stations based on search term
+  const filteredExistingStations = existingStations.filter(
+    (station: ReusableStation) =>
+      station.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      station.address.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
+
   const handleAddStation = () => {
     if (newStation.name.trim() && newStation.address.trim()) {
-      onAdd({ 
-        name: newStation.name.trim(), 
-        address: newStation.address.trim() 
+      onAdd({
+        name: newStation.name.trim(),
+        address: newStation.address.trim(),
       });
       setNewStation({ name: "", address: "" });
       toast.success(`Added station "${newStation.name.trim()}" to ${cityName}`);
@@ -61,9 +89,32 @@ const StationManager = ({
     }
   };
 
-  const handleStationUpdate = (index: number, field: 'name' | 'address', value: string) => {
+  const handleStationUpdate = (
+    index: number,
+    field: "name" | "address",
+    value: string,
+  ) => {
     const updatedStation = { ...stations[index], [field]: value };
     onUpdate(index, updatedStation);
+  };
+
+  const handleReuseStation = (existingStation: ReusableStation) => {
+    // Check if station is already added
+    const isAlreadyAdded = stations.some(
+      (s) => s.name === existingStation.name,
+    );
+    if (isAlreadyAdded) {
+      toast.error(`Station "${existingStation.name}" is already added`);
+      return;
+    }
+
+    onAdd({
+      name: existingStation.name,
+      address: existingStation.address,
+    });
+    toast.success(
+      `Reused station "${existingStation.name}" from your saved stations`,
+    );
   };
 
   return (
@@ -71,25 +122,34 @@ const StationManager = ({
       <div className="flex items-center gap-2 mb-3">
         <MapPin className="w-4 h-4 text-blue-600" />
         <span className="font-medium text-sm">
-          {cityName ? `Stations in ${cityName}` : "Add stations (select city first)"}
+          {cityName
+            ? `Stations in ${cityName}`
+            : "Add stations (select city first)"}
         </span>
         <Badge variant="secondary">{stations.length}</Badge>
       </div>
-      
-      {/* Existing Stations */}
+
+      {/* Existing Stations in Current Route */}
       <div className="space-y-2 max-h-40 overflow-y-auto">
         {stations.map((station, index) => (
-          <div key={`station-${index}-${station.name}`} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+          <div
+            key={`station-${index}-${station.name}`}
+            className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg"
+          >
             <div className="flex-1 space-y-1">
               <Input
                 value={station.name || ""}
-                onChange={(e) => handleStationUpdate(index, 'name', e.target.value)}
+                onChange={(e) =>
+                  handleStationUpdate(index, "name", e.target.value)
+                }
                 placeholder="Station name"
                 className="h-8 text-sm"
               />
               <Input
                 value={station.address || ""}
-                onChange={(e) => handleStationUpdate(index, 'address', e.target.value)}
+                onChange={(e) =>
+                  handleStationUpdate(index, "address", e.target.value)
+                }
                 placeholder="Address/Location"
                 className="h-8 text-sm"
               />
@@ -106,56 +166,180 @@ const StationManager = ({
           </div>
         ))}
       </div>
-      
-      {/* Add New Station */}
-      <div className="border-t pt-3 space-y-2">
-        <Input
-          value={newStation.name}
-          onChange={(e) => setNewStation(prev => ({ ...prev, name: e.target.value }))}
-          placeholder={cityName ? "New station name" : "Select city first"}
-          className="h-8 text-sm"
-          disabled={!cityName}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && newStation.name.trim() && newStation.address.trim()) {
-              handleAddStation();
-            }
-          }}
-        />
-        <Input
-          value={newStation.address}
-          onChange={(e) => setNewStation(prev => ({ ...prev, address: e.target.value }))}
-          placeholder={cityName ? "Station address/location" : "Select city first"}
-          className="h-8 text-sm"
-          disabled={!cityName}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && newStation.name.trim() && newStation.address.trim()) {
-              handleAddStation();
-            }
-          }}
-        />
-        <Button
-          type="button"
-          onClick={handleAddStation}
-          size="sm"
-          variant="outline"
-          className="w-full bg-brand-dark-blue text-white hover:bg-brand-dark-blue-600 transition-colors"
-          disabled={!cityName || !newStation.name.trim() || !newStation.address.trim()}
+
+      {/* Add New or Reuse Existing Stations */}
+      {cityName && (
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as "new" | "existing")}
+          className="w-full"
         >
-          <Plus className="w-4 h-4 mr-1" />
-          Add Station
-        </Button>
-      </div>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="new" className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Add New
+            </TabsTrigger>
+            <TabsTrigger value="existing" className="flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              Use Existing ({existingStations.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="new" className="space-y-2 mt-3">
+            <Input
+              value={newStation.name}
+              onChange={(e) =>
+                setNewStation((prev) => ({ ...prev, name: e.target.value }))
+              }
+              placeholder="New station name"
+              className="h-8 text-sm"
+              onKeyDown={(e) => {
+                if (
+                  e.key === "Enter" &&
+                  newStation.name.trim() &&
+                  newStation.address.trim()
+                ) {
+                  handleAddStation();
+                }
+              }}
+            />
+            <Input
+              value={newStation.address}
+              onChange={(e) =>
+                setNewStation((prev) => ({ ...prev, address: e.target.value }))
+              }
+              placeholder="Station address/location"
+              className="h-8 text-sm"
+              onKeyDown={(e) => {
+                if (
+                  e.key === "Enter" &&
+                  newStation.name.trim() &&
+                  newStation.address.trim()
+                ) {
+                  handleAddStation();
+                }
+              }}
+            />
+            <Button
+              type="button"
+              onClick={handleAddStation}
+              size="sm"
+              variant="outline"
+              className="w-full bg-brand-dark-blue text-white hover:bg-brand-dark-blue-600 transition-colors"
+              disabled={!newStation.name.trim() || !newStation.address.trim()}
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Add New Station
+            </Button>
+          </TabsContent>
+
+          <TabsContent value="existing" className="space-y-3 mt-3">
+            {existingStations.length > 0 ? (
+              <>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search existing stations..."
+                    className="h-8 text-sm pl-10"
+                  />
+                </div>
+
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {filteredExistingStations.map(
+                    (existingStation: ReusableStation) => {
+                      const isAlreadyAdded = stations.some(
+                        (s) => s.name === existingStation.name,
+                      );
+                      return (
+                        <div
+                          key={existingStation.id || existingStation.name}
+                          className={`
+                          flex items-center justify-between p-2 rounded-lg border transition-all
+                          ${
+                            isAlreadyAdded
+                              ? "bg-green-50 border-green-200"
+                              : "bg-gray-50 hover:bg-gray-100 border-gray-200"
+                          }
+                        `}
+                        >
+                          <div className="flex-1">
+                            <div className="font-medium text-sm">
+                              {existingStation.name}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              {existingStation.address}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {isAlreadyAdded && (
+                              <Badge
+                                variant="secondary"
+                                className="text-xs bg-green-100 text-green-700"
+                              >
+                                <Check className="w-3 h-3 mr-1" />
+                                Added
+                              </Badge>
+                            )}
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                handleReuseStation(existingStation)
+                              }
+                              disabled={isAlreadyAdded}
+                              className={`
+                              text-xs h-7 px-2
+                              ${
+                                isAlreadyAdded
+                                  ? "opacity-50 cursor-not-allowed"
+                                  : "hover:bg-brand-orange hover:text-white border-brand-orange"
+                              }
+                            `}
+                            >
+                              {isAlreadyAdded ? "Added" : "Reuse"}
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    },
+                  )}
+                </div>
+
+                {filteredExistingStations.length === 0 && searchTerm && (
+                  <p className="text-sm text-muted-foreground text-center py-2">
+                    No stations found matching "{searchTerm}"
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-4">
+                <Clock className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  No existing stations found for {cityName}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Create new stations and they'll be available for reuse in
+                  future routes
+                </p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 };
 
 // City Manager Component with Drag-and-Drop
-const CityManager = ({ 
-  cities, 
-  onAdd, 
-  onRemove, 
-  onUpdate, 
-  onReorder 
+const CityManager = ({
+  cities,
+  onAdd,
+  onRemove,
+  onUpdate,
+  onReorder,
 }: {
   cities: CityWithStations[];
   onAdd: () => void;
@@ -184,9 +368,9 @@ const CityManager = ({
   return (
     <div className="space-y-4">
       {cities.map((city, cityIndex) => (
-        <Card 
-          key={cityIndex} 
-          className={`premium-card transition-all ${draggedIndex === cityIndex ? 'opacity-50' : ''}`}
+        <Card
+          key={cityIndex}
+          className={`premium-card transition-all ${draggedIndex === cityIndex ? "opacity-50" : ""}`}
           draggable
           onDragStart={() => handleDragStart(cityIndex)}
           onDragOver={handleDragOver}
@@ -196,28 +380,32 @@ const CityManager = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 flex-1">
                 <GripVertical className="w-5 h-5 text-gray-400 cursor-move" />
-                <div className={`
+                <div
+                  className={`
                   flex items-center justify-center w-8 h-8 rounded-lg text-sm font-medium
-                  ${cityIndex === 0 
-                    ? 'bg-green-100 text-green-800' 
-                    : cityIndex === cities.length - 1
-                    ? 'bg-red-100 text-red-800'
-                    : 'bg-blue-100 text-blue-800'}
-                `}>
+                  ${
+                    cityIndex === 0
+                      ? "bg-green-100 text-green-800"
+                      : cityIndex === cities.length - 1
+                        ? "bg-red-100 text-red-800"
+                        : "bg-blue-100 text-blue-800"
+                  }
+                `}
+                >
                   {cityIndex + 1}
                 </div>
-                
+
                 {/* City Selection */}
                 <div className="flex-1">
                   <EnhancedCitySelector
                     selectedCountry={city.countryCode}
                     selectedCity={city.cityName}
                     onSelection={(countryCode: string, cityName: string) => {
-                      onUpdate(cityIndex, { 
+                      onUpdate(cityIndex, {
                         ...city,
-                        cityName, 
+                        cityName,
                         countryCode,
-                        stations: city.stations // Keep existing stations
+                        stations: city.stations, // Keep existing stations
                       });
                     }}
                     label=""
@@ -226,9 +414,15 @@ const CityManager = ({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {cityIndex === 0 && <Badge variant="outline" className="text-green-600">Origin</Badge>}
+                {cityIndex === 0 && (
+                  <Badge variant="outline" className="text-green-600">
+                    Origin
+                  </Badge>
+                )}
                 {cityIndex === cities.length - 1 && cities.length > 1 && (
-                  <Badge variant="outline" className="text-red-600">Destination</Badge>
+                  <Badge variant="outline" className="text-red-600">
+                    Destination
+                  </Badge>
                 )}
                 {cityIndex !== 0 && cityIndex !== cities.length - 1 && (
                   <Badge variant="outline">Stop</Badge>
@@ -253,14 +447,14 @@ const CityManager = ({
               onAdd={(station) => {
                 const updatedCity = {
                   ...city,
-                  stations: [...city.stations, station]
+                  stations: [...city.stations, station],
                 };
                 onUpdate(cityIndex, updatedCity);
               }}
               onRemove={(stationIndex) => {
                 const updatedCity = {
                   ...city,
-                  stations: city.stations.filter((_, i) => i !== stationIndex)
+                  stations: city.stations.filter((_, i) => i !== stationIndex),
                 };
                 onUpdate(cityIndex, updatedCity);
               }}
@@ -274,7 +468,7 @@ const CityManager = ({
           </CardContent>
         </Card>
       ))}
-      
+
       <Button
         type="button"
         onClick={onAdd}
@@ -289,10 +483,10 @@ const CityManager = ({
 };
 
 // Intercity Fare Manager
-const InterCityFareManager = ({ 
-  cities, 
-  fares, 
-  onChange 
+const InterCityFareManager = ({
+  cities,
+  fares,
+  onChange,
 }: {
   cities: CityWithStations[];
   fares: InterCityFare[];
@@ -301,32 +495,34 @@ const InterCityFareManager = ({
   // Generate city pairs with proper ordering: segments first, then total route
   const generateCityPairs = () => {
     const segments: { from: string; to: string; isTotal: boolean }[] = [];
-    
+
     // Add individual segments (adjacent cities)
     for (let i = 0; i < cities.length - 1; i++) {
-      segments.push({ 
-        from: cities[i].cityName, 
-        to: cities[i + 1].cityName, 
-        isTotal: false 
+      segments.push({
+        from: cities[i].cityName,
+        to: cities[i + 1].cityName,
+        isTotal: false,
       });
     }
-    
+
     // Add origin to destination (total route) if more than 2 cities
     if (cities.length > 2) {
-      segments.push({ 
-        from: cities[0].cityName, 
-        to: cities[cities.length - 1].cityName, 
-        isTotal: true 
+      segments.push({
+        from: cities[0].cityName,
+        to: cities[cities.length - 1].cityName,
+        isTotal: true,
       });
     }
-    
+
     return segments;
   };
 
   const cityPairs = generateCityPairs();
 
   const updateFare = (fromCity: string, toCity: string, fare: number) => {
-    const updatedFares = fares.filter(f => !(f.fromCity === fromCity && f.toCity === toCity));
+    const updatedFares = fares.filter(
+      (f) => !(f.fromCity === fromCity && f.toCity === toCity),
+    );
     if (fare > 0) {
       updatedFares.push({ fromCity, toCity, fare });
     }
@@ -334,13 +530,16 @@ const InterCityFareManager = ({
   };
 
   const getFare = (fromCity: string, toCity: string) => {
-    return fares.find(f => f.fromCity === fromCity && f.toCity === toCity)?.fare || 0;
+    return (
+      fares.find((f) => f.fromCity === fromCity && f.toCity === toCity)?.fare ||
+      0
+    );
   };
 
   // Calculate total fare from origin to destination by summing segments
   const calculateTotalFare = () => {
     if (cities.length < 2) return 0;
-    
+
     let totalFare = 0;
     for (let i = 0; i < cities.length - 1; i++) {
       const fromCity = cities[i].cityName;
@@ -359,21 +558,23 @@ const InterCityFareManager = ({
 
     const originCity = cities[0].cityName;
     const destinationCity = cities[cities.length - 1].cityName;
-    
+
     if (!originCity || !destinationCity) {
       toast.error("Please name your origin and destination cities first");
       return;
     }
 
     const totalFare = calculateTotalFare();
-    
+
     if (totalFare === 0) {
       toast.error("Set individual segment fares first to auto-calculate total");
       return;
     }
 
     updateFare(originCity, destinationCity, totalFare);
-    toast.success(`Auto-calculated ${originCity} → ${destinationCity}: $${totalFare}`);
+    toast.success(
+      `Auto-calculated ${originCity} → ${destinationCity}: $${totalFare}`,
+    );
   };
 
   return (
@@ -399,20 +600,22 @@ const InterCityFareManager = ({
         </div>
         {cities.length >= 2 && (
           <p className="text-sm text-muted-foreground">
-            Auto-calculate will set {cities[0]?.cityName || "Origin"} → {cities[cities.length - 1]?.cityName || "Destination"} 
-            {" "}fare by summing all segment prices (Total: ${calculateTotalFare()})
+            Auto-calculate will set {cities[0]?.cityName || "Origin"} →{" "}
+            {cities[cities.length - 1]?.cityName || "Destination"} fare by
+            summing all segment prices (Total: ${calculateTotalFare()})
           </p>
         )}
       </CardHeader>
       <CardContent className="space-y-3">
         {cityPairs.map(({ from, to, isTotal }, index) => (
-          <div 
-            key={index} 
+          <div
+            key={index}
             className={`
               flex items-center gap-3 p-3 rounded-lg transition-all
-              ${isTotal 
-                ? 'bg-brand-dark-blue/10 border-2 border-brand-dark-blue/30 shadow-sm' 
-                : 'bg-gray-50 hover:bg-gray-100'
+              ${
+                isTotal
+                  ? "bg-brand-dark-blue/10 border-2 border-brand-dark-blue/30 shadow-sm"
+                  : "bg-gray-50 hover:bg-gray-100"
               }
             `}
           >
@@ -422,31 +625,47 @@ const InterCityFareManager = ({
                   T
                 </div>
               )}
-              <span className={`font-medium text-sm ${isTotal ? 'text-brand-dark-blue' : ''}`}>
+              <span
+                className={`font-medium text-sm ${isTotal ? "text-brand-dark-blue" : ""}`}
+              >
                 {from}
               </span>
-              <ArrowRight className={`w-4 h-4 ${isTotal ? 'text-brand-dark-blue' : 'text-gray-400'}`} />
-              <span className={`font-medium text-sm ${isTotal ? 'text-brand-dark-blue' : ''}`}>
+              <ArrowRight
+                className={`w-4 h-4 ${isTotal ? "text-brand-dark-blue" : "text-gray-400"}`}
+              />
+              <span
+                className={`font-medium text-sm ${isTotal ? "text-brand-dark-blue" : ""}`}
+              >
                 {to}
               </span>
               {isTotal && (
-                <Badge variant="secondary" className="ml-2 bg-brand-dark-blue/20 text-brand-dark-blue text-xs">
+                <Badge
+                  variant="secondary"
+                  className="ml-2 bg-brand-dark-blue/20 text-brand-dark-blue text-xs"
+                >
                   Total Route
                 </Badge>
               )}
             </div>
             <div className="flex items-center gap-2">
-              <span className={`text-sm ${isTotal ? 'text-brand-dark-blue font-medium' : ''}`}>$</span>
+              <span
+                className={`text-sm ${isTotal ? "text-brand-dark-blue font-medium" : ""}`}
+              >
+                $
+              </span>
               <Input
                 type="number"
                 value={getFare(from, to)}
-                onChange={(e) => updateFare(from, to, parseFloat(e.target.value) || 0)}
+                onChange={(e) =>
+                  updateFare(from, to, parseFloat(e.target.value) || 0)
+                }
                 placeholder="0"
                 className={`
-                  w-20 h-8 text-sm 
-                  ${isTotal 
-                    ? 'border-brand-dark-blue focus:border-brand-dark-blue focus:ring-brand-dark-blue/20 font-medium' 
-                    : ''
+                  w-20 h-8 text-sm
+                  ${
+                    isTotal
+                      ? "border-brand-dark-blue focus:border-brand-dark-blue focus:ring-brand-dark-blue/20 font-medium"
+                      : ""
                   }
                 `}
                 min="0"
@@ -481,14 +700,18 @@ const RoutePreview = ({ cities }: { cities: CityWithStations[] }) => {
             {cities.map((city, cityIndex) => (
               <div key={cityIndex} className="flex items-center gap-4">
                 <div className="flex flex-col items-center">
-                  <div className={`
+                  <div
+                    className={`
                     flex items-center justify-center w-32 h-16 rounded-lg border-2 shadow-sm relative
-                    ${cityIndex === 0 
-                      ? 'bg-green-100 border-green-300 text-green-800' 
-                      : cityIndex === cities.length - 1
-                      ? 'bg-red-100 border-red-300 text-red-800'
-                      : 'bg-blue-100 border-blue-300 text-blue-800'}
-                  `}>
+                    ${
+                      cityIndex === 0
+                        ? "bg-green-100 border-green-300 text-green-800"
+                        : cityIndex === cities.length - 1
+                          ? "bg-red-100 border-red-300 text-red-800"
+                          : "bg-blue-100 border-blue-300 text-blue-800"
+                    }
+                  `}
+                  >
                     <div className="text-center">
                       <div className="text-sm font-medium">
                         {city.cityName || `City ${cityIndex + 1}`}
@@ -523,23 +746,45 @@ export default function RouteEditor() {
   const isEditing = !!id;
 
   // Load existing route data for editing
-  const existingRoute = useRouteTemplateById(isEditing ? (id as Id<"routeTemplates">) : undefined);
+  const existingRoute = useRouteTemplateById(
+    isEditing ? (id as Id<"routeTemplates">) : undefined,
+  );
 
   // Fetch countries for proper country information handling
   const countries = useAvailableCountries() || [];
 
-  const { control, handleSubmit, watch, setValue, trigger, reset, formState: { errors } } = useForm<RouteTemplateFormData>({
+  const {
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    trigger,
+    reset,
+    formState: { errors },
+  } = useForm<RouteTemplateFormData>({
     defaultValues: {
       name: "",
       estimatedDuration: "",
       basePrice: 0,
-      status: 'draft',
+      status: "draft",
       cities: [
-        { cityName: "", countryCode: "", countryName: "", flagEmoji: "", stations: [] },
-        { cityName: "", countryCode: "", countryName: "", flagEmoji: "", stations: [] }
+        {
+          cityName: "",
+          countryCode: "",
+          countryName: "",
+          flagEmoji: "",
+          stations: [],
+        },
+        {
+          cityName: "",
+          countryCode: "",
+          countryName: "",
+          flagEmoji: "",
+          stations: [],
+        },
       ],
-      intercityFares: []
-    }
+      intercityFares: [],
+    },
   });
 
   // Reset form when existing route data loads
@@ -551,7 +796,7 @@ export default function RouteEditor() {
         basePrice: existingRoute.basePrice,
         status: existingRoute.status,
         cities: existingRoute.cities,
-        intercityFares: existingRoute.intercityFares
+        intercityFares: existingRoute.intercityFares,
       });
     }
   }, [existingRoute, reset]);
@@ -559,10 +804,15 @@ export default function RouteEditor() {
   // Create and update route mutations
   const createRouteMutation = useCreateRouteTemplate();
   const updateRouteMutation = useUpdateRouteTemplate();
+  const extractAndSaveCitiesMutation = useExtractAndSaveCitiesFromRoute();
 
-  const { append: appendCity, remove: removeCity, move: moveCity } = useFieldArray({
+  const {
+    append: appendCity,
+    remove: removeCity,
+    move: moveCity,
+  } = useFieldArray({
     control,
-    name: "cities"
+    name: "cities",
   });
 
   const watchedCities = watch("cities");
@@ -571,25 +821,63 @@ export default function RouteEditor() {
   const onSubmit = async (data: RouteTemplateFormData) => {
     try {
       if (isEditing) {
-        await updateRouteMutation({ routeTemplateId: id as Id<"routeTemplates">, ...data });
+        await updateRouteMutation({
+          routeTemplateId: id as Id<"routeTemplates">,
+          ...data,
+        });
         toast.success("Route template updated successfully!");
       } else {
         await createRouteMutation(data);
         toast.success("Route template created successfully!");
       }
+
+      // Automatically save cities and stations to reusable system for future use
+      try {
+        const citiesToSave = data.cities
+          .filter(
+            (city) =>
+              city.cityName &&
+              city.countryCode &&
+              city.countryCode.trim() !== "",
+          )
+          .map((city) => ({
+            cityName: city.cityName,
+            countryCode: city.countryCode as string,
+            stations: city.stations.map((station) => ({
+              name: station.name,
+              address: station.address,
+            })),
+          }));
+
+        if (citiesToSave.length > 0) {
+          await extractAndSaveCitiesMutation({ cities: citiesToSave });
+          toast.success(
+            "Cities and stations saved for reuse in future routes!",
+          );
+        }
+      } catch (saveError) {
+        // Don't fail the main operation if saving to reusable system fails
+        console.warn(
+          "Failed to save cities/stations to reusable system:",
+          saveError,
+        );
+      }
+
       navigate("/driver/routes");
     } catch (error) {
-      toast.error(`Failed to ${isEditing ? 'update' : 'create'} route template: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(
+        `Failed to ${isEditing ? "update" : "create"} route template: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   };
 
   const addCity = () => {
-    appendCity({ 
-      cityName: "", 
+    appendCity({
+      cityName: "",
       countryCode: "",
       countryName: "",
       flagEmoji: "",
-      stations: [] 
+      stations: [],
     });
   };
 
@@ -599,12 +887,12 @@ export default function RouteEditor() {
 
   const updateCity = async (index: number, city: CityWithStations) => {
     // Ensure we have all required country information
-    const selectedCountry = countries?.find(c => c.code === city.countryCode);
+    const selectedCountry = countries?.find((c) => c.code === city.countryCode);
     if (selectedCountry && city.countryCode && city.cityName) {
       const updatedCity = {
         ...city,
         countryName: selectedCountry.name,
-        flagEmoji: selectedCountry.flagEmoji
+        flagEmoji: selectedCountry.flagEmoji,
       };
       setValue(`cities.${index}`, updatedCity, { shouldDirty: true });
       await trigger(`cities.${index}`);
@@ -620,7 +908,7 @@ export default function RouteEditor() {
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h1 className="font-heading text-3xl font-bold text-foreground">
-            {isEditing ? 'Edit Route Template' : 'Create Route Template'}
+            {isEditing ? "Edit Route Template" : "Create Route Template"}
           </h1>
           <p className="text-muted-foreground">
             Design your intercity route with cities, stations, and pricing
@@ -630,12 +918,12 @@ export default function RouteEditor() {
           <Button variant="outline" asChild>
             <Link to="/driver/routes">Cancel</Link>
           </Button>
-          <Button 
+          <Button
             onClick={handleSubmit(onSubmit)}
             className="bg-brand-orange hover:bg-brand-orange-600 text-white"
           >
             <Save className="w-4 h-4 mr-2" />
-            {isEditing ? 'Save Changes' : 'Create Route'}
+            {isEditing ? "Save Changes" : "Create Route"}
           </Button>
         </div>
       </div>
@@ -760,4 +1048,4 @@ export default function RouteEditor() {
       </form>
     </div>
   );
-} 
+}

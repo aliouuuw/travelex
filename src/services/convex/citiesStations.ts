@@ -29,6 +29,7 @@ export const useDriverCitiesAndStations = () => {
 };
 
 export const useStationsForCity = (cityName: string) => {
+  console.log("useStationsForCity hook - received cityName:", cityName);
   return useQuery(api.citiesStations.getStationsForCity, { cityName });
 };
 
@@ -38,6 +39,58 @@ export const usePublicStationsForCity = (cityName: string) => {
     api.citiesStations.getPublicStationsForCity,
     cityName ? { cityName } : "skip",
   );
+};
+
+// Hook for getting driver's own stations from route templates
+export const useDriverStationsForCity = (cityName: string) => {
+  const { user } = useAuth();
+  return useQuery(
+    api.citiesStations.getDriverStationsForCity,
+    user?.profile?.role === "driver" || user?.profile?.role === "admin"
+      ? { cityName }
+      : "skip",
+  );
+};
+
+// Combined hook that fetches stations from both reusable cities and route templates
+export const useCombinedStationsForCity = (
+  cityName: string,
+): ReusableStation[] => {
+  const { user } = useAuth();
+
+  // Get stations from reusable cities (if authenticated)
+  const reusableStations = useQuery(
+    api.citiesStations.getStationsForCity,
+    user?.profile?.role === "driver" || user?.profile?.role === "admin"
+      ? { cityName }
+      : "skip",
+  );
+
+  // Get stations from route templates (driver-specific)
+  const driverTemplateStations = useDriverStationsForCity(cityName);
+
+  // Combine and deduplicate stations
+  const stations = new Map();
+
+  // Add reusable stations first (higher priority)
+  if (reusableStations) {
+    reusableStations.forEach((station: ReusableStation) => {
+      const key = `${station.name}-${station.address}`.toLowerCase();
+      stations.set(key, station);
+    });
+  }
+
+  // Add driver's template stations (only if not already present)
+  if (driverTemplateStations) {
+    driverTemplateStations.forEach((station: ReusableStation) => {
+      const key = `${station.name}-${station.address}`.toLowerCase();
+      if (!stations.has(key)) {
+        stations.set(key, station);
+      }
+    });
+  }
+
+  return Array.from(stations.values());
 };
 
 // Mutation hooks
@@ -76,6 +129,17 @@ export const getPublicStationsForCity = async (
 ): Promise<ReusableStation[]> => {
   const result = await convex.query(
     api.citiesStations.getPublicStationsForCity,
+    { cityName },
+  );
+  return result || [];
+};
+
+// Function to get driver's own stations from route templates
+export const getDriverStationsForCity = async (
+  cityName: string,
+): Promise<ReusableStation[]> => {
+  const result = await convex.query(
+    api.citiesStations.getDriverStationsForCity,
     { cityName },
   );
   return result || [];

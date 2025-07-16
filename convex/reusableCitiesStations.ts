@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { ConvexError } from "convex/values";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 // =============================================
 // REUSABLE CITIES MANAGEMENT
@@ -12,14 +13,14 @@ import { ConvexError } from "convex/values";
 export const getDriverCitiesAndStations = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
       throw new ConvexError("Authentication required");
     }
     
     const profile = await ctx.db
       .query("profiles")
-      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
     
     if (!profile) {
@@ -74,14 +75,14 @@ export const saveCitiesAndStations = mutation({
     })),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
       throw new ConvexError("Authentication required");
     }
     
     const profile = await ctx.db
       .query("profiles")
-      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
     
     if (!profile) {
@@ -166,14 +167,14 @@ export const saveCitiesAndStations = mutation({
 export const getStationsForCity = query({
   args: { cityName: v.string() },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
       throw new ConvexError("Authentication required");
     }
     
     const profile = await ctx.db
       .query("profiles")
-      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
     
     if (!profile) {
@@ -216,14 +217,14 @@ export const addCityWithStations = mutation({
     })),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
       throw new ConvexError("Authentication required");
     }
     
     const profile = await ctx.db
       .query("profiles")
-      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
     
     if (!profile) {
@@ -286,14 +287,14 @@ export const updateCityWithStations = mutation({
     })),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
       throw new ConvexError("Authentication required");
     }
     
     const profile = await ctx.db
       .query("profiles")
-      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
     
     if (!profile) {
@@ -363,14 +364,14 @@ export const updateCityWithStations = mutation({
 export const deleteCity = mutation({
   args: { cityId: v.id("reusableCities") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
       throw new ConvexError("Authentication required");
     }
     
     const profile = await ctx.db
       .query("profiles")
-      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
     
     if (!profile) {
@@ -409,14 +410,14 @@ export const addStationToCity = mutation({
     stationAddress: v.string(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
       throw new ConvexError("Authentication required");
     }
     
     const profile = await ctx.db
       .query("profiles")
-      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
     
     if (!profile) {
@@ -455,14 +456,14 @@ export const addStationToCity = mutation({
 export const removeStationFromCity = mutation({
   args: { stationId: v.id("reusableStations") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
       throw new ConvexError("Authentication required");
     }
     
     const profile = await ctx.db
       .query("profiles")
-      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
     
     if (!profile) {
@@ -500,14 +501,14 @@ export const extractAndSaveCitiesFromRoute = mutation({
     })),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
       throw new ConvexError("Authentication required");
     }
     
     const profile = await ctx.db
       .query("profiles")
-      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
     
     if (!profile) {

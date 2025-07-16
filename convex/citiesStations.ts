@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { ConvexError } from "convex/values";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 /**
  * Get all reusable cities and stations for the current driver
@@ -8,26 +9,26 @@ import { ConvexError } from "convex/values";
 export const getDriverCitiesAndStations = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
       throw new ConvexError("Authentication required");
     }
-    
+
     const profile = await ctx.db
       .query("profiles")
-      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
-    
+
     if (!profile) {
       throw new ConvexError("User profile not found");
     }
-    
+
     // Get all cities for this driver
     const cities = await ctx.db
       .query("reusableCities")
       .withIndex("by_driver", (q) => q.eq("driverId", profile._id))
       .collect();
-    
+
     // Get stations for each city
     const citiesWithStations = await Promise.all(
       cities.map(async (city) => {
@@ -35,20 +36,20 @@ export const getDriverCitiesAndStations = query({
           .query("reusableStations")
           .withIndex("by_city", (q) => q.eq("reusableCityId", city._id))
           .collect();
-        
+
         return {
           id: city._id,
           cityName: city.cityName,
           countryCode: city.countryCode,
-          stations: stations.map(station => ({
+          stations: stations.map((station) => ({
             id: station._id,
             name: station.stationName,
             address: station.stationAddress,
           })),
         };
-      })
+      }),
     );
-    
+
     return citiesWithStations;
   },
 });
@@ -68,13 +69,15 @@ export const getPublicStationsForCity = query({
 
     // Get all unique stations for this city from route templates
     const stationMap = new Map();
-    
+
     for (const city of routeTemplateCities) {
       const stations = await ctx.db
         .query("routeTemplateStations")
-        .withIndex("by_route_city", (q) => q.eq("routeTemplateCityId", city._id))
+        .withIndex("by_route_city", (q) =>
+          q.eq("routeTemplateCityId", city._id),
+        )
         .collect();
-      
+
       // Add stations to map to avoid duplicates
       for (const station of stations) {
         const key = `${station.stationName}-${station.stationAddress}`;
@@ -87,7 +90,72 @@ export const getPublicStationsForCity = query({
         }
       }
     }
-    
+
+    return Array.from(stationMap.values());
+  },
+});
+
+/**
+ * Get stations for a city from the current driver's route templates
+ */
+export const getDriverStationsForCity = query({
+  args: { cityName: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      return [];
+    }
+
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!profile) {
+      return [];
+    }
+
+    // Get route templates created by this driver
+    const routeTemplates = await ctx.db
+      .query("routeTemplates")
+      .withIndex("by_driver", (q) => q.eq("driverId", profile._id))
+      .collect();
+
+    const stationMap = new Map();
+
+    for (const template of routeTemplates) {
+      // Get cities with the specified name from this route template
+      const routeTemplateCities = await ctx.db
+        .query("routeTemplateCities")
+        .withIndex("by_route_template", (q) =>
+          q.eq("routeTemplateId", template._id),
+        )
+        .filter((q) => q.eq(q.field("cityName"), args.cityName))
+        .collect();
+
+      // Get stations for each matching city
+      for (const city of routeTemplateCities) {
+        const stations = await ctx.db
+          .query("routeTemplateStations")
+          .withIndex("by_route_city", (q) =>
+            q.eq("routeTemplateCityId", city._id),
+          )
+          .collect();
+
+        // Add stations to map to avoid duplicates
+        for (const station of stations) {
+          const key = `${station.stationName}-${station.stationAddress}`;
+          if (!stationMap.has(key)) {
+            stationMap.set(key, {
+              id: station._id,
+              name: station.stationName,
+              address: station.stationAddress,
+            });
+          }
+        }
+      }
+    }
+
     return Array.from(stationMap.values());
   },
 });
@@ -97,47 +165,51 @@ export const getPublicStationsForCity = query({
  */
 export const saveCitiesAndStations = mutation({
   args: {
-    cities: v.array(v.object({
-      id: v.optional(v.id("reusableCities")),
-      cityName: v.string(),
-      countryCode: v.string(),
-      stations: v.array(v.object({
-        id: v.optional(v.id("reusableStations")),
-        name: v.string(),
-        address: v.string(),
-      })),
-    })),
+    cities: v.array(
+      v.object({
+        id: v.optional(v.id("reusableCities")),
+        cityName: v.string(),
+        countryCode: v.string(),
+        stations: v.array(
+          v.object({
+            id: v.optional(v.id("reusableStations")),
+            name: v.string(),
+            address: v.string(),
+          }),
+        ),
+      }),
+    ),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
       throw new ConvexError("Authentication required");
     }
-    
+
     const profile = await ctx.db
       .query("profiles")
-      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
-    
+
     if (!profile) {
       throw new ConvexError("User profile not found");
     }
-    
+
     // Get the country for each city
     const results = [];
-    
+
     for (const city of args.cities) {
       const country = await ctx.db
         .query("countries")
         .withIndex("by_code", (q) => q.eq("code", city.countryCode))
         .first();
-      
+
       if (!country) {
         throw new ConvexError(`Country not found: ${city.countryCode}`);
       }
-      
+
       let cityId = city.id;
-      
+
       // Create or update city
       if (cityId) {
         // Update existing city
@@ -155,21 +227,23 @@ export const saveCitiesAndStations = mutation({
           countryId: country._id,
         });
       }
-      
+
       // Handle stations for this city
       const existingStations = await ctx.db
         .query("reusableStations")
         .withIndex("by_city", (q) => q.eq("reusableCityId", cityId))
         .collect();
-      
+
       // Delete stations that are no longer in the request
-      const stationIdsToKeep = city.stations.filter(s => s.id).map(s => s.id!);
+      const stationIdsToKeep = city.stations
+        .filter((s) => s.id)
+        .map((s) => s.id!);
       for (const existingStation of existingStations) {
         if (!stationIdsToKeep.includes(existingStation._id)) {
           await ctx.db.delete(existingStation._id);
         }
       }
-      
+
       // Create or update stations
       for (const station of city.stations) {
         if (station.id) {
@@ -187,10 +261,10 @@ export const saveCitiesAndStations = mutation({
           });
         }
       }
-      
+
       results.push({ cityId, success: true });
     }
-    
+
     return { success: true, cities: results };
   },
 });
@@ -201,36 +275,36 @@ export const saveCitiesAndStations = mutation({
 export const getStationsForCity = query({
   args: { cityName: v.string() },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
       throw new ConvexError("Authentication required");
     }
-    
+
     const profile = await ctx.db
       .query("profiles")
-      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
-    
+
     if (!profile) {
       throw new ConvexError("User profile not found");
     }
-    
+
     const city = await ctx.db
       .query("reusableCities")
       .withIndex("by_driver", (q) => q.eq("driverId", profile._id))
       .filter((q) => q.eq(q.field("cityName"), args.cityName))
       .first();
-    
+
     if (!city) {
       return [];
     }
-    
+
     const stations = await ctx.db
       .query("reusableStations")
       .withIndex("by_city", (q) => q.eq("reusableCityId", city._id))
       .collect();
-    
-    return stations.map(station => ({
+
+    return stations.map((station) => ({
       id: station._id,
       name: station.stationName,
       address: station.stationAddress,
@@ -245,46 +319,48 @@ export const addCityWithStations = mutation({
   args: {
     cityName: v.string(),
     countryCode: v.string(),
-    stations: v.array(v.object({
-      name: v.string(),
-      address: v.string(),
-    })),
+    stations: v.array(
+      v.object({
+        name: v.string(),
+        address: v.string(),
+      }),
+    ),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
       throw new ConvexError("Authentication required");
     }
-    
+
     const profile = await ctx.db
       .query("profiles")
-      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
-    
+
     if (!profile) {
       throw new ConvexError("User profile not found");
     }
-    
+
     const country = await ctx.db
       .query("countries")
       .withIndex("by_code", (q) => q.eq("code", args.countryCode))
       .first();
-    
+
     if (!country) {
       throw new ConvexError(`Country not found: ${args.countryCode}`);
     }
-    
+
     // Check if city already exists for this driver
     const existingCity = await ctx.db
       .query("reusableCities")
       .withIndex("by_driver", (q) => q.eq("driverId", profile._id))
       .filter((q) => q.eq(q.field("cityName"), args.cityName))
       .first();
-    
+
     if (existingCity) {
       throw new ConvexError("City already exists");
     }
-    
+
     // Create the city
     const cityId = await ctx.db.insert("reusableCities", {
       driverId: profile._id,
@@ -292,7 +368,7 @@ export const addCityWithStations = mutation({
       countryCode: args.countryCode,
       countryId: country._id,
     });
-    
+
     // Create stations
     for (const station of args.stations) {
       await ctx.db.insert("reusableStations", {
@@ -301,7 +377,7 @@ export const addCityWithStations = mutation({
         stationAddress: station.address,
       });
     }
-    
+
     return { cityId, success: true };
   },
 });
@@ -311,53 +387,59 @@ export const addCityWithStations = mutation({
  */
 export const extractAndSaveCitiesFromRoute = mutation({
   args: {
-    cities: v.array(v.object({
-      cityName: v.string(),
-      countryCode: v.string(),
-      stations: v.array(v.object({
-        name: v.string(),
-        address: v.string(),
-      })),
-    })),
+    cities: v.array(
+      v.object({
+        cityName: v.string(),
+        countryCode: v.string(),
+        stations: v.array(
+          v.object({
+            name: v.string(),
+            address: v.string(),
+          }),
+        ),
+      }),
+    ),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
       throw new ConvexError("Authentication required");
     }
-    
+
     const profile = await ctx.db
       .query("profiles")
-      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
-    
+
     if (!profile) {
       throw new ConvexError("User profile not found");
     }
-    
+
     // Get existing cities
     const existingCities = await ctx.db
       .query("reusableCities")
       .withIndex("by_driver", (q) => q.eq("driverId", profile._id))
       .collect();
-    
+
     for (const newCity of args.cities) {
       const country = await ctx.db
         .query("countries")
         .withIndex("by_code", (q) => q.eq("code", newCity.countryCode))
         .first();
-      
+
       if (!country) {
         continue; // Skip if country not found
       }
-      
+
       // Check if city already exists
-      const existingCity = existingCities.find(c => 
-        c.cityName === newCity.cityName && c.countryCode === newCity.countryCode
+      const existingCity = existingCities.find(
+        (c) =>
+          c.cityName === newCity.cityName &&
+          c.countryCode === newCity.countryCode,
       );
-      
+
       let cityId = existingCity?._id;
-      
+
       if (!cityId) {
         // Create new city
         cityId = await ctx.db.insert("reusableCities", {
@@ -367,15 +449,17 @@ export const extractAndSaveCitiesFromRoute = mutation({
           countryId: country._id,
         });
       }
-      
+
       // Merge stations
       const existingStations = await ctx.db
         .query("reusableStations")
         .withIndex("by_city", (q) => q.eq("reusableCityId", cityId))
         .collect();
-      
+
       for (const newStation of newCity.stations) {
-        const stationExists = existingStations.some(s => s.stationName === newStation.name);
+        const stationExists = existingStations.some(
+          (s) => s.stationName === newStation.name,
+        );
         if (!stationExists) {
           await ctx.db.insert("reusableStations", {
             reusableCityId: cityId,
@@ -385,7 +469,7 @@ export const extractAndSaveCitiesFromRoute = mutation({
         }
       }
     }
-    
+
     return { success: true };
   },
-}); 
+});
