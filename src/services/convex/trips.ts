@@ -312,7 +312,7 @@ function transformTripFromConvex(convexTrip: Record<string, any>): Trip {
  * Transform trip form data to convex format
  */
 async function transformTripDataToConvex(tripData: TripFormData) {
-  // Convert date strings to timestamps
+  // Convert date strings to timestamps - ensure proper UTC handling
   const departureTime = new Date(tripData.departureTime).getTime();
   const arrivalTime = new Date(tripData.arrivalTime).getTime();
 
@@ -342,7 +342,7 @@ async function transformTripDataToConvex(tripData: TripFormData) {
 async function transformUpdateTripDataToConvex(
   tripData: Omit<TripFormData, "routeTemplateId">,
 ) {
-  // Convert date strings to timestamps
+  // Convert date strings to timestamps - ensure proper UTC handling
   const departureTime = new Date(tripData.departureTime).getTime();
   const arrivalTime = new Date(tripData.arrivalTime).getTime();
 

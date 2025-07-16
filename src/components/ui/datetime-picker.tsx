@@ -52,7 +52,9 @@ export const DateTimePickerField = forwardRef<HTMLButtonElement, DateTimePickerF
     const dateValue = React.useMemo(() => {
       if (!value) return undefined;
       if (typeof value === 'string') {
-        return new Date(value);
+        // Handle ISO strings properly - ensure they're treated as UTC
+        const date = new Date(value);
+        return isNaN(date.getTime()) ? undefined : date;
       }
       return value;
     }, [value]);

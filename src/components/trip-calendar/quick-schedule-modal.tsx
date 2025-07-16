@@ -253,9 +253,9 @@ export default function QuickScheduleModal({
 
       form.setValue(
         "departureTime",
-        defaultDeparture.toISOString().slice(0, 16),
+        defaultDeparture.toISOString(),
       );
-      form.setValue("arrivalTime", defaultArrival.toISOString().slice(0, 16));
+      form.setValue("arrivalTime", defaultArrival.toISOString());
       form.trigger(["departureTime", "arrivalTime"]);
     }
   }, [selectedDate, isOpen, form]);
@@ -427,7 +427,7 @@ export default function QuickScheduleModal({
                       onChange={(date) => {
                         form.setValue(
                           "departureTime",
-                          date.toISOString().slice(0, 16),
+                          date.toISOString(),
                         );
                         form.trigger("departureTime");
                       }}
@@ -453,7 +453,7 @@ export default function QuickScheduleModal({
                       onChange={(date) => {
                         form.setValue(
                           "arrivalTime",
-                          date.toISOString().slice(0, 16),
+                          date.toISOString(),
                         );
                         form.trigger("arrivalTime");
                       }}

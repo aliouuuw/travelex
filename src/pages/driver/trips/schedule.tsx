@@ -442,7 +442,7 @@ export default function ScheduleTripPage() {
                     <DateTimePickerField
                       value={form.watch('departureTime')}
                       onChange={(date) => {
-                        form.setValue('departureTime', date.toISOString().slice(0, 16));
+                        form.setValue('departureTime', date.toISOString());
                         form.trigger('departureTime');
                       }}
                       placeholder="Select departure time"
@@ -458,7 +458,7 @@ export default function ScheduleTripPage() {
                     <DateTimePickerField
                       value={form.watch('arrivalTime')}
                       onChange={(date) => {
-                        form.setValue('arrivalTime', date.toISOString().slice(0, 16));
+                        form.setValue('arrivalTime', date.toISOString());
                         form.trigger('arrivalTime');
                       }}
                       placeholder="Select arrival time"

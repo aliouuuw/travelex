@@ -198,8 +198,8 @@ export default function EditTripPage() {
         form.setValue('luggagePolicyId', trip.luggagePolicyId, { shouldValidate: true });
       }
       
-      form.setValue('departureTime', new Date(trip.departureTime).toISOString().slice(0, 16), { shouldValidate: true });
-      form.setValue('arrivalTime', new Date(trip.arrivalTime).toISOString().slice(0, 16), { shouldValidate: true });
+              form.setValue('departureTime', new Date(trip.departureTime).toISOString(), { shouldValidate: true });
+        form.setValue('arrivalTime', new Date(trip.arrivalTime).toISOString(), { shouldValidate: true });
 
       // Set selected stations
       if (trip.tripStations && trip.tripStations.length > 0) {
@@ -530,7 +530,7 @@ export default function EditTripPage() {
                     <DateTimePickerField
                       value={form.watch('departureTime')}
                       onChange={(date) => {
-                        form.setValue('departureTime', date.toISOString().slice(0, 16));
+                        form.setValue('departureTime', date.toISOString());
                         form.trigger('departureTime');
                       }}
                       placeholder="Select departure time"
@@ -546,7 +546,7 @@ export default function EditTripPage() {
                     <DateTimePickerField
                       value={form.watch('arrivalTime')}
                       onChange={(date) => {
-                        form.setValue('arrivalTime', date.toISOString().slice(0, 16));
+                        form.setValue('arrivalTime', date.toISOString());
                         form.trigger('arrivalTime');
                       }}
                       placeholder="Select arrival time"
