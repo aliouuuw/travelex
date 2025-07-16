@@ -56,7 +56,7 @@ export const getDriverCitiesAndStations = query({
 
 /**
  * Get all available stations for a city (public, no authentication required)
- * This returns stations from route templates that passengers can choose from
+ * This returns stations from active route templates that passengers can choose from
  */
 export const getPublicStationsForCity = query({
   args: { cityName: v.string() },
@@ -67,10 +67,16 @@ export const getPublicStationsForCity = query({
       .filter((q) => q.eq(q.field("cityName"), args.cityName))
       .collect();
 
-    // Get all unique stations for this city from route templates
+    // Get all unique stations for this city from active route templates only
     const stationMap = new Map();
 
     for (const city of routeTemplateCities) {
+      // Check if the route template is active
+      const routeTemplate = await ctx.db.get(city.routeTemplateId);
+      if (!routeTemplate || routeTemplate.status !== "active") {
+        continue; // Skip stations from non-active route templates
+      }
+
       const stations = await ctx.db
         .query("routeTemplateStations")
         .withIndex("by_route_city", (q) =>
@@ -124,6 +130,11 @@ export const getDriverStationsForCity = query({
     const stationMap = new Map();
 
     for (const template of routeTemplates) {
+      // Only consider active route templates
+      if (template.status !== "active") {
+        continue;
+      }
+
       // Get cities with the specified name from this route template
       const routeTemplateCities = await ctx.db
         .query("routeTemplateCities")
