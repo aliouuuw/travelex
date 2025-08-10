@@ -172,15 +172,26 @@ export const TripResultCard = ({
             <div className="text-right">
               {isRoundTrip ? (
                 <>
-                  <div className="text-2xl font-bold text-brand-orange">
-                    ${trip.totalPrice}
-                  </div>
-                  <div className="text-xs text-muted-foreground">round trip per passenger</div>
-                  {(trip.discountAmount ?? 0) > 0 && (
-                    <div className="text-xs text-green-600">
-                      -${trip.discountAmount} discount
-                    </div>
+                  {trip.discountAmount && trip.discountAmount > 0 ? (
+                    <>
+                      <div className="text-xs text-muted-foreground line-through">
+                        ${((trip.totalPrice ?? 0) + trip.discountAmount).toFixed(2)}
+                      </div>
+                      <div className="text-2xl font-bold text-brand-orange">
+                        ${(trip.totalPrice ?? 0).toFixed(2)}
+                      </div>
+                      <div className="text-xs text-green-600">
+                        Saving ${trip.discountAmount.toFixed(2)} ({trip.discountPercentage?.toFixed(0)}% off)
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold text-brand-orange">
+                        ${trip.totalPrice?.toFixed(2) ?? 0}
+                      </div>
+                    </>
                   )}
+                  <div className="text-xs text-muted-foreground">round trip per passenger</div>
                 </>
               ) : (
                 <>
@@ -296,7 +307,7 @@ export default function SearchPage() {
     if ("totalPrice" in result && "discountAmount" in result) {
       return {
         ...result,
-        fullRoutePrice: result.totalPrice || result.fullRoutePrice,
+        fullRoutePrice: result.totalPrice,
         // Preserve all round trip fields
         isRoundTrip: result.isRoundTrip,
         returnTripId: result.returnTripId,
@@ -304,7 +315,7 @@ export default function SearchPage() {
         totalPrice: result.totalPrice,
         discountAmount: result.discountAmount,
         discountPercentage: result.discountPercentage,
-        roundTripDiscount: result.roundTripDiscount, // Explicitly include roundTripDiscount
+        // Remove roundTripDiscount as it doesn't exist on the type
       };
     }
     return result;

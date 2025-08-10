@@ -377,15 +377,38 @@ export default function PaymentPage() {
 
                 {/* Total */}
                 <div className="pt-4 border-t">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold">Total</span>
-                    <span className="text-2xl font-bold text-brand-orange">${bookingData.totalPrice}</span>
-                  </div>
+                  {bookingData.isRoundTrip && bookingData.discountAmount && bookingData.discountAmount > 0 ? (
+                    <div className="space-y-2">
+                      {/* Subtotal */}
+                      <div className="flex justify-between items-center text-sm">
+                        <span>Subtotal</span>
+                        <span>${(bookingData.totalPrice + bookingData.discountAmount).toFixed(2)}</span>
+                      </div>
+                      
+                      {/* Discount */}
+                      <div className="flex justify-between items-center text-sm text-green-600">
+                        <span>Round Trip Discount</span>
+                        <span>-${bookingData.discountAmount.toFixed(2)}</span>
+                      </div>
+                      
+                      {/* Final Total */}
+                      <div className="flex justify-between items-center pt-2 border-t">
+                        <span className="text-lg font-bold">Total</span>
+                        <span className="text-2xl font-bold text-brand-orange">${bookingData.totalPrice.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-bold">Total</span>
+                      <span className="text-2xl font-bold text-brand-orange">${bookingData.totalPrice.toFixed(2)}</span>
+                    </div>
+                  )}
+                  
                   {bookingData.isRoundTrip && (
                     <div className="mt-2 text-sm text-muted-foreground">
                       <div className="flex justify-between">
-                        <span>Outbound: ${bookingData.outboundBooking?.totalPrice}</span>
-                        <span>Return: ${bookingData.returnBooking?.totalPrice}</span>
+                        <span>Outbound: ${bookingData.outboundBooking?.totalPrice.toFixed(2)}</span>
+                        <span>Return: ${bookingData.returnBooking?.totalPrice.toFixed(2)}</span>
                       </div>
                     </div>
                   )}

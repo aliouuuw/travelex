@@ -247,11 +247,30 @@ export const getRoundTripBookingData = query({
     if (validBookings.length === 2) {
       const otherBooking = validBookings.find(b => b._id !== booking._id);
       
+      // Calculate the total from individual bookings (pre-discount)
+      const preDiscountTotal = validBookings.reduce((sum, b) => sum + b.totalPrice, 0);
+      
+      // Get the outbound trip to check for round trip discount
+      const outboundTrip = await ctx.db
+        .query("trips")
+        .withIndex("by_id", (q) => q.eq("_id", booking.tripId as any))
+        .first();
+      
+      let finalTotal = preDiscountTotal;
+      let discountAmount = 0;
+      
+      // Apply round trip discount if available
+      if (outboundTrip?.roundTripDiscount && outboundTrip.roundTripDiscount > 0) {
+        discountAmount = preDiscountTotal * outboundTrip.roundTripDiscount;
+        finalTotal = preDiscountTotal - discountAmount;
+      }
+      
       return {
         isRoundTrip: true,
         outboundBooking: booking,
         returnBooking: otherBooking,
-        totalPrice: validBookings.reduce((sum, b) => sum + b.totalPrice, 0),
+        totalPrice: finalTotal,
+        discountAmount: discountAmount,
       };
     }
 

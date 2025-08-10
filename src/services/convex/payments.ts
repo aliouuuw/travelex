@@ -47,6 +47,14 @@ export interface TempBooking {
   expiresAt: number;
 }
 
+export interface RoundTripBookingData {
+  isRoundTrip: boolean;
+  outboundBooking: TempBooking;
+  returnBooking: TempBooking | null;
+  totalPrice: number;
+  discountAmount?: number;
+}
+
 // Hook to use payment intent creation
 export const useCreatePaymentIntent = () => {
   return useAction(api.payments.createPaymentIntent);

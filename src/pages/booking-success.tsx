@@ -340,31 +340,33 @@ export default function BookingSuccessPage() {
                   Booking Confirmation
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Booking Reference
-                    </p>
-                    <p className="text-xl font-bold text-green-800">
-                      {finalBookingRef === "PROCESSING"
-                        ? "Processing..."
-                        : finalBookingRef}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Paid</p>
-                    <p className="text-xl font-bold text-green-800">
-                      ${bookingData.totalPrice || "0"}
-                    </p>
-                  </div>
+              <CardContent className="space-y-6">
+                {/* Booking Reference - Prominent Display */}
+                <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Booking Reference
+                  </p>
+                  <p className="text-2xl font-bold text-green-800 tracking-wider">
+                    {finalBookingRef === "PROCESSING"
+                      ? "Processing..."
+                      : finalBookingRef}
+                  </p>
                 </div>
 
-                <div className="flex flex-wrap gap-3 pt-4">
+                {/* Total Paid - Prominent Display */}
+                <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-muted-foreground mb-2">Total Paid</p>
+                  <p className="text-3xl font-bold text-blue-800">
+                    ${bookingData.totalPrice?.toFixed(2) || "0.00"}
+                  </p>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3 pt-4">
                   <Button
                     onClick={handleDownloadTicket}
                     variant="outline"
-                    className="flex-1 min-w-[200px]"
+                    className="flex-1"
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Download Ticket
@@ -372,7 +374,7 @@ export default function BookingSuccessPage() {
                   <Button
                     onClick={handleEmailTicket}
                     variant="outline"
-                    className="flex-1 min-w-[200px]"
+                    className="flex-1"
                     disabled={
                       isEmailSending ||
                       !bookingData?.passengerEmail ||
