@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import {
   useTempBooking,
   useReservationByTempBookingId,
+  useRoundTripBookingData,
 } from "@/services/convex/payments";
 import { useTripForBooking } from "@/services/convex/tripSearch";
 import { useSendBookingConfirmation } from "@/services/convex/booking-confirmation";
@@ -50,21 +51,37 @@ export default function BookingSuccessPage() {
 
   // Use Convex hooks instead of React Query
   const tempBooking = useTempBooking(bookingId as Id<"tempBookings"> | null);
+  const roundTripBookingData = useRoundTripBookingData(bookingId as Id<"tempBookings"> | null);
   const reservationData = useReservationByTempBookingId(
     bookingId as Id<"tempBookings"> | null,
   );
+  
+  // Create unified booking data from either round trip or single booking
+  const unifiedBookingData = roundTripBookingData 
+    ? {
+        // For round trips, use outbound booking data for passenger info
+        passengerName: roundTripBookingData.outboundBooking.passengerName,
+        passengerEmail: roundTripBookingData.outboundBooking.passengerEmail,
+        passengerPhone: roundTripBookingData.outboundBooking.passengerPhone,
+        selectedSeats: roundTripBookingData.outboundBooking.selectedSeats,
+        numberOfBags: roundTripBookingData.outboundBooking.numberOfBags,
+        totalPrice: roundTripBookingData.totalPrice, // Use the correct total price
+        tripId: roundTripBookingData.outboundBooking.tripId,
+      }
+    : tempBooking;
+  
   const trip = useTripForBooking(
-    tempBooking?.tripId || reservationData?.tripId || "",
+    unifiedBookingData?.tripId || reservationData?.tripId || "",
   );
   const sendBookingConfirmation = useSendBookingConfirmation();
 
   // Note: Round trip functionality will be implemented in future versions
 
   // Check if queries are still loading (undefined = loading, null = loaded but empty)
-  const isLoadingBooking = tempBooking === undefined;
+  const isLoadingBooking = tempBooking === undefined && roundTripBookingData === undefined;
   const isLoadingReservation = reservationData === undefined;
   const isLoadingTrip =
-    trip === undefined && !!(tempBooking?.tripId || reservationData?.tripId);
+    trip === undefined && !!(unifiedBookingData?.tripId || reservationData?.tripId);
 
   // Function to check payment status
   const checkBookingStatus = useCallback(async () => {
@@ -131,8 +148,8 @@ export default function BookingSuccessPage() {
 
   const handleEmailTicket = async () => {
     if (
-      !bookingData?.passengerEmail ||
-      bookingData.passengerEmail === "Check your email for details"
+      !unifiedBookingData?.passengerEmail ||
+      unifiedBookingData.passengerEmail === "Check your email for details"
     ) {
       return;
     }
@@ -147,8 +164,8 @@ export default function BookingSuccessPage() {
     try {
       await sendBookingConfirmation({
         bookingId: bookingId || "",
-        email: bookingData.passengerEmail,
-        passengerName: bookingData.passengerName,
+        email: unifiedBookingData.passengerEmail,
+        passengerName: unifiedBookingData.passengerName,
         bookingReference: finalBookingRef,
         trip: {
           routeTemplateName: trip.routeTemplateName || "Your Trip",
@@ -165,12 +182,12 @@ export default function BookingSuccessPage() {
             : undefined,
         },
         bookingDetails: {
-          selectedSeats: Array.isArray(bookingData.selectedSeats)
-            ? bookingData.selectedSeats
+          selectedSeats: Array.isArray(unifiedBookingData.selectedSeats)
+            ? unifiedBookingData.selectedSeats
             : ["--"],
-          numberOfBags: bookingData.numberOfBags || 0,
-          totalPrice: bookingData.totalPrice || 0,
-          passengerPhone: bookingData.passengerPhone || undefined,
+          numberOfBags: unifiedBookingData.numberOfBags || 0,
+          totalPrice: unifiedBookingData.totalPrice || 0,
+          passengerPhone: unifiedBookingData.passengerPhone || undefined,
         },
       });
 
@@ -261,6 +278,7 @@ export default function BookingSuccessPage() {
   if (
     paymentStatus === "failed" ||
     (!tempBooking &&
+      !roundTripBookingData &&
       !reservationData &&
       !isLoadingBooking &&
       !isLoadingReservation)
@@ -299,8 +317,8 @@ export default function BookingSuccessPage() {
   const departureTime = trip ? new Date(trip.departureTime || "") : null;
   const arrivalTime = trip ? new Date(trip.arrivalTime || "") : null;
 
-  // Get booking data from either temp booking (during payment) or reservation data (after success)
-  const bookingData = tempBooking ||
+  // Get booking data from either unified booking data (during payment) or reservation data (after success)
+  const bookingData = unifiedBookingData ||
     reservationData || {
       passengerName: "Booking Complete",
       passengerEmail: "Check your email for details",
@@ -341,6 +359,18 @@ export default function BookingSuccessPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Round Trip Indicator */}
+                {roundTripBookingData?.isRoundTrip && (
+                  <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-sm font-medium text-blue-800">
+                      Round Trip Booking
+                    </p>
+                    <p className="text-xs text-blue-600">
+                      Outbound + Return Journey
+                    </p>
+                  </div>
+                )}
+
                 {/* Booking Reference - Prominent Display */}
                 <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
                   <p className="text-sm text-muted-foreground mb-2">
@@ -359,6 +389,11 @@ export default function BookingSuccessPage() {
                   <p className="text-3xl font-bold text-blue-800">
                     ${bookingData.totalPrice?.toFixed(2) || "0.00"}
                   </p>
+                  {roundTripBookingData?.discountAmount && roundTripBookingData.discountAmount > 0 && (
+                    <p className="text-xs text-green-600 mt-1">
+                      Includes ${roundTripBookingData.discountAmount.toFixed(2)} round trip discount
+                    </p>
+                  )}
                 </div>
 
                 {/* Action Buttons */}
@@ -377,8 +412,8 @@ export default function BookingSuccessPage() {
                     className="flex-1"
                     disabled={
                       isEmailSending ||
-                      !bookingData?.passengerEmail ||
-                      bookingData.passengerEmail ===
+                      !unifiedBookingData?.passengerEmail ||
+                      unifiedBookingData.passengerEmail ===
                         "Check your email for details"
                     }
                   >
