@@ -366,19 +366,6 @@ export default function BookingPage() {
       );
     }
 
-    console.log("Pickup station search:", {
-      fromStationId,
-      searchFromCity,
-      found: !!station,
-      stationFound: station,
-      allStations: trip.tripStations.map((s) => ({
-        id: s.id,
-        name: s.stationName,
-        city: s.cityName,
-        isPickup: s.isPickupPoint,
-        isDropoff: s.isDropoffPoint,
-      })),
-    });
     return station;
   }, [trip, fromStationId, searchFromCity]);
 
@@ -408,19 +395,6 @@ export default function BookingPage() {
       );
     }
 
-    console.log("Dropoff station search:", {
-      toStationId,
-      searchToCity,
-      found: !!station,
-      stationFound: station,
-      allStations: trip.tripStations.map((s) => ({
-        id: s.id,
-        name: s.stationName,
-        city: s.cityName,
-        isPickup: s.isPickupPoint,
-        isDropoff: s.isDropoffPoint,
-      })),
-    });
     return station;
   }, [trip, toStationId, searchToCity]);
 
@@ -517,12 +491,42 @@ export default function BookingPage() {
     return additionalBags * feePerBag;
   }, [isRoundTrip, returnTrip, formData.returnTrip]);
 
-  const totalPrice = isRoundTrip
-    ? segmentPrice * formData.selectedSeats.length +
-      luggageFee +
-      (returnSegmentPrice * (formData.returnTrip?.selectedSeats.length || 0) +
-        returnLuggageFee)
-    : segmentPrice * formData.selectedSeats.length + luggageFee;
+  const totalPrice = useMemo(() => {
+    if (isRoundTrip && trip?.roundTripDiscount && trip.roundTripDiscount > 0) {
+      // Calculate the final price based on selected seats and luggage
+      const outboundSeatsPrice = segmentPrice * formData.selectedSeats.length;
+      const returnSeatsPrice = returnSegmentPrice * (formData.returnTrip?.selectedSeats.length || 0);
+      const totalSeatsPrice = outboundSeatsPrice + returnSeatsPrice;
+      const totalLuggageFee = luggageFee + returnLuggageFee;
+      
+      // Apply the discount percentage to the total amount (seats + luggage)
+      const totalBeforeDiscount = totalSeatsPrice + totalLuggageFee;
+      const discountPercentage = trip.roundTripDiscount;
+      const currentDiscountAmount = totalBeforeDiscount * discountPercentage;
+      const finalPrice = totalBeforeDiscount - currentDiscountAmount;
+      
+      return finalPrice;
+    } else {
+      // One-way trip or no discount
+      const oneWayPrice = isRoundTrip
+        ? segmentPrice * formData.selectedSeats.length +
+          luggageFee +
+          (returnSegmentPrice * (formData.returnTrip?.selectedSeats.length || 0) +
+            returnLuggageFee)
+        : segmentPrice * formData.selectedSeats.length + luggageFee;
+      
+      return oneWayPrice;
+    }
+  }, [
+    isRoundTrip,
+    trip?.roundTripDiscount,
+    segmentPrice,
+    returnSegmentPrice,
+    formData.selectedSeats.length,
+    formData.returnTrip?.selectedSeats.length,
+    luggageFee,
+    returnLuggageFee,
+  ]);
 
   // Handle form updates
   const updateFormData = (updates: Partial<BookingFormData>) => {
@@ -638,7 +642,13 @@ export default function BookingPage() {
             },
           },
           totalAmount: totalPrice,
-          discountAmount: 0,
+          discountAmount: isRoundTrip && trip?.roundTripDiscount && trip?.roundTripDiscount > 0
+            ? (segmentPrice * formData.selectedSeats.length +
+               luggageFee +
+               (returnSegmentPrice * (formData.returnTrip?.selectedSeats.length || 0) +
+                 returnLuggageFee)) *
+              trip.roundTripDiscount
+            : 0,
         };
         response = await createRoundTripPaymentIntent(roundTripPaymentData);
       } else {
@@ -1382,10 +1392,39 @@ export default function BookingPage() {
                         )}
 
                         <div className="border-t pt-3">
+                          {/* Show discount information for round trips */}
+                          {isRoundTrip && trip?.roundTripDiscount && trip?.roundTripDiscount > 0 && (
+                            <div className="space-y-2 mb-3">
+                              <div className="flex justify-between text-sm">
+                                <span>Subtotal</span>
+                                <span>
+                                  ${(
+                                    segmentPrice * formData.selectedSeats.length +
+                                    luggageFee +
+                                    (returnSegmentPrice * (formData.returnTrip?.selectedSeats.length || 0) +
+                                      returnLuggageFee)
+                                  ).toFixed(2)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between text-sm text-green-600">
+                                <span>Round Trip Discount ({(trip.roundTripDiscount * 100).toFixed(0)}%)</span>
+                                <span>
+                                  -${(
+                                    (segmentPrice * formData.selectedSeats.length +
+                                    luggageFee +
+                                    (returnSegmentPrice * (formData.returnTrip?.selectedSeats.length || 0) +
+                                      returnLuggageFee)) *
+                                    trip.roundTripDiscount
+                                  ).toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                          
                           <div className="flex justify-between font-bold text-lg">
                             <span>Total Amount</span>
                             <span className="text-brand-orange">
-                              ${totalPrice}
+                              ${totalPrice.toFixed(2)}
                             </span>
                           </div>
                         </div>
@@ -1522,37 +1561,92 @@ export default function BookingPage() {
                 {/* Price Summary */}
                 {totalPrice > 0 && (
                   <div className="pt-4 border-t">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-bold">Total</span>
-                      <span className="text-2xl font-bold text-brand-orange">
-                        ${totalPrice}
-                      </span>
-                    </div>
-                    {isRoundTrip ? (
-                      <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                        <p>
-                          Outbound: {formData.selectedSeats.length} seat
-                          {formData.selectedSeats.length !== 1 ? "s" : ""} × $
-                          {segmentPrice}
-                        </p>
-                        <p>
-                          Return:{" "}
-                          {formData.returnTrip?.selectedSeats.length || 0} seat
-                          {(formData.returnTrip?.selectedSeats.length || 0) !==
-                          1
-                            ? "s"
-                            : ""}{" "}
-                          × ${returnSegmentPrice}
-                        </p>
+                    {isRoundTrip && trip?.roundTripDiscount && trip.roundTripDiscount > 0 ? (
+                      <div className="space-y-2">
+                        {/* Subtotal */}
+                        <div className="flex justify-between items-center text-sm">
+                          <span>Subtotal</span>
+                          <span>
+                            ${(
+                              segmentPrice * formData.selectedSeats.length +
+                              luggageFee +
+                              (returnSegmentPrice * (formData.returnTrip?.selectedSeats.length || 0) +
+                                returnLuggageFee)
+                            ).toFixed(2)}
+                          </span>
+                        </div>
+                        
+                        {/* Discount */}
+                        <div className="flex justify-between items-center text-sm text-green-600">
+                          <span>Round Trip Discount ({(trip.roundTripDiscount * 100).toFixed(0)}%)</span>
+                          <span>
+                            -${(
+                              (segmentPrice * formData.selectedSeats.length +
+                              luggageFee +
+                              (returnSegmentPrice * (formData.returnTrip?.selectedSeats.length || 0) +
+                                returnLuggageFee)) *
+                              trip.roundTripDiscount
+                            ).toFixed(2)}
+                          </span>
+                        </div>
+                        
+                        {/* Final Total */}
+                        <div className="flex justify-between items-center pt-2 border-t">
+                          <span className="text-lg font-bold">Total</span>
+                          <span className="text-2xl font-bold text-brand-orange">
+                            ${totalPrice.toFixed(2)}
+                          </span>
+                        </div>
+                        
+                        {/* Breakdown */}
+                        <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                          <p>
+                            Outbound: {formData.selectedSeats.length} seat
+                            {formData.selectedSeats.length !== 1 ? "s" : ""} × ${segmentPrice}
+                          </p>
+                          <p>
+                            Return: {formData.returnTrip?.selectedSeats.length || 0} seat
+                            {(formData.returnTrip?.selectedSeats.length || 0) !== 1 ? "s" : ""} × ${returnSegmentPrice}
+                          </p>
+                          {(luggageFee + returnLuggageFee) > 0 && (
+                            <p>Luggage: ${(luggageFee + returnLuggageFee).toFixed(2)}</p>
+                          )}
+                        </div>
                       </div>
                     ) : (
-                      formData.selectedSeats.length > 0 && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          ${segmentPrice} per seat ×{" "}
-                          {formData.selectedSeats.length} passenger
-                          {formData.selectedSeats.length > 1 ? "s" : ""}
-                        </p>
-                      )
+                      <div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-lg font-bold">Total</span>
+                          <span className="text-2xl font-bold text-brand-orange">
+                            ${totalPrice.toFixed(2)}
+                          </span>
+                        </div>
+                        {isRoundTrip ? (
+                          <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                            <p>
+                              Outbound: {formData.selectedSeats.length} seat
+                              {formData.selectedSeats.length !== 1 ? "s" : ""} × ${segmentPrice}
+                            </p>
+                            <p>
+                              Return: {formData.returnTrip?.selectedSeats.length || 0} seat
+                              {(formData.returnTrip?.selectedSeats.length || 0) !== 1 ? "s" : ""} × ${returnSegmentPrice}
+                            </p>
+                            {(luggageFee + returnLuggageFee) > 0 && (
+                              <p>Luggage: ${(luggageFee + returnLuggageFee).toFixed(2)}</p>
+                            )}
+                          </div>
+                        ) : (
+                          formData.selectedSeats.length > 0 && (
+                            <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                              <p>
+                                ${segmentPrice} per seat × {formData.selectedSeats.length} passenger
+                                {formData.selectedSeats.length > 1 ? "s" : ""}
+                              </p>
+                              {luggageFee > 0 && <p>Luggage: ${luggageFee.toFixed(2)}</p>}
+                            </div>
+                          )
+                        )}
+                      </div>
                     )}
                   </div>
                 )}

@@ -114,6 +114,7 @@ export interface TripSearchResult {
   totalPrice?: number;
   discountAmount?: number;
   discountPercentage?: number;
+  roundTripDiscount?: number;
 }
 
 export interface TripBookingDetails {
@@ -176,6 +177,12 @@ export interface TripBookingDetails {
     maxBags: number;
     maxBagSize?: string;
   };
+  // Round trip specific fields
+  roundTripDiscount?: number;
+  returnTripId?: string;
+  totalPrice?: number;
+  discountAmount?: number;
+  discountPercentage?: number;
 }
 
 export interface TripSearchFilters {

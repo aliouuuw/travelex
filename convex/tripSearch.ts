@@ -85,6 +85,22 @@ export interface TripSearchResult {
     maxBags: number;
     maxBagWeightKg?: number;
   };
+  // Round trip specific fields
+  isRoundTrip?: boolean;
+  returnTripId?: string;
+  returnTripDetails?: {
+    tripId: string;
+    routeTemplateName: string;
+    driverName: string;
+    vehicleInfo: string;
+    departureTime: string;
+    arrivalTime?: string;
+    availableSeats: number;
+    price: number;
+  };
+  totalPrice?: number;
+  discountAmount?: number;
+  discountPercentage?: number;
 }
 
 export interface TripBookingDetails {
@@ -147,6 +163,12 @@ export interface TripBookingDetails {
     maxBags: number;
     maxBagSize?: string;
   };
+  // Round trip specific fields
+  roundTripDiscount?: number;
+  returnTripId?: string;
+  totalPrice?: number;
+  discountAmount?: number;
+  discountPercentage?: number;
 }
 
 // =============================================
@@ -558,6 +580,9 @@ export const getTripForBooking = query({
         maxBags: luggagePolicy.maxBags,
         maxBagSize: luggagePolicy.maxBagSize,
       },
+      // Include round trip discount information
+      roundTripDiscount: trip.roundTripDiscount,
+      returnTripId: trip.returnTripId,
     };
 
     return result;

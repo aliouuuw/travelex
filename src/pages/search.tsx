@@ -292,11 +292,19 @@ export default function SearchPage() {
 
   // Normalize round-trip results to match TripSearchResult interface
   const normalizedResults = tripResults?.map((result) => {
-    // If it's a round-trip result with totalPrice, map it to fullRoutePrice
-    if ("totalPrice" in result && !("fullRoutePrice" in result)) {
+    // If it's a round-trip result, preserve all the discount information
+    if ("totalPrice" in result && "discountAmount" in result) {
       return {
         ...result,
-        fullRoutePrice: result.totalPrice,
+        fullRoutePrice: result.totalPrice || result.fullRoutePrice,
+        // Preserve all round trip fields
+        isRoundTrip: result.isRoundTrip,
+        returnTripId: result.returnTripId,
+        returnTripDetails: result.returnTripDetails,
+        totalPrice: result.totalPrice,
+        discountAmount: result.discountAmount,
+        discountPercentage: result.discountPercentage,
+        roundTripDiscount: result.roundTripDiscount, // Explicitly include roundTripDiscount
       };
     }
     return result;
